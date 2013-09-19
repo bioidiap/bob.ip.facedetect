@@ -16,7 +16,8 @@ def command_line_options(command_line_arguments):
 
   parser.add_argument('--database', '-d', default = 'banca', help = "Select the database to get the training images from.")
   parser.add_argument('--distance', '-s', type=int, default=5, help = "The distance with which the image should be scanned.")
-  parser.add_argument('--scale-base', '-S', type=float, default = math.sqrt(0.5), help = "The logarithmic distance between two scales (should be between 0 and 1).")
+  parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./4.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
+  parser.add_argument('--first-scale', '-f', type=float, default = 0.5, help = "The first scale of the image to consider (should be between 0 and 1, higher values will slow down the detection process).")
   parser.add_argument('--trained-file', '-r', default = 'detector.hdf5', help = "The file to write the resulting trained detector into.")
   parser.add_argument('--write-best', '-w', help = "Writes the best detection for each file into the given directory")
   parser.add_argument('--prediction-threshold', '-t', default = 0., type = float, help = "The threshold for which a detection should be classified as positive.")
@@ -48,7 +49,7 @@ def main(command_line_arguments = None):
 
   # create the test examples
   preprocessor = facereclib.preprocessing.NullPreprocessor()
-  sampler = Sampler(distance=args.distance, scale_factor=args.scale_base)
+  sampler = Sampler(distance=args.distance, scale_factor=args.scale_base, first_scale=args.first_scale)
 
   # iterate over the probe files and detect the faces
   for file in probe_files:
@@ -68,14 +69,17 @@ def main(command_line_arguments = None):
 
 
     if args.write_best:
-      filename = str(file.make_path(args.write_best, '.png'))
-      facereclib.utils.ensure_dir(os.path.dirname(filename))
+      if len(predictions) == 0:
+        facereclib.utils.warn("There was no bounding box found for image %s with value > %f" % (filename, args.prediction_threshold))
+      else:
+        filename = str(file.make_path(args.write_best, '.png'))
+        facereclib.utils.ensure_dir(os.path.dirname(filename))
 
-      max_index = numpy.argmax(predictions)
-      best_bb = bounding_boxes[max_index]
+        max_index = numpy.argmax(predictions)
+        best_bb = bounding_boxes[max_index]
 
-      facereclib.utils.info("Writing extracted face to file '%s', with box '%s' and prediction '%f'" % (filename, str(best_bb), predictions[max_index]))
-      bob.io.save(best_bb.extract(image).astype(numpy.uint8), filename)
+        facereclib.utils.info("Writing extracted face to file '%s', with box '%s' and prediction '%f'" % (filename, str(best_bb), predictions[max_index]))
+        bob.io.save(best_bb.extract(image).astype(numpy.uint8), filename)
 
 #    positives = [(bb, pred) for bb, pred in zip(bounding_boxes, predictions) if pred > 0]
 

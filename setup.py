@@ -105,8 +105,9 @@ setup(
       # scripts should be declared using this entry:
       'console_scripts': [
         'train.py = xfacereclib.extension.facedetect.script.train:main',
+        'bootstrap.py = xfacereclib.extension.facedetect.script.bootstrap:main',
         'test.py = xfacereclib.extension.facedetect.script.test:main',
-        ],
+      ],
 
       # tests that are _exported_ (that can be executed by other packages) can
       # be signalized like this:
