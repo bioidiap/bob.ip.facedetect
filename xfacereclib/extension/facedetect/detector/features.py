@@ -67,7 +67,7 @@ class LBPFeatures:
     return self._image[bb.m_top : bb.m_bottom, bb.m_left : bb.m_right]
 
 
-  def extract(self, bounding_box, dataset, index, use_pre_extracted_features = False):
+  def extract(self, bounding_box, dataset, index):
     """Extracts the feature for the given bounding box and writes it directly to the given dataset at the given index."""
     patch = self._extract_image_patch(bounding_box)
     # simply extract all features
@@ -82,7 +82,7 @@ class LBPFeatures:
     # extract only those features that need to be extracted
     for i in self._feature_indices:
       lut = self._lut[i]
-      feature_vector[i] = self.m_lbps[lut[0]](self._image, lut[1] + bounding_box.m_top, lut[2] + bounding_box.m_left, True)
+      feature_vector[i] = self.m_lbps[lut[0]].extract(self._image, lut[1] + bounding_box.m_top, lut[2] + bounding_box.m_left, True)
 
 
 
@@ -132,7 +132,7 @@ class MBLBPFeatures (LBPFeatures):
     return self._integral_image[bb.m_top : bb.m_bottom + 1, bb.m_left : bb.m_right + 1]
 
 
-  def extract(self, bounding_box, dataset, index, use_pre_extracted_features = False):
+  def extract(self, bounding_box, dataset, index):
     """Extracts the feature for the given bounding box and writes it directly to the given dataset at the given index."""
     patch = self._extract_image_patch(bounding_box)
     # simply extract all features
@@ -142,12 +142,16 @@ class MBLBPFeatures (LBPFeatures):
       dataset[index, self._feature_starts[t] : self._feature_starts[t+1]] = self._feature_patches[t].flatten()
 
 
+#  def _x(self, lbp, i, y, x):
+#    return lbp.extract(i, y, x, True)
+
   def extract_single(self, bounding_box, feature_vector):
     """Extracts and returns the feature vector for the given bounding box, respecting the model (if set)."""
     # extract only those features that need to be extracted
     for i in self._feature_indices:
-      lut = self._lut[i]
-      feature_vector[i] = self.m_lbps[lut[0]].extract(self._integral_image, lut[1] + bounding_box.m_top, lut[2] + bounding_box.m_left, True)
+      lbp,y,x = self._lut[i]
+      feature_vector[i] = self.m_lbps[lbp].extract(self._integral_image, y + bounding_box.m_top, x + bounding_box.m_left, True)
+#      feature_vector[i] = self._x(self.m_lbps[lbp], self._integral_image, y + bounding_box.m_top, x + bounding_box.m_left)
 
 
 def save(features, hdf5file):

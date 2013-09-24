@@ -70,7 +70,7 @@ def main(command_line_arguments = None):
   training_files = [training_files[t] for t in facereclib.utils.quasi_random_indices(len(training_files), args.limit_training_files)]
 
   # create the training set
-  sampler = Sampler(patch_size=args.patch_size, scale_factor=args.scale_factor, distance=args.distance, similarity_thresholds=args.similarity_thresholds)
+  sampler = Sampler(patch_size=args.patch_size, scale_factor=args.scale_base, distance=args.distance, similarity_thresholds=args.similarity_thresholds)
   preprocessor = facereclib.preprocessing.NullPreprocessor()
 
   facereclib.utils.info("Loading %d training images" % len(training_files))
@@ -86,7 +86,7 @@ def main(command_line_arguments = None):
   # extract all features
   facereclib.utils.info("Extracting features")
   feature_extractor = lbp_variant(args.lbp_class, args.lbp_variant)
-  features, labels = sampler.get(feature_extractor, args.training_examples[0], args.training_examples[1])
+  features, labels = sampler.get(feature_extractor, None, args.training_examples[0], args.training_examples[1])
 
   # train the boosting algorithm
   facereclib.utils.info("Training machine for %d rounds with %d features" % (args.rounds, labels.shape[0]))
@@ -94,7 +94,9 @@ def main(command_line_arguments = None):
   boosted_machine = booster.train(features, labels)
 
   # get the predictions of the training set
-  predictions, predicted_labels = boosted_machine.classify(features)
+  predictions = numpy.ndarray((features.shape[0],), numpy.float64)
+  predicted_labels = numpy.ndarray((features.shape[0],), numpy.float64)
+  boosted_machine(features, predictions, predicted_labels)
   decisions = numpy.ones(predictions.shape, numpy.float64)
   decisions[predictions < 0] = -1
 

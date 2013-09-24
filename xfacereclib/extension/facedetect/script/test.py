@@ -29,7 +29,8 @@ def command_line_options(command_line_arguments):
 
   return args
 
-
+#def classify(classifier, features):
+#  return classifier(features)
 
 def main(command_line_arguments = None):
   args = command_line_options(command_line_arguments)
@@ -39,10 +40,12 @@ def main(command_line_arguments = None):
   probe_files = database.probe_files()
   probe_files = [probe_files[t] for t in facereclib.utils.quasi_random_indices(len(probe_files), args.limit_probe_files)]
 
+  facereclib.utils.debug("Loading strong classifier from file %s" % args.trained_file)
   # load classifier and feature extractor
   f = bob.io.HDF5File(args.trained_file)
   f.cd("/Machine")
-  classifier = xbob.boosting.core.boosting.BoostMachine(hdf5file=f)
+  classifier = xbob.boosting.BoostedMachine(f)
+#  classifier = xbob.boosting.core.boosting.BoostMachine(hdf5file=f)
   f.cd("/Features")
   feature_extractor = load_features(f)
   feature_extractor.set_model(classifier)
@@ -61,6 +64,7 @@ def main(command_line_arguments = None):
     bounding_boxes = []
     predictions = []
     for bounding_box, features in sampler.iterate(image, feature_extractor):
+#      prediction = classify(classifier, features)
       prediction = classifier(features)
       if prediction > args.prediction_threshold:
         predictions.append(prediction)
