@@ -1,5 +1,6 @@
 
 import numpy
+import bob
 import facereclib
 
 class Bootstrap:
@@ -21,6 +22,9 @@ class Bootstrap:
 
       facereclib.utils.info("Starting training with %d examples" % (training_data.shape[0]))
       model = trainer.train(training_data, training_labels, model)
+
+      # write model to temporary file to be able to catch up later
+      model.save(bob.io.HDF5File("Model_Round_%d.hdf5" % (b+1), 'w'))
 
       feature_extractor.set_model(model)
 

@@ -107,6 +107,19 @@ setup(
         'train.py = xfacereclib.extension.facedetect.script.train:main',
         'bootstrap.py = xfacereclib.extension.facedetect.script.bootstrap:main',
         'test.py = xfacereclib.extension.facedetect.script.test:main',
+        'detect.py = xfacereclib.extension.facedetect.script.detect:main',
+        'froc.py = xfacereclib.extension.facedetect.script.evaluate:main',
+        'display.py = xfacereclib.extension.facedetect.script.display:main',
+      ],
+
+      # registered database short cuts
+      'facereclib.database': [
+        'cinema            = xfacereclib.extension.facedetect.databases.cinema:database',
+        'cmu               = xfacereclib.extension.facedetect.databases.cmu:database',
+        'fddb              = xfacereclib.extension.facedetect.databases.fddb:database',
+        'mash              = xfacereclib.extension.facedetect.databases.mash:database',
+        'ofd               = xfacereclib.extension.facedetect.databases.ofd:database',
+        'web               = xfacereclib.extension.facedetect.databases.web:database',
       ],
 
       # tests that are _exported_ (that can be executed by other packages) can

@@ -82,17 +82,19 @@ class LBPFeatures:
     # extract only those features that need to be extracted
     for i in self._feature_indices:
       lut = self._lut[i]
-      feature_vector[i] = self.m_lbps[lut[0]].extract(self._image, lut[1] + bounding_box.m_top, lut[2] + bounding_box.m_left, True)
+      feature_vector[i] = self.m_lbps[lut[0]].extract(self._image, lut[1] + bounding_box.m_top, lut[2] + bounding_box.m_left)
 
 
 
 
 class MBLBPFeatures (LBPFeatures):
 
-  def __init__(self, patch_size = (24,20), model = None, lbp_extractors = None, **kwargs):
+  def __init__(self, patch_size = (24,20), model = None, lbp_extractors = None, overlap = False, **kwargs):
     """Generates the feature extractors possible for the given patch size."""
     if lbp_extractors is not None:
       self.m_lbps = lbp_extractors
+    elif overlap:
+      self.m_lbps = [bob.ip.LBP(8, (dy, dx), (dy-1, dx-1)) for dy in range(1, patch_size[0] / 3 + 1) for dx in range(1, patch_size[1] / 3 + 1)]
     else:
       self.m_lbps = [bob.ip.LBP(8, (dy, dx), **kwargs) for dy in range(1, patch_size[0] / 3 + 1) for dx in range(1, patch_size[1] / 3 + 1)]
 

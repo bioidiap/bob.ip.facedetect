@@ -1,5 +1,4 @@
-
-
+import bob
 import facereclib
 import math
 
@@ -9,7 +8,8 @@ class BoundingBox:
     'direct'        : ('topleft', 'bottomright'),
     'eyes'          : ('leye', 'reye'),
     'left-profile'  : ('eye', 'mouth'),
-    'right-profile' : ('eye', 'mouth')
+    'right-profile' : ('eye', 'mouth'),
+    'ellipse'       : ('center', 'angle', 'axis_radius')
   }
 
   # This struct specifies, which paddings should be applied to which source.
@@ -18,7 +18,8 @@ class BoundingBox:
     'direct'        : None,
     'eyes'          : {'left' : -1.0, 'right' : +1.0, 'top': -0.7, 'bottom' : 1.7}, # These parameters are used to match Cosmin's implementation (which was buggy...)
     'left-profile'  : {'left' : -0.2, 'right' : +0.8, 'top': -1.0, 'bottom' : 1.0},
-    'right-profile' : {'left' : -0.8, 'right' : +0.2, 'top': -1.0, 'bottom' : 1.0}
+    'right-profile' : {'left' : -0.8, 'right' : +0.2, 'top': -1.0, 'bottom' : 1.0},
+    'ellipse'       : None
   }
 
   def __init__(self, source=None, padding=None, **kwargs):
@@ -28,6 +29,8 @@ class BoundingBox:
 
     If 'topleft' and 'bottomright' are given (i.e., the 'direct' source), they are taken as is.
     Note that the 'bottomright' is NOT included in the bounding box.
+
+    For source 'ellipse', the bounding box is computed to capture the whole ellipse, even if it is rotated.
 
     For other sources (i.e., 'eyes'), the center of the two given positions is computed, and the 'padding' is applied.
     If 'padding ' is None (the default) then the default_paddings of this source are used instead.
@@ -56,7 +59,18 @@ class BoundingBox:
       padding = self.default_paddings[source]
 
     keys = self.available_sources[source]
-    if padding is None:
+    if source == 'ellipse':
+      # compute the tight bounding box for the ellipse
+      angle = kwargs['angle']
+      axis = kwargs['axis_radius']
+      center = kwargs['center']
+      dx = abs(math.cos(angle) * axis[0]) + abs(math.sin(angle) * axis[1])
+      dy = abs(math.sin(angle) * axis[0]) + abs(math.cos(angle) * axis[1])
+      self.m_top = center[0] - dy
+      self.m_bottom = center[0] + dy
+      self.m_left = center[1] - dx
+      self.m_right = center[1] + dx
+    elif padding is None:
       # There is no padding to be applied -> take nodes as they are
       self.m_top    = kwargs[keys[0]][0]
       self.m_bottom = kwargs[keys[1]][0]
@@ -126,3 +140,33 @@ class BoundingBox:
     else:
       # compute the similarity between the two rectangles as the relative area that the overlap captures
       return float(intersection.area()) / float(self.area() + other.area() - intersection.area())
+
+  def draw(self, image, color):
+    """Draws the bounding box into the given image using the given color."""
+    bob.ip.draw_box(image, self.m_left, self.m_top, self.m_right - self.m_left, self.m_bottom - self.m_top, color)
+
+
+def prune(detections, threshold=None):
+  """Removes overlapping detections, using the given detection overlap threshold."""
+
+  # first, sort the detections based on their detection value
+  sorted_detections = sorted(detections, cmp=lambda x,y: cmp(x[0], y[0]), reverse=True)
+
+  if threshold is None:
+    return sorted_detections
+
+  # now, add detections as long as they don't overlap with previous detections
+  pruned_detections = []
+  for value, detection in sorted_detections:
+    add = True
+    # check if an overlap with previously added detections is found
+    for _, pruned in pruned_detections:
+      if detection.similarity(pruned) > threshold:
+        # found overlap, so don't add
+        add = False
+        break;
+    if add:
+      pruned_detections.append((value, detection))
+
+  return pruned_detections
+

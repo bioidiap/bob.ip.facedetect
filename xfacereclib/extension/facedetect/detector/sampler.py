@@ -57,7 +57,7 @@ class Sampler:
       current_scale_power += 1.
 
       scaled_image = bob.ip.scale(image, scale)
-      if scaled_image.shape[0] < self.m_patch_box.m_bottom or scaled_image.shape[1] < self.m_patch_box.m_top:
+      if scaled_image.shape[0] < self.m_patch_box.m_bottom or scaled_image.shape[1] < self.m_patch_box.m_right:
         # image is too small since there is not enough space to put in the complete patch box
         break
 
@@ -139,18 +139,18 @@ class Sampler:
           # extract the features for the current bounding box
           feature_extractor.extract_single(bb, feature_vector)
           # compute the current prediction of the model
-          positive_values.append((model(feature_vector)[0], image_index, bb_index))
+          positive_values.append((model(feature_vector), image_index, bb_index))
         for bb_index, bb in enumerate(self.m_negatives[image_index]):
           # extract the features for the current bounding box
           feature_extractor.extract_single(bb, feature_vector)
           # compute the current prediction of the model
-          negative_values.append((model(feature_vector)[0], image_index, bb_index))
+          negative_values.append((model(feature_vector), image_index, bb_index))
 
       # get the prediction errors (lowest for pos. class and highest for neg. class)
       positive_values = sorted(positive_values)[:num_pos]
       negative_values = sorted(negative_values, reverse=True)[:num_neg]
-      used_positive_examples = [pos[1:] for pos in sorted(positive_values)]
-      used_negative_examples = [neg[1:] for neg in sorted(negative_values)]
+      used_positive_examples = [pos[1:] for pos in positive_values]
+      used_negative_examples = [neg[1:] for neg in negative_values]
 
 
     last_image_index = -1
@@ -204,7 +204,6 @@ class Sampler:
     feature_vector = numpy.zeros(feature_extractor.number_of_features(), numpy.uint16)
     for scaled_image, boxes, scale in itertools.izip(self.m_scaled_images, self.m_negatives, self.m_scales):
       # prepare the feature extractor to extract features from the given image
-      bob.io.save(scaled_image.astype(numpy.uint8), "/scratch/mguenther/temp/scaled/im_%f.png"%scale)
       feature_extractor.prepare(scaled_image)
       # iterate over all boxes
       for box in boxes:

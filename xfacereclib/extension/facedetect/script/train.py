@@ -5,9 +5,10 @@ import bob
 import numpy
 import math
 import xbob.boosting
+import os
 
-from ..utils import BoundingBox
 from ..detector import Sampler, LBPFeatures, MBLBPFeatures, save_features
+from .. import utils
 
 
 LBP_CLASSES = {
@@ -19,16 +20,24 @@ LBP_VARIANTS = {
   'ell'  : {'circular' : True},
   'u2'   : {'uniform' : True},
   'ri'   : {'rotation_invariant' : True},
-  'avg'  : {'to_average' : True, 'add_average_bit' : True},
+  'mct'  : {'to_average' : True, 'add_average_bit' : True},
   'tran' : {'elbp_type' : bob.ip.ELBPType.TRANSITIONAL},
   'dir'  : {'elbp_type' : bob.ip.ELBPType.DIRECTION_CODED}
 }
 
-def lbp_variant(cls, variants):
+def lbp_variant(cls, variants, overlap, scale):
   """Returns the kwargs that are required for the LBP variant."""
   res = {}
   for t in variants:
     res.update(LBP_VARIANTS[t])
+  if overlap:
+    res['overlap'] = overlap
+  if scale:
+    if cls == 'MBLBP':
+      res['lbp_extractors'] = [bob.ip.LBP(8, block_size=(scale,scale), **res)]
+    else:
+      res['lbp_extractors'] = [bob.ip.LBP(8, radius=scale, **res)]
+
   return LBP_CLASSES[cls](**res)
 
 
@@ -36,10 +45,12 @@ def command_line_options(command_line_arguments):
 
   parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-  parser.add_argument('--database', '-d', default='banca', help = "Select the database to get the training images from.")
+  parser.add_argument('--databases', '-d', default=['banca'], nargs='+', help = "Select the databases to get the training images from.")
 
   parser.add_argument('--lbp-class', '-c', choices=LBP_CLASSES.keys(), default='MBLBP', help = "Specify, which type of LBP features are desired.")
   parser.add_argument('--lbp-variant', '-l', choices=LBP_VARIANTS.keys(), nargs='+', default = [], help = "Specify, which LBP variant(s) are wanted (ell is not available for MBLPB codes).")
+  parser.add_argument('--lbp-overlap', '-o', action='store_true', help = "Specify the overlap of the MBLBP.")
+  parser.add_argument('--lbp-scale', '-L', type=int, help="If given, only a single LBP extractor with the given LBP scale will be extracted, otherwise all possible scales are generated taken.")
 
   parser.add_argument('--rounds', '-r', default=10, type=int, help = "The number of training rounds to perform.")
   parser.add_argument('--patch-size', '-p', type=int, nargs=2, default=(24,20), help = "The size of the patch for the image in y and x.")
@@ -50,6 +61,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--examples-per-image-scale', '-e', type=int, nargs=2, default = [100, 100], help = "The number of positive and negative training examples for each image scale.")
   parser.add_argument('--training-examples', '-E', type=int, nargs=2, default = [10000, 10000], help = "The number of positive and negative training examples to sample.")
   parser.add_argument('--limit-training-files', '-y', type=int, help = "Limit the number of training files (for debug purposes only).")
+  parser.add_argument('--write-examples', '-x', help = "Write the positive training examples to the given directory.")
 
   parser.add_argument('--trained-file', '-w', default = 'detector.hdf5', help = "The file to write the resulting trained detector into.")
 
@@ -64,28 +76,30 @@ def command_line_options(command_line_arguments):
 def main(command_line_arguments = None):
   args = command_line_options(command_line_arguments)
 
-  # open database to collect training images
-  database = facereclib.utils.resources.load_resource(args.database, 'database')
-  training_files = database.training_files()
-  training_files = [training_files[t] for t in facereclib.utils.quasi_random_indices(len(training_files), args.limit_training_files)]
+  # get training data
+  training_files = utils.image_annot(args.databases, args.limit_training_files)
 
   # create the training set
   sampler = Sampler(patch_size=args.patch_size, scale_factor=args.scale_base, distance=args.distance, similarity_thresholds=args.similarity_thresholds)
   preprocessor = facereclib.preprocessing.NullPreprocessor()
 
   facereclib.utils.info("Loading %d training images" % len(training_files))
-  for file in training_files:
-    facereclib.utils.debug("Loading image file '%s'" % file.path)
-    image = preprocessor(preprocessor.read_original_data(str(file.make_path(database.original_directory, database.original_extension))))
+  for file_name, annotations in training_files:
+    facereclib.utils.debug("Loading image file '%s' with %d faces" % (file_name, len(annotations)))
+    image = preprocessor(preprocessor.read_original_data(file_name))
+    try:
+      boxes = [utils.BoundingBox(**annotation) for annotation in annotations]
+      sampler.add(image, boxes, args.examples_per_image_scale[0], args.examples_per_image_scale[1])
+    except KeyError as e:
+      facereclib.utils.warn("Ignoring file '%s' since the eye annotations are incomplete" % file_name)
 
-    annotations = database.annotations(file)
-
-    sampler.add(image, (BoundingBox(source='eyes', **annotations),), args.examples_per_image_scale[0], args.examples_per_image_scale[1])
-
+  if args.write_examples:
+    facereclib.utils.ensure_dir(args.write_examples)
+    sampler._write(os.path.join(args.write_examples, "image_%i.png"))
 
   # extract all features
   facereclib.utils.info("Extracting features")
-  feature_extractor = lbp_variant(args.lbp_class, args.lbp_variant)
+  feature_extractor = lbp_variant(args.lbp_class, args.lbp_variant, args.lbp_overlap, args.lbp_scale)
   features, labels = sampler.get(feature_extractor, None, args.training_examples[0], args.training_examples[1])
 
   # train the boosting algorithm
