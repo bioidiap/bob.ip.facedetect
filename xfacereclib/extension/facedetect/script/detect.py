@@ -7,8 +7,7 @@ import math
 import xbob.boosting
 import os
 
-from .. import utils
-from ..detector import Sampler, MBLBPFeatures, load_features
+from .. import utils, detector
 
 def command_line_options(command_line_arguments):
 
@@ -17,7 +16,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--database', '-d', default = 'banca', help = "Select the database to get the training images from.")
   parser.add_argument('--protocol', '-P', help = "If given, the test files from the given protocol are detected.")
   parser.add_argument('--limit-test-files', '-y', type=int, help = "Limit the test files to the given number (for debug purposes mainly)")
-  parser.add_argument('--distance', '-s', type=int, default=5, help = "The distance with which the image should be scanned.")
+  parser.add_argument('--distance', '-s', type=int, default=4, help = "The distance with which the image should be scanned.")
   parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./4.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--first-scale', '-f', type=float, default = 0.5, help = "The first scale of the image to consider (should be between 0 and 1, higher values will slow down the detection process).")
   parser.add_argument('--trained-file', '-r', default = 'detector.hdf5', help = "The file to write the resulting trained detector into.")
@@ -44,17 +43,11 @@ def main(command_line_arguments = None):
 
   facereclib.utils.debug("Loading strong classifier from file %s" % args.trained_file)
   # load classifier and feature extractor
-  f = bob.io.HDF5File(args.trained_file)
-  f.cd("/Machine")
-  classifier = xbob.boosting.BoostedMachine(f)
-#  classifier = xbob.boosting.core.boosting.BoostMachine(hdf5file=f)
-  f.cd("/Features")
-  feature_extractor = load_features(f)
-  feature_extractor.set_model(classifier)
+  classifier, feature_extractor, is_cpp_extractor = detector.load(args.trained_file)
 
   # create the test examples
   preprocessor = facereclib.preprocessing.NullPreprocessor()
-  sampler = Sampler(distance=args.distance, scale_factor=args.scale_base, first_scale=args.first_scale)
+  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, first_scale=args.first_scale, cpp_implementation=is_cpp_extractor)
 
   # iterate over the test files and detect the faces
   i = 1
@@ -80,7 +73,10 @@ def main(command_line_arguments = None):
         facereclib.utils.info("Number of pruned detections: %d" % len(detections))
 
       # get ground truth bounding boxes from annotations
-      ground_truth = [utils.BoundingBox(**annotation) for annotation in annotations]
+      if is_cpp_extractor:
+        ground_truth = [utils.bounding_box_from_annotation(**annotation) for annotation in annotations]
+      else:
+        ground_truth = [utils.BoundingBox(**annotation) for annotation in annotations]
       f.write("%s %d\n" % (file.path, len(ground_truth)))
 
       # check if we have found a bounding box

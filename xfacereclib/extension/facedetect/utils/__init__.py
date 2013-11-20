@@ -1,4 +1,4 @@
-from boundingbox import BoundingBox, prune
+from boundingbox import BoundingBox, bounding_box_from_annotation, prune
 
 from ..detector import LBPFeatures, MBLBPFeatures
 import bob
@@ -71,5 +71,6 @@ def test_image_annot(databases, protocols, limit):
     facereclib.utils.debug("For test file '%s' loaded annotations '%s'" % (file.path, str(annot)))
 
   return test_files
+
 
 

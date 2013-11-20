@@ -1,6 +1,11 @@
 *~
+*.orig
+*.hdf5
+*.pdf
+_*.so
 *.swp
 *.pyc
+*.egg
 .DS_Store
 logs
 *.db

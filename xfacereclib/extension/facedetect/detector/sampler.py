@@ -6,12 +6,16 @@ import facereclib
 import itertools
 
 from ..utils import BoundingBox
+from .._features import BoundingBox as CppBoundingBox
+
+
+import threading
 
 
 class Sampler:
   """This class generates and contains bounding boxes positive and negative examples used for face detection."""
 
-  def __init__(self, patch_size = (24,20), scale_factor = math.pow(2., -1./4.), first_scale = 0.5, distance = 2, similarity_thresholds = (0.3, 0.7)):
+  def __init__(self, patch_size = (24,20), scale_factor = math.pow(2., -1./4.), first_scale = 0.5, distance = 2, similarity_thresholds = (0.3, 0.7), cpp_implementation=False, number_of_parallel_threads=8):
     """Generates an example extractor for the given patch size.
 
     Parameters:
@@ -39,11 +43,15 @@ class Sampler:
     self.m_positives = []
     self.m_negatives = []
 
-    self.m_patch_box = BoundingBox("direct", topleft=(0,0), bottomright=patch_size)
+    if cpp_implementation:
+      self.m_patch_box = CppBoundingBox(0, 0, patch_size[0], patch_size[1])
+    else:
+      self.m_patch_box = BoundingBox("direct", topleft=(0,0), bottomright=(patch_size[0]-1, patch_size[1]-1))
     self.m_scale_factor = scale_factor
     self.m_first_scale = first_scale
     self.m_distance = distance
     self.m_similarity_thresholds = similarity_thresholds
+    self.m_number_of_parallel_threads = number_of_parallel_threads
 
 
   def add(self, image, ground_truth, number_of_positives_per_scale = None, number_of_negatives_per_scale = None):
@@ -57,20 +65,18 @@ class Sampler:
       current_scale_power += 1.
 
       scaled_image = bob.ip.scale(image, scale)
-      if scaled_image.shape[0] < self.m_patch_box.m_bottom or scaled_image.shape[1] < self.m_patch_box.m_right:
+      if scaled_image.shape[0] <= self.m_patch_box.bottom or scaled_image.shape[1] <= self.m_patch_box.right:
         # image is too small since there is not enough space to put in the complete patch box
         break
 
-      # adapt distance so that scaled images are scanned tighter
-      distance = int(math.ceil(self.m_distance*scale / self.m_first_scale))
 #      facereclib.utils.debug("Scaled image size %s" %str(scaled_image.shape))
       scaled_gt = [gt.scale(scale) for gt in ground_truth]
       positives = []
       negatives = []
 
       # iterate over all possible positions in the image
-      for y in range(0, scaled_image.shape[0]-self.m_patch_box.m_bottom, distance):
-        for x in range(0, scaled_image.shape[1]-self.m_patch_box.m_right, distance):
+      for y in range(0, scaled_image.shape[0]-self.m_patch_box.bottom-1, self.m_distance):
+        for x in range(0, scaled_image.shape[1]-self.m_patch_box.right-1, self.m_distance):
           # create bounding box for the image
           bb = self.m_patch_box.shift(y,x)
 
@@ -102,7 +108,27 @@ class Sampler:
       self.m_negatives.append([negatives[i] for i in facereclib.utils.quasi_random_indices(len(negatives), number_of_negatives_per_scale)])
 
 
+
+
   def get(self, feature_extractor, model = None, maximum_number_of_positives = None, maximum_number_of_negatives = None, delete_samples = False):
+
+    def _get_parallel(fex, pos, neg, first, last):
+      """Extracts the feature for the given set of feature type and return the model response"""
+      feature_vector = numpy.zeros((fex.number_of_features,), numpy.uint16)
+      for image_index in range(first, last):
+        # prepare for current scaled image
+        fex.prepare(self.m_scaled_images[image_index])
+        for bb_index, bb in enumerate(self.m_positives[image_index]):
+          # extract the features for the current bounding box
+          fex.extract_single(bb, feature_vector)
+          # compute the current prediction of the model
+          pos.append((model(feature_vector), image_index, bb_index))
+        for bb_index, bb in enumerate(self.m_negatives[image_index]):
+          # extract the features for the current bounding box
+          fex.extract_single(bb, feature_vector)
+          # compute the current prediction of the model
+          neg.append((model(feature_vector), image_index, bb_index))
+
     """Returns a pair of features and labels that can be used for training, after extracting the features using the given feature extractor.
     If number_of_positives and/or number_of_negatives are given, the number of examples is limited to these numbers."""
     # get the maximum number of examples
@@ -114,7 +140,7 @@ class Sampler:
     facereclib.utils.info("Extracting %d (%d) positive and %d (%d) negative examples" % (num_pos, all_pos, num_neg, all_neg))
 
     # create feature and labels as required for training
-    features = numpy.ndarray((num_pos + num_neg, feature_extractor.number_of_features()), numpy.uint16)
+    features = numpy.ndarray((num_pos + num_neg, feature_extractor.number_of_features), numpy.uint16)
     labels = numpy.ones((num_pos + num_neg, ), numpy.float64)
 
     # get the positive and negative examples
@@ -129,29 +155,46 @@ class Sampler:
       used_negative_examples = [all_negative_examples[i] for i in facereclib.utils.quasi_random_indices(len(all_negative_examples), num_neg)]
     else:
       # compute the prediction error of the current classifier for all remaining
-      positive_values = []
-      negative_values = []
-      feature_vector = numpy.zeros((feature_extractor.number_of_features(),), numpy.uint16)
-      for image_index, image in enumerate(self.m_scaled_images):
-        # prepare for current scaled image
-        feature_extractor.prepare(self.m_scaled_images[image_index])
-        for bb_index, bb in enumerate(self.m_positives[image_index]):
-          # extract the features for the current bounding box
-          feature_extractor.extract_single(bb, feature_vector)
-          # compute the current prediction of the model
-          positive_values.append((model(feature_vector), image_index, bb_index))
-        for bb_index, bb in enumerate(self.m_negatives[image_index]):
-          # extract the features for the current bounding box
-          feature_extractor.extract_single(bb, feature_vector)
-          # compute the current prediction of the model
-          negative_values.append((model(feature_vector), image_index, bb_index))
+      if self.m_number_of_parallel_threads == 1:
+
+        positive_values = []
+        negative_values = []
+        feature_vector = numpy.zeros((feature_extractor.number_of_features,), numpy.uint16)
+        for image_index, image in enumerate(self.m_scaled_images):
+          # prepare for current scaled image
+          feature_extractor.prepare(image)
+          for bb_index, bb in enumerate(self.m_positives[image_index]):
+            # extract the features for the current bounding box
+            feature_extractor.extract_single(bb, feature_vector)
+            # compute the current prediction of the model
+            positive_values.append((model(feature_vector), image_index, bb_index))
+          for bb_index, bb in enumerate(self.m_negatives[image_index]):
+            # extract the features for the current bounding box
+            feature_extractor.extract_single(bb, feature_vector)
+            # compute the current prediction of the model
+            negative_values.append((model(feature_vector), image_index, bb_index))
+
+      else:
+
+        # parallel implementation
+        number_of_indices = len(self.m_scaled_images)
+        indices = [i * number_of_indices / self.m_number_of_parallel_threads for i in range(self.m_number_of_parallel_threads)] + [number_of_indices]
+
+        parallel_positive_results = [[] for i in range(self.m_number_of_parallel_threads)]
+        parallel_negative_results = [[] for i in range(self.m_number_of_parallel_threads)]
+        parallel_feature_extractors = [feature_extractor.__class__(feature_extractor) for i in range(self.m_number_of_parallel_threads)]
+
+        threads = [threading.Thread(target=_get_parallel, args=(parallel_feature_extractors[i], parallel_positive_results[i], parallel_negative_results[i], indices[i], indices[i+1])) for i in range(self.m_number_of_parallel_threads)]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
+        positive_values = [x for pos in parallel_positive_results for x in pos]
+        negative_values = [x for neg in parallel_negative_results for x in neg]
 
       # get the prediction errors (lowest for pos. class and highest for neg. class)
       positive_values = sorted(positive_values)[:num_pos]
       negative_values = sorted(negative_values, reverse=True)[:num_neg]
       used_positive_examples = [pos[1:] for pos in positive_values]
       used_negative_examples = [neg[1:] for neg in negative_values]
-
 
     last_image_index = -1
     i = 0
@@ -175,6 +218,7 @@ class Sampler:
       labels[i] = -1.
       i += 1
 
+#    for neg in sorted(used_negative_examples, reverse=True): print neg
     # finally, delete all examples that we returned
     if delete_samples:
       # TODO: implement faster versions of this; currently it is O(n^2)
@@ -201,7 +245,7 @@ class Sampler:
 
     self.add(image, [])
 
-    feature_vector = numpy.zeros(feature_extractor.number_of_features(), numpy.uint16)
+    feature_vector = numpy.zeros(feature_extractor.number_of_features, numpy.uint16)
     for scaled_image, boxes, scale in itertools.izip(self.m_scaled_images, self.m_negatives, self.m_scales):
       # prepare the feature extractor to extract features from the given image
       feature_extractor.prepare(scaled_image)
@@ -224,6 +268,6 @@ class Sampler:
       i = 0
       for index, image in enumerate(self.m_scaled_images):
         for bb in self.m_positives[index]:
-           bob.io.save(image[bb.m_top:bb.m_bottom, bb.m_left:bb.m_right].astype(numpy.uint8), name % i)
+           bob.io.save(image[bb.top:bb.bottom+1, bb.left:bb.right+1].astype(numpy.uint8), name % i)
            i += 1
 

@@ -22,17 +22,18 @@ from __future__ import print_function
 """This script evaluates the given score files and computes EER, HTER.
 It also is able to plot CMC and ROC curves."""
 
+# matplotlib stuff
+import matplotlib; matplotlib.use('pdf') #avoids TkInter threaded start
+import matplotlib.pyplot as mpl
+from matplotlib.backends.backend_pdf import PdfPages
+
+
 import facereclib
 from .. import utils
 import argparse
 import bob
 import numpy, math
 import os
-
-# matplotlib stuff
-import matplotlib; matplotlib.use('pdf') #avoids TkInter threaded start
-import matplotlib.pyplot as mpl
-from matplotlib.backends.backend_pdf import PdfPages
 
 # enable LaTeX interpreter
 matplotlib.rc('text', usetex=True)
@@ -66,8 +67,8 @@ def command_line_arguments(command_line_parameters):
 
   facereclib.utils.set_verbosity_level(args.verbose)
 
-  if args.legends and len(args.dev_files) != len(args.legends):
-    facereclib.utils.error("The number of --dev-files (%d) and --legends (%d) are not identical" % (len(args.dev_files), len(args.legends)))
+  if args.legends and len(args.files) != len(args.legends):
+    facereclib.utils.error("The number of --dev-files (%d) and --legends (%d) are not identical" % (len(args.files), len(args.legends)))
 
   # update legends when they are not specified on command line
   if args.legends is None:
@@ -80,12 +81,15 @@ def _plot_froc(fa, dr, colors, labels, title):
   figure = mpl.figure()
   # plot FAR and FRR for each algorithm
   for i in range(len(fa)):
-    mpl.semilogx(fa[i], [100.0*f for f in  dr[i]], color=colors[i], lw=2, ms=10, mew=1.5, label=labels[i])
+    mpl.plot(fa[i], [100.0*f for f in  dr[i]], color=colors[i], lw=2, ms=10, mew=1.5, label=labels[i])
 
   # finalize plot
-  mpl.xticks((1, 10, 100, 1000, 10000), ('1', '10', '100', '1000', '10000'))
+#  mpl.xticks((1, 10, 100, 1000, 10000), ('1', '10', '100', '1000', '10000'))
+  mpl.xticks([100*i for i in range(11)])
   mpl.xlabel('False Alarm')
   mpl.ylabel('Detection Rate (\%)')
+#  mpl.xlim((0.1, 100000))
+  mpl.xlim((0, 1000))
   mpl.grid(True, color=(0.6,0.6,0.6))
   mpl.legend(loc=4)
   mpl.title(title)
@@ -138,14 +142,15 @@ def main(command_line_parameters=None):
     # compute 20 thresholds
     tmin = min(score[2])
     tmax = max(score[2])
-    thresholds = [tmin + x/20. * (tmax - tmin) for x in range(21)]
+    count = 100
+    thresholds = [tmin + float(x)/count * (tmax - tmin) for x in range(count+2)]
     false_alarms.append([])
     detection_rate.append([])
     for threshold in thresholds:
-      detection_rate[-1].append(numpy.count_nonzero(numpy.array(score[1]) > threshold) / float(score[0]))
-      false_alarms[-1].append(numpy.count_nonzero(numpy.array(score[2]) > threshold))
-
-  print (thresholds, false_alarms, detection_rate, colors, args.legends)
+      detection_rate[-1].append(numpy.count_nonzero(numpy.array(score[1]) >= threshold) / float(score[0]))
+      false_alarms[-1].append(numpy.count_nonzero(numpy.array(score[2]) >= threshold))
+    # to display 0 in a semilogx plot, we have to add a little
+#    false_alarms[-1][-1] += 1e-8
 
   facereclib.utils.info("Plotting FROC curves to file '%s'" % args.froc)
   # create a multi-page PDF for the ROC curve

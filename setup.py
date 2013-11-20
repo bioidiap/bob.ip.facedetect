@@ -33,7 +33,9 @@
 # allows you to test your package with new python dependencies w/o requiring
 # administrative interventions.
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, dist
+dist.Distribution(dict(setup_requires='xbob.extension'))
+from xbob.extension import Extension, build_ext
 
 # The only thing we do in this file is to call the setup() function with all
 # parameters that define our package.
@@ -59,6 +61,10 @@ setup(
     packages=find_packages(),
     include_package_data=True,
 
+    setup_requires=[
+      'xbob.extension',
+    ],
+
     # This line defines which packages should be installed when you "install"
     # this package. All packages that are mentioned here, but are not installed
     # on the current system will be installed locally and only visible to the
@@ -69,6 +75,37 @@ setup(
       'bob', # base signal proc./machine learning library
       'facereclib',
       'xbob.boosting'
+    ],
+
+    cmdclass={
+      'build_ext': build_ext,
+    },
+
+    ext_modules = [
+      Extension(
+        'xfacereclib.extension.facedetect._features',
+        [
+          "xfacereclib/extension/facedetect/cpp/features.cpp",
+          "xfacereclib/extension/facedetect/cpp/bindings.cpp",
+        ],
+        pkgconfig = [
+          'bob-ip',
+        ],
+        include_dirs = [
+          "/idiap/user/mguenther/Bob/release/include",
+#          "xfacereclib/extension/facedetect/cpp"
+        ],
+# STUFF for DEBUGGING goes here (requires DEBUG bob version...):
+#        extra_compile_args = [
+#          '-ggdb',
+#        ],
+#        define_macros = [
+#          ('BZ_DEBUG', 1)
+#        ],
+#        undef_macros=[
+#          'NDEBUG'
+#        ]
+      )
     ],
 
     # Your project should be called something like 'xbob.<foo>' or
