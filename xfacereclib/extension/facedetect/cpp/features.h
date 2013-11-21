@@ -1,6 +1,7 @@
 #include <bob/io/HDF5File.h>
 #include <bob/ip/LBP.h>
 #include <bob/ip/integral.h>
+#include <bob/ip/scale.h>
 #include <bob/core/array_convert.h>
 #include <boost/shared_ptr.hpp>
 
@@ -82,15 +83,15 @@ class FeatureExtractor{
     const std::vector<bob::ip::LBP>& getExtractors() const {return m_extractors;}
 
     // Model indices
-    void setModelIndices(const blitz::Array<int64_t,1>& indices) {m_modelIndices.resize(indices.shape()); m_modelIndices = indices;}
-    blitz::Array<int64_t,1> getModelIndices() const {return m_modelIndices;}
+    void setModelIndices(const blitz::Array<int32_t,1>& indices) {m_modelIndices.resize(indices.shape()); m_modelIndices = indices;}
+    blitz::Array<int32_t,1> getModelIndices() const {return m_modelIndices;}
 
     // feature information
     int numberOfFeatures() const {return m_featureStarts((int)m_extractors.size());}
     uint16_t getMaxLabel() const {return m_extractors[0].getMaxLabel();}
 
     template <typename T>
-      void prepare(const blitz::Array<T,2>& image);
+      void prepare(const blitz::Array<T,2>& image, double scale);
 
     // Extract the features
     void extract_all(const BoundingBox& boundingBox, blitz::Array<uint16_t,2>& dataset, int datasetIndex) const;
@@ -108,8 +109,8 @@ class FeatureExtractor{
 
     std::vector<bob::ip::LBP> m_extractors;
 
-    blitz::Array<int64_t,1> m_featureStarts;
-    blitz::Array<int64_t,1> m_modelIndices;
+    blitz::Array<int32_t,1> m_featureStarts;
+    blitz::Array<int32_t,1> m_modelIndices;
 
     blitz::Array<double,2> m_image;
     blitz::Array<double,2> m_integralImage;
@@ -119,13 +120,16 @@ class FeatureExtractor{
 };
 
 template <typename T>
-  inline void FeatureExtractor::prepare(const blitz::Array<T,2>& image){
+  inline void FeatureExtractor::prepare(const blitz::Array<T,2>& image, double scale){
+    // TODO: implement different MB-LBP behaviour here (i.e., scaling the LBP's instead of scaling the image)
+
+    // scale image
+    m_image.resize(bob::ip::getScaledShape<T>(image, scale));
+    bob::ip::scale(image, m_image);
     if (m_isMultiBlock){
-      m_integralImage.resize(image.extent(0)+1, image.extent(1)+1);
-      bob::ip::integral<T>(image, m_integralImage, true);
-    } else {
-      m_image.resize(image.shape());
-      m_image = bob::core::array::cast<double>(image);
+      // compute integral image of scaled image
+      m_integralImage.resize(m_image.extent(0)+1, m_image.extent(1)+1);
+      bob::ip::integral<double>(m_image, m_integralImage, true);
     }
   }
 

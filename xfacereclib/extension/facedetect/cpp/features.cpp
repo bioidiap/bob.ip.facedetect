@@ -162,11 +162,12 @@ void FeatureExtractor::extract_some(const BoundingBox& boundingBox, blitz::Array
 }
 
 void FeatureExtractor::load(bob::io::HDF5File& hdf5file){
-  m_patchSize[0] = hdf5file.read<int>("PatchSize", 0);
-  m_patchSize[1] = hdf5file.read<int>("PatchSize", 1);
+  // get global information
+  m_patchSize[0] = hdf5file.read<int64_t>("PatchSize", 0);
+  m_patchSize[1] = hdf5file.read<int64_t>("PatchSize", 1);
 
+  // get the LBP extractors
   m_extractors.clear();
-
   for (int i = 1;; ++i){
     std::string dir = (boost::format("LBP_%d") %i).str();
     if (!hdf5file.hasGroup(dir))
@@ -179,11 +180,13 @@ void FeatureExtractor::load(bob::io::HDF5File& hdf5file){
 }
 
 void FeatureExtractor::save(bob::io::HDF5File& hdf5file) const{
-  // get global information
-  hdf5file.append("PatchSize", m_patchSize[0]);
-  hdf5file.append("PatchSize", m_patchSize[1]);
+  // set global information
+  blitz::Array<int64_t,1> t(2);
+  t(0) = m_patchSize[0];
+  t(1) = m_patchSize[1];
+  hdf5file.setArray("PatchSize", t);
 
-  // get the LBP extractors
+  // set the LBP extractors
   for (unsigned i = 0; i != m_extractors.size(); ++i){
     std::string dir = (boost::format("LBP_%d") % (i+1)).str();
     hdf5file.createGroup(dir);

@@ -35,10 +35,10 @@ class ExtractorTests(unittest.TestCase):
       py_feat = numpy.ndarray((1,feature_length), dtype=numpy.uint16)
       cpp_feat = numpy.ndarray((1,feature_length), dtype=numpy.uint16)
 
-      py.prepare(test_image)
+      py.prepare(test_image, 1)
       py.extract(py_bb, py_feat, 0)
 
-      cpp.prepare(test_image)
+      cpp.prepare(test_image, 1)
       cpp(cpp_bb, cpp_feat, 0)
 
       self.assertEqual(numpy.count_nonzero(py_feat - cpp_feat), 0)
@@ -51,7 +51,7 @@ class ExtractorTests(unittest.TestCase):
       py.set_model(feature_indices = indices)
       py.extract_single(py_bb, py_some)
 
-      cpp.model_indices = numpy.array(indices)
+      cpp.model_indices = numpy.array(indices, numpy.int32)
       cpp(cpp_bb, cpp_some)
 
       self.assertEqual(numpy.count_nonzero(py_some - cpp_some), 0)
@@ -87,10 +87,10 @@ class ExtractorTests(unittest.TestCase):
           py_feat = numpy.ndarray((1,feature_length), dtype=numpy.uint16)
           cpp_feat = numpy.ndarray((1,feature_length), dtype=numpy.uint16)
 
-          py.prepare(test_image)
+          py.prepare(test_image, 1)
           py.extract(py_bb, py_feat, 0)
 
-          cpp.prepare(test_image)
+          cpp.prepare(test_image, 1)
           cpp(cpp_bb, cpp_feat, 0)
 
           self.assertEqual(numpy.count_nonzero(py_feat - cpp_feat), 0)
@@ -103,7 +103,7 @@ class ExtractorTests(unittest.TestCase):
           py.set_model(feature_indices = indices)
           py.extract_single(py_bb, py_some)
 
-          cpp.model_indices = numpy.array(indices)
+          cpp.model_indices = numpy.array(indices, numpy.int32)
           cpp(cpp_bb, cpp_some)
 
           self.assertEqual(numpy.count_nonzero(py_some - cpp_some), 0)

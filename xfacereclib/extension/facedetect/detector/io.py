@@ -15,7 +15,7 @@ def load(filename):
   is_cpp = not f.has_attribute("Class")
   if is_cpp:
     extractor = FeatureExtractor(f)
-    extractor.model_indices = model.feature_indices().astype(numpy.int64)
+    extractor.model_indices = model.indices
   else:
     extractor = load_features(f)
     extractor.set_model(model)

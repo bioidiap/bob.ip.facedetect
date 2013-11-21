@@ -3,6 +3,7 @@ from boundingbox import BoundingBox, bounding_box_from_annotation, prune
 from ..detector import LBPFeatures, MBLBPFeatures
 import bob
 import facereclib
+import xbob.db.detection.utils
 import xbob.db.verification.utils
 
 
@@ -62,8 +63,10 @@ def test_image_annot(databases, protocols, limit):
     if isinstance(db, facereclib.databases.DatabaseXBob):
       db = db.m_database
 
+    orig_files = db.test_files(protocol=protocol)
+    orig_files = [orig_files[t] for t in facereclib.utils.quasi_random_indices(len(orig_files), limit)]
     # collect image name and annotations
-    test_files.extend([(db.original_file_name(f), _annotations(db,f), f) for f in db.test_files(protocol=protocol)])
+    test_files.extend([(db.original_file_name(f), _annotations(db,f), f) for f in orig_files])
 
   test_files = [test_files[t] for t in facereclib.utils.quasi_random_indices(len(test_files), limit)]
 

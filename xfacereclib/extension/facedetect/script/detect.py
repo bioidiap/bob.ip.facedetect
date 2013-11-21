@@ -52,6 +52,8 @@ def main(command_line_arguments = None):
   # iterate over the test files and detect the faces
   i = 1
   with open(args.score_file, 'w') as f:
+    # write configuration
+    f.write("# --trained-file %s --distance %d --scale-base %f ---first-scale %s --detection-threshold %f\n" % (args.trained_file, args.distance, args.scale_base, args.first_scale, args.detection_threshold))
     for filename, annotations, file in test_files:
       facereclib.utils.info("Loading image %d of %d from file '%s'" % (i, len(test_files), filename))
       i += 1

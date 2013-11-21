@@ -45,7 +45,7 @@ def lbp_variant(cls, variants, overlap, scale, square, cpp):
   else:
     if scale:
       if cls == 'MBLBP':
-        res['lbp_extractors'] = [bob.ip.LBP(8, block_size=(scale,scale), overlap=(scale-1, scale-1) if overlap else (0,0))]
+        res['lbp_extractors'] = [bob.ip.LBP(8, block_size=(scale,scale), block_overlap=(scale-1, scale-1) if overlap else (0,0))]
       else:
         res['lbp_extractors'] = [bob.ip.LBP(8, radius=scale, **res)]
 
@@ -65,6 +65,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--lbp-scale', '-L', type=int, help="If given, only a single LBP extractor with the given LBP scale will be extracted, otherwise all possible scales are generated taken.")
   parser.add_argument('--lbp-square', '-Q', action='store_true', help="Generate only square feature extractors, and no rectangular ones.")
 
+  parser.add_argument('--parallel', '-P', default=1, type=int, help = "The number of parallel threads to use for feature extraction.")
   parser.add_argument('--training-rounds', '-r', default=10, type=int, help = "The number of rounds to perform training during bootstrapping.")
   parser.add_argument('--bootstrapping-rounds', '-R', default=10, type=int, help = "The number of bootstrapping rounds to perform.")
   parser.add_argument('--patch-size', '-p', type=int, nargs=2, default=(24,20), help = "The size of the patch for the image in y and x.")
@@ -94,7 +95,7 @@ def main(command_line_arguments = None):
   training_files = utils.training_image_annot(args.databases, args.limit_training_files)
 
   # create the training set
-  sampler = Sampler(patch_size=args.patch_size, scale_factor=args.scale_base, first_scale=args.first_scale, distance=args.distance, similarity_thresholds=args.similarity_thresholds, cpp_implementation=args.lbp_cpp_implementation)
+  sampler = Sampler(patch_size=args.patch_size, scale_factor=args.scale_base, first_scale=args.first_scale, distance=args.distance, similarity_thresholds=args.similarity_thresholds, cpp_implementation=args.lbp_cpp_implementation, number_of_parallel_threads=args.parallel)
   preprocessor = facereclib.preprocessing.NullPreprocessor()
 
   facereclib.utils.info("Loading %d training images" % len(training_files))

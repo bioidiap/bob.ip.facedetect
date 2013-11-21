@@ -3,7 +3,7 @@ import numpy
 import bob
 import facereclib
 import os
-from .save import save
+from .io import save
 
 class Bootstrap:
   """This class deals with selecting new training examples for each boosting round."""
@@ -29,7 +29,7 @@ class Bootstrap:
       is_cpp = not hasattr(feature_extractor, "set_model")
       save("%s_round_%d.hdf5" % (os.path.splitext(filename)[0], b+1), model, feature_extractor, is_cpp)
       if is_cpp:
-        feature_extractor.model_indices = model.feature_indices().astype(numpy.int64)
+        feature_extractor.model_indices = model.indices
       else:
         feature_extractor.set_model(model)
 

@@ -43,7 +43,7 @@ class LBPFeatures:
       self._feature_indices = range(len(self._lut))
     elif feature_indices is None:
       # extract only the features used by the model
-      self._feature_indices = model.feature_indices()
+      self._feature_indices = model.indices
     else:
       self._feature_indices = feature_indices
 
@@ -54,9 +54,9 @@ class LBPFeatures:
     return self.m_lbps[0].max_label
 
 
-  def prepare(self, image):
+  def prepare(self, image, scale):
     """Simply stores the image for later use."""
-    self._image = image
+    self._image = bob.ip.scale(image, scale)
 
 
   def _extract_image_patch(self, bb):
@@ -122,11 +122,12 @@ class MBLBPFeatures (LBPFeatures):
     self.set_model(model)
 
 
-  def prepare(self, image):
+  def prepare(self, image, scale):
     """Computes the integral image for the given image."""
     # compute the integral image for the given image
-    self._integral_image.resize(image.shape[0]+1, image.shape[1]+1)
-    bob.ip.integral(image, self._integral_image, True)
+    scaled_image = bob.ip.scale(image, scale)
+    self._integral_image.resize(scaled_image.shape[0]+1, scaled_image.shape[1]+1)
+    bob.ip.integral(scaled_image, self._integral_image, True)
 
 
   def _extract_image_patch(self, bb):

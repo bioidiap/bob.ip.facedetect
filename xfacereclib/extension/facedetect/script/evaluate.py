@@ -104,8 +104,8 @@ def read_score_file(filename):
   with open(filename) as f:
     while f:
       line = f.readline().rstrip()
-      if not len(line):
-        break
+      if not len(line): break
+      if line[0] == '#': continue
       face_count = int(line.split()[-1])
       ground_truth += face_count
       # for each face in the image, get the detection scores
