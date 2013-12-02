@@ -117,8 +117,60 @@ void FeatureExtractor::init(){
   }
 }
 
+double FeatureExtractor::mean(const BoundingBox& boundingBox) const{
+  int t = boundingBox.top(), b = boundingBox.bottom(), l = boundingBox.left(), r = boundingBox.right();
+  // compute the mean using the integral image
+  double sum = m_integralImage(t, l)
+             + m_integralImage(b, r)
+             - m_integralImage(t, r)
+             - m_integralImage(b, l);
 
-void FeatureExtractor::extract_all(const BoundingBox& boundingBox, blitz::Array<uint16_t,2>& dataset, int datasetIndex) const{
+  double pixelCount = boundingBox.area();
+
+  return sum / pixelCount;
+}
+
+
+double FeatureExtractor::variance(const BoundingBox& boundingBox) const{
+  int t = boundingBox.top(), b = boundingBox.bottom(), l = boundingBox.left(), r = boundingBox.right();
+  // compute the variance using the integral image and the integral square image
+  double square = m_integralSquareImage(t, l)
+                + m_integralSquareImage(b, r)
+                - m_integralSquareImage(t, r)
+                - m_integralSquareImage(b, l);
+
+  double sum = m_integralImage(t, l)
+             + m_integralImage(b, r)
+             - m_integralImage(t, r)
+             - m_integralImage(b, l);
+
+  double pixelCount = boundingBox.area();
+
+  return (square - sum*sum/pixelCount) / (pixelCount-1);
+}
+
+
+blitz::TinyVector<double,2> FeatureExtractor::meanAndVariance(const BoundingBox& boundingBox) const{
+  int t = boundingBox.top(), b = boundingBox.bottom(), l = boundingBox.left(), r = boundingBox.right();
+  // compute the variance using the integral image and the integral square image
+  double square = m_integralSquareImage(t, l)
+                + m_integralSquareImage(b, r)
+                - m_integralSquareImage(t, r)
+                - m_integralSquareImage(b, l);
+
+  double sum = m_integralImage(t, l)
+             + m_integralImage(b, r)
+             - m_integralImage(t, r)
+             - m_integralImage(b, l);
+
+  double pixelCount = boundingBox.area();
+
+  return blitz::TinyVector<double,2>(sum / pixelCount, (square - sum*sum/pixelCount) / (pixelCount-1));
+}
+
+
+
+void FeatureExtractor::extractAll(const BoundingBox& boundingBox, blitz::Array<uint16_t,2>& dataset, int datasetIndex) const{
   // extract full feature set
   if (m_isMultiBlock){
     blitz::Array<double,2> subwindow = m_integralImage(blitz::Range(boundingBox.top(), boundingBox.bottom()+1), blitz::Range(boundingBox.left(), boundingBox.right()+1));
@@ -141,20 +193,26 @@ void FeatureExtractor::extract_all(const BoundingBox& boundingBox, blitz::Array<
   }
 }
 
-void FeatureExtractor::extract_some(const BoundingBox& boundingBox, blitz::Array<uint16_t,1>& featureVector) const{
-  // extract only required data
+void FeatureExtractor::extractSome(const BoundingBox& boundingBox, blitz::Array<uint16_t,1>& featureVector) const{
   if (m_modelIndices.extent(0) == 0)
     throw std::runtime_error("Please set the model indices before calling this function!");
+  // extract only required data
+  return extractIndexed(boundingBox, featureVector, m_modelIndices);
+}
 
+void FeatureExtractor::extractIndexed(const BoundingBox& boundingBox, blitz::Array<uint16_t,1>& featureVector, const blitz::Array<int32_t,1>& indices) const{
+  if (indices.extent(0) == 0)
+    throw std::runtime_error("The given indices are empty!");
+  // extract only requested data
   if (m_isMultiBlock){
-    for (int i = m_modelIndices.extent(0); i--;){
-      int index = m_modelIndices(i);
+    for (int i = indices.extent(0); i--;){
+      int index = indices(i);
       const bob::ip::LBP& lbp = m_extractors[m_lookUpTable(index,0)];
       featureVector(index) = lbp.operator()(m_integralImage, boundingBox.top() + m_lookUpTable(index,1), boundingBox.left() + m_lookUpTable(index,2), true);
     }
   } else {
-    for (int i = m_modelIndices.extent(0); i--;){
-      int index = m_modelIndices(i);
+    for (int i = indices.extent(0); i--;){
+      int index = indices(i);
       const bob::ip::LBP& lbp = m_extractors[m_lookUpTable(index,0)];
       featureVector(index) = lbp.operator()(m_image, boundingBox.top() + m_lookUpTable(index,1), boundingBox.left() + m_lookUpTable(index,2));
     }
@@ -163,8 +221,8 @@ void FeatureExtractor::extract_some(const BoundingBox& boundingBox, blitz::Array
 
 void FeatureExtractor::load(bob::io::HDF5File& hdf5file){
   // get global information
-  m_patchSize[0] = hdf5file.read<int64_t>("PatchSize", 0);
-  m_patchSize[1] = hdf5file.read<int64_t>("PatchSize", 1);
+  m_patchSize[0] = hdf5file.read<int32_t>("PatchSize", 0);
+  m_patchSize[1] = hdf5file.read<int32_t>("PatchSize", 1);
 
   // get the LBP extractors
   m_extractors.clear();
@@ -176,12 +234,13 @@ void FeatureExtractor::load(bob::io::HDF5File& hdf5file){
     m_extractors.push_back(bob::ip::LBP(hdf5file));
     hdf5file.cd("..");
   }
+  m_isMultiBlock = m_extractors[0].isMultiBlockLBP();
   init();
 }
 
 void FeatureExtractor::save(bob::io::HDF5File& hdf5file) const{
   // set global information
-  blitz::Array<int64_t,1> t(2);
+  blitz::Array<int32_t,1> t(2);
   t(0) = m_patchSize[0];
   t(1) = m_patchSize[1];
   hdf5file.setArray("PatchSize", t);

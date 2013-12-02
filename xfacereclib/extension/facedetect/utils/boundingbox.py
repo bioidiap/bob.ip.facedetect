@@ -1,4 +1,5 @@
 import bob
+import numpy
 import facereclib
 import math
 
@@ -224,27 +225,32 @@ class BoundingBox:
     bob.ip.draw_box(image, self.left, self.top, self.right - self.left + 1, self.bottom - self.top + 1, color)
 
 
-def prune(detections, threshold=None):
+def prune(detections, predictions, threshold=None):
   """Removes overlapping detections, using the given detection overlap threshold."""
 
   # first, sort the detections based on their detection value
-  sorted_detections = sorted(detections, cmp=lambda x,y: cmp(x[0], y[0]), reverse=True)
+  so = sorted(zip(predictions,detections), cmp=lambda x,y: cmp(x[0], y[0]), reverse=True)
+  predictions = [d[0] for d in so]
+  detections = [d[1] for d in so]
 
   if threshold is None:
-    return sorted_detections
+    return (detections, predictions)
 
   # now, add detections as long as they don't overlap with previous detections
+  pruned_predictions = []
   pruned_detections = []
-  for value, detection in sorted_detections:
+  for prediction, detection in zip(predictions, detections):
     add = True
     # check if an overlap with previously added detections is found
-    for _, pruned in pruned_detections:
+    for pruned in pruned_detections:
       if detection.similarity(pruned) > threshold:
         # found overlap, so don't add
         add = False
         break;
     if add:
-      pruned_detections.append((value, detection))
+      pruned_predictions.append(prediction)
+      pruned_detections.append(detection)
 
-  return pruned_detections
+  return (pruned_detections, pruned_predictions)
+
 

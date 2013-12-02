@@ -58,6 +58,11 @@ class ExtractorTests(unittest.TestCase):
       for i in indices:
         self.assertEqual(cpp_some[i], cpp_feat[0,i])
 
+      cpp.extract_indexed(cpp_bb, cpp_some, numpy.array(indices, numpy.int32))
+      self.assertEqual(numpy.count_nonzero(py_some - cpp_some), 0)
+      for i in indices:
+        self.assertEqual(cpp_some[i], cpp_feat[0,i])
+
 
   def test02_multiple_LBP(self):
     # two bounding boxes (py and c++ version)
@@ -110,4 +115,8 @@ class ExtractorTests(unittest.TestCase):
           for i in indices:
             self.assertEqual(cpp_some[i], cpp_feat[0,i])
 
+          cpp.extract_indexed(cpp_bb, cpp_some, numpy.array(indices, numpy.int32))
+          self.assertEqual(numpy.count_nonzero(py_some - cpp_some), 0)
+          for i in indices:
+            self.assertEqual(cpp_some[i], cpp_feat[0,i])
 

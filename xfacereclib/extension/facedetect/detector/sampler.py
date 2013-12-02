@@ -15,7 +15,7 @@ import threading
 class Sampler:
   """This class generates and contains bounding boxes positive and negative examples used for face detection."""
 
-  def __init__(self, patch_size = (24,20), scale_factor = math.pow(2., -1./4.), first_scale = 0.5, distance = 2, similarity_thresholds = (0.3, 0.7), cpp_implementation=False, number_of_parallel_threads=1):
+  def __init__(self, patch_size = (24,20), scale_factor = math.pow(2., -1./4.), first_scale = 0.5, distance = 2, similarity_thresholds = (0.3, 0.7), mirror_samples=False, cpp_implementation=True, number_of_parallel_threads=1):
     """Generates an example extractor for the given patch size.
 
     Parameters:
@@ -52,6 +52,30 @@ class Sampler:
     self.m_distance = distance
     self.m_similarity_thresholds = similarity_thresholds
     self.m_number_of_parallel_threads = number_of_parallel_threads
+    self.m_mirror_samples = mirror_samples
+
+
+  def _scales(self, image):
+    current_scale_power = 0.
+    while True:
+      # scale the image
+      scale = self.m_first_scale * math.pow(self.m_scale_factor, current_scale_power)
+      current_scale_power += 1.
+      scaled_image_shape = bob.ip.get_scaled_output_shape(image, scale)
+      if scaled_image_shape[0] <= self.m_patch_box.bottom or scaled_image_shape[1] <= self.m_patch_box.right:
+        # image is too small since there is not enough space to put in the complete patch box
+        break
+
+      yield scale, scaled_image_shape
+
+
+  def _sample(self, scaled_image_shape):
+    """Returns an iterator that iterates over the sampled positions in the image."""
+    for y in range(0, scaled_image_shape[0]-self.m_patch_box.bottom-1, self.m_distance):
+      for x in range(0, scaled_image_shape[1]-self.m_patch_box.right-1, self.m_distance):
+        # create bounding box for the image
+        yield self.m_patch_box.shift(y,x)
+
 
 
   def add(self, image, ground_truth, number_of_positives_per_scale = None, number_of_negatives_per_scale = None):
@@ -66,16 +90,7 @@ class Sampler:
     self.m_positives.append([])
     self.m_negatives.append([])
 
-    current_scale_power = 0.
-    while True:
-      # scale the image
-      scale = self.m_first_scale * math.pow(self.m_scale_factor, current_scale_power)
-      current_scale_power += 1.
-
-      scaled_image_shape = bob.ip.get_scaled_output_shape(image, scale)
-      if scaled_image_shape[0] <= self.m_patch_box.bottom or scaled_image_shape[1] <= self.m_patch_box.right:
-        # image is too small since there is not enough space to put in the complete patch box
-        break
+    for scale, scaled_image_shape in self._scales(image):
 
 #      facereclib.utils.debug("Scaled image size %s" %str(scaled_image.shape))
       scaled_gt = [gt.scale(scale) for gt in ground_truth]
@@ -83,31 +98,27 @@ class Sampler:
       negatives = []
 
       # iterate over all possible positions in the image
-      for y in range(0, scaled_image_shape[0]-self.m_patch_box.bottom-1, self.m_distance):
-        for x in range(0, scaled_image_shape[1]-self.m_patch_box.right-1, self.m_distance):
-          # create bounding box for the image
-          bb = self.m_patch_box.shift(y,x)
-
-          # check if the patch is a positive example
-          positive = False
-          negative = True
-          for gt in scaled_gt:
-            similarity = bb.similarity(gt)
-            if similarity > self.m_similarity_thresholds[1]:
+      for bb in self._sample(scaled_image_shape):
+        # check if the patch is a positive example
+        positive = False
+        negative = True
+        for gt in scaled_gt:
+          similarity = bb.similarity(gt)
+          if similarity > self.m_similarity_thresholds[1]:
 #              facereclib.utils.debug("Found positive bounding box %s with similarity value %f" % (str(bb), similarity))
-              positive = True
-              break
+            positive = True
+            break
 
-            if similarity > self.m_similarity_thresholds[0]:
+          if similarity > self.m_similarity_thresholds[0]:
 #              facereclib.utils.debug("Rejecting negative bounding box %s  -- '%s' with similarity value %f" % (str(bb), str(gt), similarity))
-              negative = False
-              break
+            negative = False
+            break
 
-          if positive:
-            positives.append(bb)
-          elif negative:
-            negatives.append(bb)
-          # else: ignore patch
+        if positive:
+          positives.append(bb)
+        elif negative:
+          negatives.append(bb)
+        # else: ignore patch
 
       # at the end, add found patches
       self.m_scales[-1].append(scale)
@@ -115,9 +126,7 @@ class Sampler:
       self.m_negatives[-1].append([negatives[i] for i in facereclib.utils.quasi_random_indices(len(negatives), number_of_negatives_per_scale)])
 
 
-
-
-  def get(self, feature_extractor, model = None, maximum_number_of_positives = None, maximum_number_of_negatives = None, delete_samples = False):
+  def get(self, feature_extractor, model = None, maximum_number_of_positives = None, maximum_number_of_negatives = None, delete_samples = False, compute_means_and_variances = False):
 
     def _get_parallel(pos, neg, first, last):
       """Extracts the feature for the given set of feature type and return the model response"""
@@ -141,7 +150,7 @@ class Sampler:
             neg.append((model.forward_p(feature_vector), image_index, scale_index, bb_index))
 
 
-    def _extract_parallel(examples, bounding_boxes, dataset, first, last, offset):
+    def _extract_parallel(examples, bounding_boxes, dataset, first, last, offset, compute_means = False, means=[], variances=[]):
       last_image_index = -1
       last_scale_index = 1
       fex = feature_extractor.__class__(feature_extractor)
@@ -151,9 +160,14 @@ class Sampler:
         if last_scale_index != scale_index or last_image_index != image_index:
           last_scale_index = scale_index
           last_image_index = image_index
-          fex.prepare_p(self.m_images[image_index], self.m_scales[image_index][scale_index])
+          fex.prepare_p(self.m_images[image_index], self.m_scales[image_index][scale_index], compute_means_and_variances)
         # extract and append features
-        fex.extract_p(bounding_boxes[image_index][scale_index][bb_index], dataset, index + offset)
+        bb = bounding_boxes[image_index][scale_index][bb_index]
+        fex.extract_p(bb, dataset, index + offset)
+        if compute_means:
+          m,v = fex.mean_and_variance(bb)
+          means[index+offset] = m
+          variances[index+offset] = v
 
     def _get_all(pos_or_neg):
       for image_count in range(len(pos_or_neg)):
@@ -166,14 +180,18 @@ class Sampler:
     # get the maximum number of examples
     pos_count = len(list(_get_all(self.m_positives)))
     neg_count = len(list(_get_all(self.m_negatives)))
+    if self.m_mirror_samples:
+      pos_count *= 2
+      neg_count *= 2
     num_pos = pos_count if maximum_number_of_positives is None else min(maximum_number_of_positives, pos_count)
     num_neg = neg_count if maximum_number_of_negatives is None else min(maximum_number_of_negatives, neg_count)
 
-    facereclib.utils.info("Extracting %d (%d) positive and %d (%d) negative examples" % (num_pos, pos_count, num_neg, neg_count))
 
     # create feature and labels as required for training
     dataset = numpy.ndarray((num_pos + num_neg, feature_extractor.number_of_features), numpy.uint16)
     labels = numpy.ones((num_pos + num_neg, ), numpy.float64)
+    means = numpy.ndarray((num_pos/2 if self.m_mirror_samples else num_pos, ), numpy.float64)
+    variances = numpy.ndarray((num_pos/2 if self.m_mirror_samples else num_pos, ), numpy.float64)
 
     # get the positive and negative examples
     if model is None:
@@ -183,9 +201,11 @@ class Sampler:
 
       # simply compute a random subset of both lists
       # (for testing purposes, this is quasi-random)
-      used_positive_examples = [all_positive_examples[i] for i in facereclib.utils.quasi_random_indices(len(all_positive_examples), num_pos)]
-      used_negative_examples = [all_negative_examples[i] for i in facereclib.utils.quasi_random_indices(len(all_negative_examples), num_neg)]
+      used_positive_examples = [all_positive_examples[i] for i in facereclib.utils.quasi_random_indices(len(all_positive_examples), num_pos/2 if self.m_mirror_samples else num_pos)]
+      used_negative_examples = [all_negative_examples[i] for i in facereclib.utils.quasi_random_indices(len(all_negative_examples), num_neg/2 if self.m_mirror_samples else num_neg)]
     else:
+
+      facereclib.utils.info("Computing classification results for %d positive and %d negative training items" % (pos_count, neg_count))
       # compute the prediction error of the current classifier for all remaining
       if self.m_number_of_parallel_threads == 1:
 
@@ -215,6 +235,7 @@ class Sampler:
 
         parallel_positive_results = [[] for i in range(self.m_number_of_parallel_threads)]
         parallel_negative_results = [[] for i in range(self.m_number_of_parallel_threads)]
+        parallel_means = [[] for i in range(self.m_number_of_parallel_threads)]
 
         threads = [threading.Thread(target=_get_parallel, args=(parallel_positive_results[i], parallel_negative_results[i], indices[i], indices[i+1])) for i in range(self.m_number_of_parallel_threads)]
         [t.start() for t in threads]
@@ -224,11 +245,13 @@ class Sampler:
 
 
       # get the prediction errors (lowest for pos. class and highest for neg. class)
-      positive_values = sorted(positive_values)[:num_pos]
-      negative_values = sorted(negative_values, reverse=True)[:num_neg]
+      positive_values = sorted(positive_values)[:num_pos/2 if self.m_mirror_samples else num_pos]
+      negative_values = sorted(negative_values, reverse=True)[:num_neg/2 if self.m_mirror_samples else num_neg]
       used_positive_examples = [pos[1:] for pos in positive_values]
       used_negative_examples = [neg[1:] for neg in negative_values]
 
+
+    facereclib.utils.info("Extracting %d (%d) positive and %d (%d) negative examples" % (num_pos, pos_count, num_neg, neg_count))
 
     # We have decided, which patches to take,
     # Now, extract the features...
@@ -236,17 +259,34 @@ class Sampler:
       last_image_index = -1
       last_scale_index = -1
       i = 0
+      if self.m_mirror_samples:
+        mirror_extractor = feature_extractor.__class__(feature_extractor)
+        mirror_offset = len(used_positive_examples)
       # append positive examples
       for image_index, scale_index, bb_index in used_positive_examples:
         # prepare for this image, if it has changed
         if last_scale_index != scale_index or last_image_index != image_index:
           last_scale_index = scale_index
           last_image_index = image_index
-          feature_extractor.prepare(self.m_images[image_index], self.m_scales[image_index][scale_index])
+          feature_extractor.prepare(self.m_images[image_index], self.m_scales[image_index][scale_index], compute_means_and_variances)
+          if self.m_mirror_samples:
+            # prepare for the mirrored image
+            mirror_extractor.prepare(self.m_images[image_index][:,::-1].copy(), self.m_scales[image_index][scale_index])
         # extract and append features
-        feature_extractor.extract(self.m_positives[image_index][scale_index][bb_index], dataset, i)
+        bb = self.m_positives[image_index][scale_index][bb_index]
+        feature_extractor.extract(bb, dataset, i)
+        if self.m_mirror_samples:
+          mirror_extractor.extract(bb.mirror_x(mirror_extractor.image.shape[1]), dataset, i + mirror_offset)
+        if compute_means_and_variances:
+          m,v = feature_extractor.mean_and_variance(bb)
+          means[i] = m
+          variances[i] = v
         i += 1
 
+      if self.m_mirror_samples:
+        mirror_extractor = feature_extractor.__class__(feature_extractor)
+        i += mirror_offset
+        mirror_offset = len(used_negative_examples)
       # append negative examples
       for image_index, scale_index, bb_index in used_negative_examples:
         # prepare for this image, if it has changed
@@ -254,15 +294,22 @@ class Sampler:
           last_scale_index = scale_index
           last_image_index = image_index
           feature_extractor.prepare(self.m_images[image_index], self.m_scales[image_index][scale_index])
+          if self.m_mirror_samples:
+            # prepare for the mirrored image
+            mirror_extractor.prepare(self.m_images[image_index][:,::-1].copy(), self.m_scales[image_index][scale_index])
         # extract and append features
-        feature_extractor.extract(self.m_negatives[image_index][scale_index][bb_index], dataset, i)
+        bb = self.m_negatives[image_index][scale_index][bb_index]
+        feature_extractor.extract(bb, dataset, i)
         labels[i] = -1.
+        if self.m_mirror_samples:
+          mirror_extractor.extract(bb.mirror_x(mirror_extractor.image.shape[1]), dataset, i + mirror_offset)
+          labels[i + mirror_offset] = -1.
         i += 1
     else: # parallel implementation
       # positives
       number_of_indices = len(used_positive_examples)
       indices = [i * number_of_indices / self.m_number_of_parallel_threads for i in range(self.m_number_of_parallel_threads)] + [number_of_indices]
-      threads = [threading.Thread(target=_extract_parallel, args=(used_positive_examples, self.m_positives, dataset, indices[i], indices[i+1], 0)) for i in range(self.m_number_of_parallel_threads)]
+      threads = [threading.Thread(target=_extract_parallel, args=(used_positive_examples, self.m_positives, dataset, indices[i], indices[i+1], 0, compute_means_and_variances, means, variances)) for i in range(self.m_number_of_parallel_threads)]
       [t.start() for t in threads]
       [t.join() for t in threads]
 
@@ -285,36 +332,52 @@ class Sampler:
         del self.m_negatives[image_index][scale_index][bb_index]
 
     # return the collected features and labels
-    return (dataset, labels)
+    if compute_means_and_variances:
+      return (dataset, labels, means, variances)
+    else:
+      return (dataset, labels)
 
 
-  def iterate(self, image, feature_extractor):
-    """Scales the given image and extracts bounding boxes, computes the features for the given feature extractor and returns an ITERATOR returning a pair of bounding_box and feature.
+  def iterate(self, image, feature_extractor, feature_vector):
+    """Scales the given image and extracts bounding boxes, computes the features for the given feature extractor and returns an ITERATOR returning a the bounding_box.
     """
-
-    # for now, we just call the add function and return the latest results
-    assert not self.m_scales
-    assert not self.m_images
-    assert not self.m_positives
-    assert not self.m_negatives
-
-    self.add(image, [])
-
-    feature_vector = numpy.zeros(feature_extractor.number_of_features, numpy.uint16)
-    for boxes, scale in itertools.izip(self.m_negatives[0], self.m_scales[0]):
+    for scale, scaled_image_shape in self._scales(image):
       # prepare the feature extractor to extract features from the given image
       feature_extractor.prepare(image, scale)
-      # iterate over all boxes
-      for box in boxes:
+      for bb in self._sample(scaled_image_shape):
         # extract features for
-        feature_extractor.extract_single(box, feature_vector)
-        yield box.scale(1./scale), feature_vector
+        feature_extractor.extract_single(bb, feature_vector)
+        yield bb.scale(1./scale)
 
-    # at the end, clean up the mess
-    self.m_scales = []
-    self.m_images = []
-    self.m_positives = []
-    self.m_negatives = []
+
+  def cascade(self, image, feature_extractor, feature_vector, classifiers, indices = None, threshold = 0., mean=None, variance=None):
+    """Iterates over the given image and computes the cascade of classifiers."""
+    if indices is None:
+      indices = [c.indices for c in classifiers]
+
+    compute_mean_and_variance = mean!=None and variance!=None
+    for scale, scaled_image_shape in self._scales(image):
+      # prepare the feature extractor to extract features from the given image
+      feature_extractor.prepare(image, scale, compute_mean_and_variance)
+      for bb in self._sample(scaled_image_shape):
+        # check if we can reject the patch based on mean and variance
+        if compute_mean_and_variance:
+          m,v = feature_extractor.mean_and_variance(bb)
+          if v < variance[0] or v > variance[1] or m < mean[0] or m > mean[1]:
+            yield -100., None
+        # start cascade
+        global_result = 0.
+        for i in range(len(indices)):
+          feature_extractor.extract_indexed(bb, feature_vector, indices[i])
+          local_result = classifiers[i](feature_vector)
+          global_result += local_result
+          if global_result < threshold:
+#            facereclib.utils.debug("Rejecting patch %s after %d rounds with result %f" % (bb, i+1, global_result))
+            break
+
+        # return bounding box and result
+        yield global_result, bb.scale(1./scale)
+
 
 
   def _write(self, name="/scratch/mguenther/temp/examples/image_%i.png", write_positives = True, write_negatives = False):

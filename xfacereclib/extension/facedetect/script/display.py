@@ -1,3 +1,5 @@
+#!ipython
+
 
 import argparse
 import facereclib
@@ -38,7 +40,7 @@ def main(command_line_arguments = None):
 
   facereclib.utils.debug("Loading strong classifier from file %s" % args.trained_file)
   # load classifier and feature extractor
-  classifier, feature_extractor, is_cpp_extractor = detector.load(args.trained_file)
+  classifier, feature_extractor, is_cpp_extractor, mean, variance = detector.load(args.trained_file)
 
   sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, first_scale=args.first_scale, cpp_implementation=is_cpp_extractor)
 
@@ -48,32 +50,34 @@ def main(command_line_arguments = None):
     test_image = bob.ip.rgb_to_gray(test_image)
 
   detections = []
+  predictions = []
   # get the detection scores for the image
-  for bounding_box, features in sampler.iterate(test_image, feature_extractor):
-    prediction = classifier(features)
+  feature_vector = numpy.zeros(feature_extractor.number_of_features, numpy.uint16)
+  for bounding_box in sampler.iterate(test_image, feature_extractor, feature_vector):
+    prediction = classifier(feature_vector)
     if args.prediction_threshold is None or prediction > args.prediction_threshold:
-      detections.append((prediction, bounding_box))
+      detections.append(bounding_box)
+      predictions.append(prediction)
       facereclib.utils.debug("Found bounding box %s with value %f" % (str(bounding_box), prediction))
 
   # prune detections
-  detections = utils.prune(detections, args.prune_detections)
-
+  detections, predictions = utils.prune(detections, predictions, args.prune_detections)
 
   facereclib.utils.info("Number of (pruned) detections: %d" % len(detections))
-  highest_detection = detections[0][0]
-  facereclib.utils.info("Best detection with value %f at %s: " % (highest_detection, str(detections[0][1])))
+  highest_detection = predictions[0]
+  facereclib.utils.info("Best detection with value %f at %s: " % (highest_detection, str(detections[0])))
 
-  if not args.prediction_threshold:
+  if args.prediction_threshold is None:
     detections = detections[:1]
 
-  test_image = bob.io.load(args.test_image)
-  for detection in detections:
-    draw_bb(test_image, detection[1], (int(255. * detection[0] / highest_detection),0,0))
+  test_image = bob.ip.gray_to_rgb(test_image)
+  for detection, prediction in zip(detections, predictions):
+    color = (255,0,0) if args.prediction_threshold is None else (int(255. * (prediction - args.prediction_threshold) / (highest_detection-args.prediction_threshold)),0,0)
+    draw_bb(test_image, detection, color)
 
   import matplotlib.pyplot as mpl
 
   rolled = numpy.rollaxis(numpy.rollaxis(test_image, 2),2)
-  print test_image.shape, rolled.shape
 
   mpl.imshow(rolled)
   raw_input("Press Enter to continue...")

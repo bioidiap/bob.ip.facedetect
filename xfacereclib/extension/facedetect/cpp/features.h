@@ -16,8 +16,12 @@ class BoundingBox{
     BoundingBox shift(int y, int x) const {return BoundingBox(m_top + y, m_left + x, m_height, m_width);}
     // create boundingbox by scaling
     BoundingBox scale(double scale) const {return BoundingBox(irnd(m_top*scale), irnd(m_left*scale), irnd(m_height*scale), irnd(m_width*scale));}
+    // create a bounding box that is mirrored horizontically, adapted to the image width
+    BoundingBox mirrorX(int width) const {return BoundingBox(m_top, width - m_width - m_left, m_height, m_width);}
 
     BoundingBox overlap(const BoundingBox& other) const;
+
+    bool operator == (const BoundingBox& other){return top() == other.top() && left() == other.left() && height() == other.height() && width() == other.width();}
 
     // query functions
     int top() const {return m_top;}
@@ -28,7 +32,7 @@ class BoundingBox{
     int width() const {return m_width;}
     int area() const{return m_area;}
 
-    // Jesorsky distance between boundingh boxes
+    // Jesorsky distance between bounding boxes
     double similarity(const BoundingBox& other) const;
 
   private:
@@ -38,30 +42,7 @@ class BoundingBox{
     int m_area;
 };
 
-inline BoundingBox BoundingBox::overlap(const BoundingBox& other) const{
-  // compute intersection rectangle
-  int t = std::max(top(), other.top()),
-      b = std::min(bottom(), other.bottom()),
-      l = std::max(left(), other.left()),
-      r = std::min(right(), other.right());
-  return BoundingBox(t, l, b-t+1, r-l+1);
-}
-
-inline double BoundingBox::similarity(const BoundingBox& other) const{
-  // compute intersection rectangle
-  double t = std::max(top(), other.top()),
-         b = std::min(bottom(), other.bottom()),
-         l = std::max(left(), other.left()),
-         r = std::min(right(), other.right());
-
-  // no overlap?
-  if (l > r || t > b) return 0.;
-
-  // compute overlap
-  double intersection = (b-t+1) * (r-l+1);
-  return intersection / (area() + other.area() - intersection);
-}
-
+void pruneDetections(const std::vector<BoundingBox>& detections, const blitz::Array<double, 1>& predictions, double threshold, std::vector<BoundingBox>& pruned_boxes, blitz::Array<double, 1>& pruned_weights);
 
 class FeatureExtractor{
 
@@ -91,13 +72,21 @@ class FeatureExtractor{
     uint16_t getMaxLabel() const {return m_extractors[0].getMaxLabel();}
 
     template <typename T>
-      void prepare(const blitz::Array<T,2>& image, double scale);
+      void prepare(const blitz::Array<T,2>& image, double scale, bool computeIntegralSquareImage);
+
+    // the prepared image
+    const blitz::Array<double,2>& getImage() const {return m_image;}
 
     // Extract the features
-    void extract_all(const BoundingBox& boundingBox, blitz::Array<uint16_t,2>& dataset, int datasetIndex) const;
+    void extractAll(const BoundingBox& boundingBox, blitz::Array<uint16_t,2>& dataset, int datasetIndex) const;
 
-    void extract_some(const BoundingBox& boundingBox, blitz::Array<uint16_t,1>& featureVector) const;
+    void extractSome(const BoundingBox& boundingBox, blitz::Array<uint16_t,1>& featureVector) const;
 
+    void extractIndexed(const BoundingBox& boundingBox, blitz::Array<uint16_t,1>& featureVector, const blitz::Array<int32_t,1>& indices) const;
+
+    double mean(const BoundingBox& boundingBox) const;
+    double variance(const BoundingBox& boundingBox) const;
+    blitz::TinyVector<double,2> meanAndVariance(const BoundingBox& boundingBox) const;
 
   private:
 
@@ -105,7 +94,7 @@ class FeatureExtractor{
 
     // look up table storing three information: lbp index, offset y, offset x
     blitz::TinyVector<int,2> m_patchSize;
-    blitz::Array<uint8_t,2> m_lookUpTable;
+    blitz::Array<int,2> m_lookUpTable;
 
     std::vector<bob::ip::LBP> m_extractors;
 
@@ -114,22 +103,28 @@ class FeatureExtractor{
 
     blitz::Array<double,2> m_image;
     blitz::Array<double,2> m_integralImage;
+    blitz::Array<double,2> m_integralSquareImage;
 
     mutable std::vector<blitz::Array<uint16_t,2> > m_featureImages;
     bool m_isMultiBlock;
 };
 
 template <typename T>
-  inline void FeatureExtractor::prepare(const blitz::Array<T,2>& image, double scale){
+  inline void FeatureExtractor::prepare(const blitz::Array<T,2>& image, double scale, bool computeIntegralSquareImage){
     // TODO: implement different MB-LBP behaviour here (i.e., scaling the LBP's instead of scaling the image)
 
     // scale image
     m_image.resize(bob::ip::getScaledShape<T>(image, scale));
     bob::ip::scale(image, m_image);
-    if (m_isMultiBlock){
+    if (m_isMultiBlock or computeIntegralSquareImage){
       // compute integral image of scaled image
       m_integralImage.resize(m_image.extent(0)+1, m_image.extent(1)+1);
-      bob::ip::integral<double>(m_image, m_integralImage, true);
+      if (computeIntegralSquareImage){
+        m_integralSquareImage.resize(m_integralImage.extent(0), m_integralImage.extent(1));
+        bob::ip::integral<double>(m_image, m_integralImage, m_integralSquareImage, true);
+      } else {
+        bob::ip::integral<double>(m_image, m_integralImage, true);
+      }
     }
   }
 

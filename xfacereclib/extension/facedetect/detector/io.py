@@ -19,12 +19,20 @@ def load(filename):
   else:
     extractor = load_features(f)
     extractor.set_model(model)
+
+  # check if mean and variance is stored
+  f.cd("/")
+  mean, variance = None, None
+  if f.has_key('mean') and f.has_key('variance'):
+    mean = f.read("mean")
+    variance = f.read("variance")
+
   del f
 
-  return (model, extractor, is_cpp)
+  return (model, extractor, is_cpp, mean, variance)
 
 
-def save(filename, model, extractor, is_cpp=True):
+def save(filename, model, extractor, is_cpp=True, mean=None, variance=None):
   facereclib.utils.ensure_dir(os.path.dirname(filename))
   f = bob.io.HDF5File(filename, 'w')
   f.create_group("Machine")
@@ -36,5 +44,10 @@ def save(filename, model, extractor, is_cpp=True):
     extractor.save(f)
   else:
     save_features(extractor, f)
+  if mean is not None and variance is not None:
+    f.cd("/")
+    f.set("mean", numpy.array(mean))
+    f.set("variance", numpy.array(variance))
+
   del f
 

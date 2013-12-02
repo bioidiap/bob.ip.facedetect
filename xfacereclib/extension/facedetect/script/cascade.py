@@ -20,9 +20,12 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--distance', '-s', type=int, default=4, help = "The distance with which the image should be scanned.")
   parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./4.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--first-scale', '-f', type=float, default = 0.5, help = "The first scale of the image to consider (should be between 0 and 1, higher values will slow down the detection process).")
-  parser.add_argument('--trained-file', '-r', default = 'detector.hdf5', help = "The file to write the resulting trained detector into.")
-  parser.add_argument('--prediction-threshold', '-t', type = float, help = "If given, detections with values below this threshold will not be handled further.")
-  parser.add_argument('--score-file', '-w', default='detection_scores.txt', help = "The score file to be written.")
+  parser.add_argument('--trained-file', '-r', default = 'detector.hdf5', help = "The file to read the trained detector from.")
+  parser.add_argument('--classifiers-per-round', '-n', type=int, default=25, help = "The number of classifiers that should be applied in each cascade.")
+  parser.add_argument('--limit-by-variance', '-V', action='store_false', help = "Disable the mean/variance limitation.")
+  parser.add_argument('--cascade-threshold', '-t', type=float, default=0., help = "Detections with values below this threshold will be discarded in each round.")
+  parser.add_argument('--prediction-threshold', '-T', type=float, help = "Detections with values below this threshold will be rejected by by the complete detector.")
+  parser.add_argument('--score-file', '-w', default='cascaded_scores.txt', help = "The score file to be written.")
   parser.add_argument('--prune-detections', '-p', type=float, help = "If given, detections that overlap with the given threshold are pruned")
   parser.add_argument('--detection-threshold', '-j', type=float, default=0.5, help = "The overlap from Ground Truth for which a detection should be considered as successful")
 
@@ -47,6 +50,18 @@ def main(command_line_arguments = None):
   classifier, feature_extractor, is_cpp_extractor, mean, variance = detector.load(args.trained_file)
   feature_vector = numpy.zeros(feature_extractor.number_of_features, numpy.uint16)
 
+  if not args.limit_by_variance:
+    mean, variance = None, None
+
+  # split the classifier and the feature extractor into cascades
+  indices = range(0, len(classifier.weak_machines), args.classifiers_per_round)
+  if indices[-1] != len(classifier.weak_machines): indices.append(len(classifier.weak_machines))
+  cascade = []
+  model_indices = []
+  for i in range(len(indices)-1):
+    cascade.append(classifier.__class__(classifier.weak_machines[indices[i]:indices[i+1]], classifier.weights[indices[i]:indices[i+1], 0]))
+    model_indices.append(classifier.feature_indices(indices[i], indices[i+1]))
+
   # create the test examples
   preprocessor = facereclib.preprocessing.NullPreprocessor()
   sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, first_scale=args.first_scale, cpp_implementation=is_cpp_extractor)
@@ -55,7 +70,7 @@ def main(command_line_arguments = None):
   i = 1
   with open(args.score_file, 'w') as f:
     # write configuration
-    f.write("# --trained-file %s --distance %d --scale-base %f ---first-scale %s --detection-threshold %f --prune-detections %s\n" % (args.trained_file, args.distance, args.scale_base, args.first_scale, args.detection_threshold, "%f" args.prune_detections if args.prune_detections is not None else "None"))
+    f.write("# --trained-file %s --distance %d --scale-base %f --first-scale %s --cascade-threshold %f --prediction-threshold %s --detection-threshold %f\n" % (args.trained_file, args.distance, args.scale_base, args.first_scale, args.cascade_threshold, "None" if args.prediction_threshold is None else "%f" % args.prediction_threshold, args.detection_threshold))
     for filename, annotations, file in test_files:
       facereclib.utils.info("Loading image %d of %d from file '%s'" % (i, len(test_files), filename))
       i += 1
@@ -64,18 +79,16 @@ def main(command_line_arguments = None):
       # get the detection scores for the image
       predictions = []
       detections = []
-      for bounding_box in sampler.iterate(image, feature_extractor, feature_vector):
-        prediction = classifier(feature_vector)
+      for prediction, bounding_box in sampler.cascade(image, feature_extractor, feature_vector, cascade, model_indices, threshold = args.cascade_threshold, mean = mean, variance = variance):
         if args.prediction_threshold is None or prediction > args.prediction_threshold:
           predictions.append(prediction)
           detections.append(bounding_box)
-#          facereclib.utils.debug("Found bounding box %s with value %f" % (str(bounding_box), prediction))
 
       facereclib.utils.info("Number of detections: %d" % len(detections))
 
       # prune detections
-      detections, predictions = utils.prune(detections, predictions, args.prune_detections)
-      facereclib.utils.info("Number of pruned detections: %d" % len(predictions))
+      detections, predictions = utils.prune(detections, numpy.array(predictions), args.prune_detections)
+      facereclib.utils.info("Number of pruned detections: %d" % len(detections))
 
       # get ground truth bounding boxes from annotations
       if is_cpp_extractor:

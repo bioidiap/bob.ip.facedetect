@@ -15,10 +15,18 @@ class Bootstrap:
   def __call__(self, trainer, sampler, feature_extractor, model = None, filename="bootstrapped_model.hdf5"):
     training_data = numpy.ndarray((0,feature_extractor.number_of_features), numpy.uint16)
     training_labels = numpy.ndarray((0,), numpy.float64)
+    mean = None
+    variance = None
     for b in range(self.m_number_of_rounds):
       # get new data
       facereclib.utils.info("Getting new data for bootstrapping round %d" % (b+1))
-      new_data, new_labels = sampler.get(feature_extractor, model, self.m_number_of_positive_examples_per_round, self.m_number_of_negative_examples_per_round, True)
+      new_data, new_labels, new_means, new_variances = sampler.get(feature_extractor, model, self.m_number_of_positive_examples_per_round, self.m_number_of_negative_examples_per_round, delete_samples=True, compute_means_and_variances=True)
+      if mean is None:
+        mean = (min(new_means), max(new_means))
+        variance = (min(new_variances), max(new_variances))
+      elif new_means.size:
+        mean = (min(min(new_means), mean[0]), max(max(new_means), mean[1]))
+        variance = (min(min(new_variances), variance[0]), max(max(new_variances), variance[1]))
       training_data = numpy.append(training_data, new_data, axis=0)
       training_labels = numpy.append(training_labels, new_labels)
 
@@ -27,11 +35,11 @@ class Bootstrap:
 
       # write model and extractor to temporary file to be able to catch up later
       is_cpp = not hasattr(feature_extractor, "set_model")
-      save("%s_round_%d.hdf5" % (os.path.splitext(filename)[0], b+1), model, feature_extractor, is_cpp)
+      save("%s_round_%d.hdf5" % (os.path.splitext(filename)[0], b+1), model, feature_extractor, is_cpp, mean, variance)
       if is_cpp:
         feature_extractor.model_indices = model.indices
       else:
         feature_extractor.set_model(model)
 
     # finally, return the trained model
-    return model
+    return model, mean, variance

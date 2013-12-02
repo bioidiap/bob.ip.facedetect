@@ -86,6 +86,7 @@ setup(
         'xfacereclib.extension.facedetect._features',
         [
           "xfacereclib/extension/facedetect/cpp/features.cpp",
+          "xfacereclib/extension/facedetect/cpp/boundingbox.cpp",
           "xfacereclib/extension/facedetect/cpp/bindings.cpp",
         ],
         pkgconfig = [
@@ -143,19 +144,24 @@ setup(
       'console_scripts': [
         'train.py = xfacereclib.extension.facedetect.script.train:main',
         'bootstrap.py = xfacereclib.extension.facedetect.script.bootstrap:main',
-        'test.py = xfacereclib.extension.facedetect.script.test:main',
-        'detect.py = xfacereclib.extension.facedetect.script.detect:main',
-        'froc.py = xfacereclib.extension.facedetect.script.evaluate:main',
         'display.py = xfacereclib.extension.facedetect.script.display:main',
+        'detect.py = xfacereclib.extension.facedetect.script.detect:main',
+        'cascade.py = xfacereclib.extension.facedetect.script.cascade:main',
+        'froc.py = xfacereclib.extension.facedetect.script.evaluate:main',
       ],
 
       # registered database short cuts
       'facereclib.database': [
+        'bioid             = xfacereclib.extension.facedetect.databases.bioid:database',
+        'caltech           = xfacereclib.extension.facedetect.databases.caltech:database',
         'cinema            = xfacereclib.extension.facedetect.databases.cinema:database',
-        'cmu               = xfacereclib.extension.facedetect.databases.cmu:database',
+        'mit-cmu           = xfacereclib.extension.facedetect.databases.cmu:database',
         'fddb              = xfacereclib.extension.facedetect.databases.fddb:database',
+        'fdhd              = xfacereclib.extension.facedetect.databases.fdhd:database',
         'mash              = xfacereclib.extension.facedetect.databases.mash:database',
         'ofd               = xfacereclib.extension.facedetect.databases.ofd:database',
+        'cmu-pie           = xfacereclib.extension.facedetect.databases.pie:database',
+        'yale-b            = xfacereclib.extension.facedetect.databases.yale_b:database',
         'web               = xfacereclib.extension.facedetect.databases.web:database',
       ],
 

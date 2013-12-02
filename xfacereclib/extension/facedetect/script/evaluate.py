@@ -52,11 +52,16 @@ def command_line_arguments(command_line_parameters):
       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('-d', '--files', required=True, nargs='+', help = "A list of score files to evaluate.")
+  parser.add_argument('-b', '--baselines', nargs='+', help = "A list of baseline results to add to the plot")
 
-  parser.add_argument('-s', '--directory', default = '.', help = "A directory, where to find the --dev-files and the --eval-files")
+  parser.add_argument('-D', '--directory', default = '.', help = "A directory, where to find the --files")
+  parser.add_argument('-B', '--baseline-directory', default = '.', help = "A directory, where to find the --baselines")
 
-  parser.add_argument('-l', '--legends', nargs='+', help = "A list of legend strings used for ROC, CMC and DET plots; if given, must be the same number than --dev-files.")
+  parser.add_argument('-l', '--legends', nargs='+', help = "A list of legend strings used for ROC, CMC and DET plots; if given, must be the same number than --files plus --baselines.")
   parser.add_argument('-F', '--froc', default = 'FROC.pdf', help = "If given, FROC curves will be plotted into the given pdf file.")
+  parser.add_argument('-c', '--count-detections', action='store_true', help = "Counts the number of detections (positive is higher than negative, per file).")
+  parser.add_argument('-n', '--max', type=int, nargs=2, default=(160,70), help = "The highest false alarms and the lowest detection rate to plot")
+  parser.add_argument('-t', '--title', default='FROC', help = "The title of the plot")
 
   parser.add_argument('--self-test', action='store_true', help=argparse.SUPPRESS)
 
@@ -67,17 +72,19 @@ def command_line_arguments(command_line_parameters):
 
   facereclib.utils.set_verbosity_level(args.verbose)
 
-  if args.legends and len(args.files) != len(args.legends):
-    facereclib.utils.error("The number of --dev-files (%d) and --legends (%d) are not identical" % (len(args.files), len(args.legends)))
+  if args.legends is not None:
+    count = len(args.files) + (len(args.baselines) if args.baselines is not None else 0)
+    if len(args.legends) != count:
+      facereclib.utils.error("The number of --files (%d) plus --baselines (%d) must be the same as --legends (%d)" % (len(args.files), len(args.baselines) if args.baselines else 0, len(args.legends)))
+      args.legends = None
 
   # update legends when they are not specified on command line
   if args.legends is None:
-    args.legends = args.files
-
+    args.legends = args.files if not args.baselines else args.files + args.baselines
 
   return args
 
-def _plot_froc(fa, dr, colors, labels, title):
+def _plot_froc(fa, dr, colors, labels, title, max_r):
   figure = mpl.figure()
   # plot FAR and FRR for each algorithm
   for i in range(len(fa)):
@@ -85,16 +92,48 @@ def _plot_froc(fa, dr, colors, labels, title):
 
   # finalize plot
 #  mpl.xticks((1, 10, 100, 1000, 10000), ('1', '10', '100', '1000', '10000'))
-  mpl.xticks([100*i for i in range(11)])
+#  mpl.xticks([100*i for i in range(11)])
   mpl.xlabel('False Alarm')
   mpl.ylabel('Detection Rate (\%)')
 #  mpl.xlim((0.1, 100000))
-  mpl.xlim((0, 1000))
+  mpl.xlim((0, max_r[0]))
+  mpl.ylim((max_r[1], 100))
   mpl.grid(True, color=(0.6,0.6,0.6))
   mpl.legend(loc=4)
   mpl.title(title)
 
   return figure
+
+
+def count_detections(filename):
+  detections = 0
+  faces = 0
+  with open(filename) as f:
+    while f:
+      line = f.readline().rstrip()
+      if not len(line): break
+      if line[0] == '#': continue
+      face_count = int(line.split()[-1])
+      faces += face_count
+      # for each face in the image, get the detection scores
+      positives = []
+      for c in range(face_count):
+        splits = f.readline().rstrip().split()
+        # here, we only take the first value as detection score
+        if len(splits):
+          positives.append(float(splits[0]))
+      # now, read negative scores
+      splits = f.readline().rstrip().split()
+      if len(splits):
+        negative = float(splits[0])
+        for positive in positives:
+          if positive > negative:
+            detections += 1
+      else:
+        detections += face_count
+
+  return (detections, faces)
+
 
 
 def read_score_file(filename):
@@ -128,7 +167,8 @@ def main(command_line_parameters=None):
 
   # get some colors for plotting
   cmap = mpl.cm.get_cmap(name='hsv')
-  colors = [cmap(i) for i in numpy.linspace(0, 1.0, len(args.files)+1)]
+  count = len(args.files) + (len(args.baselines) if args.baselines else 0)
+  colors = [cmap(i) for i in numpy.linspace(0, 1.0, count+1)]
 
   # First, read the score files
   facereclib.utils.info("Loading %d score files" % len(args.files))
@@ -152,10 +192,28 @@ def main(command_line_parameters=None):
     # to display 0 in a semilogx plot, we have to add a little
 #    false_alarms[-1][-1] += 1e-8
 
+  # also read baselines
+  if args.baselines is not None:
+    for baseline in args.baselines:
+      dr = []
+      fa = []
+      with open(os.path.join(args.baseline_directory, baseline)) as f:
+        for line in f:
+          splits = line.rstrip().split()
+          dr.append(float(splits[0]))
+          fa.append(int(splits[1]))
+      false_alarms.append(fa)
+      detection_rate.append(dr)
+
   facereclib.utils.info("Plotting FROC curves to file '%s'" % args.froc)
   # create a multi-page PDF for the ROC curve
   pdf = PdfPages(args.froc)
   # create a separate figure for dev and eval
-  pdf.savefig(_plot_froc(false_alarms, detection_rate, colors, args.legends, 'FROC'))
+  pdf.savefig(_plot_froc(false_alarms, detection_rate, colors, args.legends, args.title, args.max))
   pdf.close()
+
+  if args.count_detections:
+    for i, f in enumerate(args.files):
+      det, all = count_detections(f)
+      print("The number of detected faces for %s is %d out of %d" % (args.legends[i], det, all))
 
