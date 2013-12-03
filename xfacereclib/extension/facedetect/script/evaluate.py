@@ -52,13 +52,15 @@ def command_line_arguments(command_line_parameters):
       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('-d', '--files', required=True, nargs='+', help = "A list of score files to evaluate.")
-  parser.add_argument('-b', '--baselines', nargs='+', help = "A list of baseline results to add to the plot")
+  parser.add_argument('-b', '--baselines', default=[], nargs='+', help = "A list of baseline results to add to the plot")
 
   parser.add_argument('-D', '--directory', default = '.', help = "A directory, where to find the --files")
   parser.add_argument('-B', '--baseline-directory', default = '.', help = "A directory, where to find the --baselines")
 
+  parser.add_argument('-R', '--auto-baselines', choices = ('bioid', 'mit-cmu'), help = "Automatically add the baselines for the given database")
+
   parser.add_argument('-l', '--legends', nargs='+', help = "A list of legend strings used for ROC, CMC and DET plots; if given, must be the same number than --files plus --baselines.")
-  parser.add_argument('-F', '--froc', default = 'FROC.pdf', help = "If given, FROC curves will be plotted into the given pdf file.")
+  parser.add_argument('-w', '--output', default = 'FROC.pdf', help = "If given, FROC curves will be plotted into the given pdf file.")
   parser.add_argument('-c', '--count-detections', action='store_true', help = "Counts the number of detections (positive is higher than negative, per file).")
   parser.add_argument('-n', '--max', type=int, nargs=2, default=(160,70), help = "The highest false alarms and the lowest detection rate to plot")
   parser.add_argument('-t', '--title', default='FROC', help = "The title of the plot")
@@ -81,8 +83,17 @@ def command_line_arguments(command_line_parameters):
   # update legends when they are not specified on command line
   if args.legends is None:
     args.legends = args.files if not args.baselines else args.files + args.baselines
+    args.legends = [l.replace("_","-") for l in args.legends]
+
+  if args.auto_baselines == 'bioid':
+    args.baselines.extend(["baselines/baseline_detection_froba_mct_BIOID", "cosmin/BIOID/face.elbp.proj0.var.levels10.roc"])
+    args.legends.extend(["Froba", "Cosmin"])
+  elif args.auto_baselines == 'mit-cmu':
+    args.baselines.extend(["baselines/baseline_detection_fcboost_MIT+CMU", "baselines/baseline_detection_viola_rapid1_MIT+CMU", "cosmin/MIT+CMU/face.elbp.proj0.var.levels10.roc"])
+    args.legends.extend(["FcBoost", "Viola", "Cosmin"])
 
   return args
+
 
 def _plot_froc(fa, dr, colors, labels, title, max_r):
   figure = mpl.figure()
@@ -99,7 +110,7 @@ def _plot_froc(fa, dr, colors, labels, title, max_r):
   mpl.xlim((0, max_r[0]))
   mpl.ylim((max_r[1], 100))
   mpl.grid(True, color=(0.6,0.6,0.6))
-  mpl.legend(loc=4)
+  mpl.legend(loc=4,prop={'size': 16})
   mpl.title(title)
 
   return figure
@@ -179,7 +190,7 @@ def main(command_line_parameters=None):
   detection_rate = []
   facereclib.utils.info("Computing FROC curves")
   for score in scores:
-    # compute 20 thresholds
+    # compute some thresholds
     tmin = min(score[2])
     tmax = max(score[2])
     count = 100
@@ -205,9 +216,9 @@ def main(command_line_parameters=None):
       false_alarms.append(fa)
       detection_rate.append(dr)
 
-  facereclib.utils.info("Plotting FROC curves to file '%s'" % args.froc)
+  facereclib.utils.info("Plotting FROC curves to file '%s'" % args.output)
   # create a multi-page PDF for the ROC curve
-  pdf = PdfPages(args.froc)
+  pdf = PdfPages(args.output)
   # create a separate figure for dev and eval
   pdf.savefig(_plot_froc(false_alarms, detection_rate, colors, args.legends, args.title, args.max))
   pdf.close()

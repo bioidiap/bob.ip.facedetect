@@ -150,10 +150,12 @@ class Sampler:
             neg.append((model.forward_p(feature_vector), image_index, scale_index, bb_index))
 
 
-    def _extract_parallel(examples, bounding_boxes, dataset, first, last, offset, compute_means = False, means=[], variances=[]):
+    def _extract_parallel(examples, bounding_boxes, dataset, first, last, offset, compute_means = False, means=[], variances=[], mirror_offset = 0):
       last_image_index = -1
       last_scale_index = 1
       fex = feature_extractor.__class__(feature_extractor)
+      if mirror_offset:
+        mex = feature_extractor.__class__(feature_extractor)
       for index in range(first, last):
         image_index, scale_index, bb_index = examples[index]
         # prepare for this image, if it has changed
@@ -161,9 +163,13 @@ class Sampler:
           last_scale_index = scale_index
           last_image_index = image_index
           fex.prepare_p(self.m_images[image_index], self.m_scales[image_index][scale_index], compute_means_and_variances)
+          if mirror_offset:
+            mex.prepare(self.m_images[image_index][:,::-1].copy(), self.m_scales[image_index][scale_index])
         # extract and append features
         bb = bounding_boxes[image_index][scale_index][bb_index]
         fex.extract_p(bb, dataset, index + offset)
+        if mirror_offset:
+          mex.extract_p(bb.mirror_x(mex.image.shape[1]), dataset, index + offset + mirror_offset)
         if compute_means:
           m,v = fex.mean_and_variance(bb)
           means[index+offset] = m
@@ -307,16 +313,18 @@ class Sampler:
         i += 1
     else: # parallel implementation
       # positives
+      mirror_offset = len(used_positive_examples) if self.m_mirror_samples else 0
       number_of_indices = len(used_positive_examples)
       indices = [i * number_of_indices / self.m_number_of_parallel_threads for i in range(self.m_number_of_parallel_threads)] + [number_of_indices]
-      threads = [threading.Thread(target=_extract_parallel, args=(used_positive_examples, self.m_positives, dataset, indices[i], indices[i+1], 0, compute_means_and_variances, means, variances)) for i in range(self.m_number_of_parallel_threads)]
+      threads = [threading.Thread(target=_extract_parallel, args=(used_positive_examples, self.m_positives, dataset, indices[i], indices[i+1], 0, compute_means_and_variances, means, variances), kwargs={'mirror_offset': mirror_offset}) for i in range(self.m_number_of_parallel_threads)]
       [t.start() for t in threads]
       [t.join() for t in threads]
 
       # negatives
+      mirror_offset = len(used_negative_examples) if self.m_mirror_samples else 0
       number_of_indices = len(used_negative_examples)
       indices = [i * number_of_indices / self.m_number_of_parallel_threads for i in range(self.m_number_of_parallel_threads)] + [number_of_indices]
-      threads = [threading.Thread(target=_extract_parallel, args=(used_negative_examples, self.m_negatives, dataset, indices[i], indices[i+1], len(used_positive_examples))) for i in range(self.m_number_of_parallel_threads)]
+      threads = [threading.Thread(target=_extract_parallel, args=(used_negative_examples, self.m_negatives, dataset, indices[i], indices[i+1], len(used_positive_examples)), kwargs={'mirror_offset': mirror_offset}) for i in range(self.m_number_of_parallel_threads)]
       [t.start() for t in threads]
       [t.join() for t in threads]
       labels[len(used_positive_examples):] = -1.
@@ -350,33 +358,15 @@ class Sampler:
         yield bb.scale(1./scale)
 
 
-  def cascade(self, image, feature_extractor, feature_vector, classifiers, indices = None, threshold = 0., mean=None, variance=None):
+  def iterate_cascade(self, cascade, image):
     """Iterates over the given image and computes the cascade of classifiers."""
-    if indices is None:
-      indices = [c.indices for c in classifiers]
 
-    compute_mean_and_variance = mean!=None and variance!=None
     for scale, scaled_image_shape in self._scales(image):
       # prepare the feature extractor to extract features from the given image
-      feature_extractor.prepare(image, scale, compute_mean_and_variance)
+      cascade.prepare(image, scale)
       for bb in self._sample(scaled_image_shape):
-        # check if we can reject the patch based on mean and variance
-        if compute_mean_and_variance:
-          m,v = feature_extractor.mean_and_variance(bb)
-          if v < variance[0] or v > variance[1] or m < mean[0] or m > mean[1]:
-            yield -100., None
-        # start cascade
-        global_result = 0.
-        for i in range(len(indices)):
-          feature_extractor.extract_indexed(bb, feature_vector, indices[i])
-          local_result = classifiers[i](feature_vector)
-          global_result += local_result
-          if global_result < threshold:
-#            facereclib.utils.debug("Rejecting patch %s after %d rounds with result %f" % (bb, i+1, global_result))
-            break
-
         # return bounding box and result
-        yield global_result, bb.scale(1./scale)
+        yield cascade(bb), bb.scale(1./scale)
 
 
 

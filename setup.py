@@ -144,6 +144,7 @@ setup(
       'console_scripts': [
         'train.py = xfacereclib.extension.facedetect.script.train:main',
         'bootstrap.py = xfacereclib.extension.facedetect.script.bootstrap:main',
+        'validate.py = xfacereclib.extension.facedetect.script.validate:main',
         'display.py = xfacereclib.extension.facedetect.script.display:main',
         'detect.py = xfacereclib.extension.facedetect.script.detect:main',
         'cascade.py = xfacereclib.extension.facedetect.script.cascade:main',
@@ -152,6 +153,8 @@ setup(
 
       # registered database short cuts
       'facereclib.database': [
+        'banca-french      = xfacereclib.extension.facedetect.databases.banca_french:database',
+        'banca-spanish     = xfacereclib.extension.facedetect.databases.banca_spanish:database',
         'bioid             = xfacereclib.extension.facedetect.databases.bioid:database',
         'caltech           = xfacereclib.extension.facedetect.databases.caltech:database',
         'cinema            = xfacereclib.extension.facedetect.databases.cinema:database',
