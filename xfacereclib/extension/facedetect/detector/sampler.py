@@ -313,21 +313,21 @@ class Sampler:
         i += 1
     else: # parallel implementation
       # positives
-      mirror_offset = len(used_positive_examples) if self.m_mirror_samples else 0
+      pos_mirror_offset = len(used_positive_examples) if self.m_mirror_samples else 0
       number_of_indices = len(used_positive_examples)
       indices = [i * number_of_indices / self.m_number_of_parallel_threads for i in range(self.m_number_of_parallel_threads)] + [number_of_indices]
-      threads = [threading.Thread(target=_extract_parallel, args=(used_positive_examples, self.m_positives, dataset, indices[i], indices[i+1], 0, compute_means_and_variances, means, variances), kwargs={'mirror_offset': mirror_offset}) for i in range(self.m_number_of_parallel_threads)]
+      threads = [threading.Thread(target=_extract_parallel, args=(used_positive_examples, self.m_positives, dataset, indices[i], indices[i+1], 0, compute_means_and_variances, means, variances), kwargs={'mirror_offset': pos_mirror_offset}) for i in range(self.m_number_of_parallel_threads)]
       [t.start() for t in threads]
       [t.join() for t in threads]
 
       # negatives
-      mirror_offset = len(used_negative_examples) if self.m_mirror_samples else 0
+      neg_mirror_offset = len(used_negative_examples) if self.m_mirror_samples else 0
       number_of_indices = len(used_negative_examples)
       indices = [i * number_of_indices / self.m_number_of_parallel_threads for i in range(self.m_number_of_parallel_threads)] + [number_of_indices]
-      threads = [threading.Thread(target=_extract_parallel, args=(used_negative_examples, self.m_negatives, dataset, indices[i], indices[i+1], len(used_positive_examples)), kwargs={'mirror_offset': mirror_offset}) for i in range(self.m_number_of_parallel_threads)]
+      threads = [threading.Thread(target=_extract_parallel, args=(used_negative_examples, self.m_negatives, dataset, indices[i], indices[i+1], len(used_positive_examples)+pos_mirror_offset), kwargs={'mirror_offset': neg_mirror_offset}) for i in range(self.m_number_of_parallel_threads)]
       [t.start() for t in threads]
       [t.join() for t in threads]
-      labels[len(used_positive_examples):] = -1.
+      labels[len(used_positive_examples)+pos_mirror_offset:] = -1.
 
 
 #    for neg in sorted(used_negative_examples, reverse=True): print neg
