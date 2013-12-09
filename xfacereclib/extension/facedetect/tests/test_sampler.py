@@ -73,8 +73,8 @@ class SamplerTest (unittest.TestCase):
     sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), first_scale=0.5, cpp_implementation=is_cpp_extractor)
 
     # get predictions
-    feature = numpy.zeros(extractor.number_of_features, numpy.uint16)
-    detections = list(sampler.cascade(test_image, extractor, feature, [classifier]))
+    cascade = fd.detector.Cascade(classifier, classifiers_per_round=500, classification_thresholds=0., feature_extractor=extractor)
+    detections = list(sampler.iterate_cascade(cascade, test_image))
     self.assertEqual(len(detections), 28087)
 
     # check value of a single prediction
