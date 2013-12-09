@@ -18,7 +18,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--limit-validation-files', '-y', type=int, help = "Limit the validation files to the given number (for debug purposes mainly)")
   parser.add_argument('--limit-classifiers', '-Y', type=int, help = "Limit the number of classifiers that are evaluated (for debug purposes mainly)")
   parser.add_argument('--kept-negatives', '-l', type=float, nargs='+', default=[0.2, 0.1, 0.03, 0.01, 0.003, 0.001, 0.0003, 0.0001], help = "The relative number of negative values not rejected in the step of the cascade")
-  parser.add_argument('--rejection-rates', '-L', type=float, nargs='+', default=[0., 0.02, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1], help = "The relative number of **positive** values rejected in the step of the cascade")
+  parser.add_argument('--rejection-rates', '-L', type=float, nargs='+', default=[0.05, 0.07, 0.1, 0.11, 0.12, 0.13, 0.14, 0.15], help = "The relative number of **positive** values rejected in the step of the cascade")
   parser.add_argument('--distance', '-s', type=int, default=4, help = "The distance with which the image should be scanned.")
   parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./4.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--first-scale', '-f', type=float, default = 0.5, help = "The first scale of the image to consider (should be between 0 and 1, higher values will slow down the detection process).")
@@ -108,6 +108,7 @@ def main(command_line_arguments = None):
       cascade.add(classifier, last_cascade_index, index+1, threshold)
       last_cascade_index = index + 1
       cascade_step += 1
+      cascade.save(bob.io.HDF5File("cascade_index_%d.hdf5" % cascade_step, 'w'))
 
       if cascade_step >= len(args.kept_negatives):
         # we have used all our acceptance rates, so we can stop here
