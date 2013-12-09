@@ -285,6 +285,8 @@ class Sampler:
           mirror_extractor.extract(bb.mirror_x(mirror_extractor.image.shape[1]), dataset, i + mirror_offset)
         if compute_means_and_variances:
           m,v = feature_extractor.mean_and_variance(bb)
+          if m == 0 or v == 0:
+            facereclib.utils.warn("In image number %d of %d there was a positive bounding box containing mean %f and variance %f" % (image_index, len(self.m_images), m, v))
           means[i] = m
           variances[i] = v
         i += 1
@@ -329,8 +331,6 @@ class Sampler:
       [t.join() for t in threads]
       labels[len(used_positive_examples)+pos_mirror_offset:] = -1.
 
-
-#    for neg in sorted(used_negative_examples, reverse=True): print neg
     # finally, delete all examples that we returned
     if delete_samples:
       # TODO: implement faster versions of this; currently it is O(n^2)

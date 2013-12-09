@@ -1,6 +1,6 @@
 import xbob.boosting
 import numpy
-
+from .._features import FeatureExtractor
 
 class Cascade:
 
@@ -10,6 +10,7 @@ class Cascade:
       self.load(classifier_file)
     elif classifier is not None and classifiers_per_round is not None:
       # split the classifier and the feature extractor into cascades
+      self.extractor = feature_extractor
       indices = range(0, len(classifier.weak_machines), classifiers_per_round)
       if indices[-1] != len(classifier.weak_machines): indices.append(len(classifier.weak_machines))
       self.cascade = []
@@ -22,17 +23,19 @@ class Cascade:
         self.thresholds = classification_thresholds
 
     else:
+      self.extractor = feature_extractor
       self.cascade = []
       self.indices = []
       self.thresholds = []
-    self.extractor = feature_extractor
-    self.feature = numpy.zeros(self.extractor.number_of_features, numpy.uint16)
+
     self._indices()
 
   def _indices(self):
     # computes the list of indices from the current classifiers
+    self.indices = []
     for classifier in self.cascade:
       self.indices.append(classifier.indices)
+    self.feature = numpy.zeros(self.extractor.number_of_features, numpy.uint16)
 
 
   def prepare(self, image, scale):
@@ -66,13 +69,21 @@ class Cascade:
       hdf5.cd("Classifier_%d" % (i+1))
       self.cascade[i].save(hdf5)
       hdf5.cd("..")
+    hdf5.create_group("FeatureExtractor")
+    hdf5.cd("FeatureExtractor")
+    self.extractor.save(hdf5)
+    hdf5.cd("..")
 
   def load(self, hdf5):
     # write the cascade to file
-    self.thresholds = hdf5.load("Thresholds")
+    self.thresholds = hdf5.read("Thresholds")
     self.cascade = []
     for i in range(len(self.thresholds)):
       hdf5.cd("Classifier_%d" % (i+1))
       self.cascade.append(xbob.boosting.BoostedMachine(hdf5))
       hdf5.cd("..")
+    hdf5.cd("FeatureExtractor")
+    self.extractor = FeatureExtractor(hdf5)
+    hdf5.cd("..")
+    self._indices()
 

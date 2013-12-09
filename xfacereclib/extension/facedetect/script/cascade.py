@@ -48,8 +48,7 @@ def main(command_line_arguments = None):
   try:
     facereclib.utils.info("Loading cascade from file %s" % args.cascade_file)
     hdf5 = bob.io.HDF5File(args.cascade_file)
-    feature_extractor = FeatureExtractor(hdf5)
-    cascade = detector.Cascade(feature_extractor = feature_extractor, classifier_file=hdf5)
+    cascade = detector.Cascade(classifier_file=hdf5)
   except:
     facereclib.utils.info("Creating regular cascade from strong classifier %s" % args.cascade_file)
     # load classifier and feature extractor
@@ -57,11 +56,12 @@ def main(command_line_arguments = None):
     feature_vector = numpy.zeros(feature_extractor.number_of_features, numpy.uint16)
 
     cascade = detector.Cascade(classifier=classifier, classifiers_per_round=args.classifiers_per_round, classification_thresholds=args.cascade_threshold, feature_extractor=feature_extractor)
-
+    # write temporary cascade file
+    cascade.save(bob.io.HDF5File("__cascade__.hdf5", 'w'))
 
   # create the test examples
   preprocessor = facereclib.preprocessing.NullPreprocessor()
-  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, first_scale=args.first_scale, cpp_implementation=is_cpp_extractor)
+  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, first_scale=args.first_scale, cpp_implementation=True)
 
   # iterate over the test files and detect the faces
   i = 1
@@ -88,10 +88,7 @@ def main(command_line_arguments = None):
       facereclib.utils.info("Number of pruned detections: %d" % len(detections))
 
       # get ground truth bounding boxes from annotations
-      if is_cpp_extractor:
-        ground_truth = [utils.bounding_box_from_annotation(**annotation) for annotation in annotations]
-      else:
-        ground_truth = [utils.BoundingBox(**annotation) for annotation in annotations]
+      ground_truth = [utils.bounding_box_from_annotation(**annotation) for annotation in annotations]
       f.write("%s %d\n" % (file.path, len(ground_truth)))
 
       # check if we have found a bounding box

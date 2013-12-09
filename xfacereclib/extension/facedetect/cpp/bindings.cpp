@@ -84,7 +84,7 @@ static void prepare(FeatureExtractor& self, const blitz::Array<T,2>& image, doub
 }
 
 
-static object prune_detections(object detections, const blitz::Array<double,1>& predictions, double threshold){
+static object prune_detections(object detections, const blitz::Array<double,1>& predictions, double threshold, const int number_of_detections){
   // extract the bounding boxes
   stl_input_iterator<BoundingBox> dbegin(detections), dend;
   std::vector<BoundingBox> bbs(dbegin, dend);
@@ -93,7 +93,7 @@ static object prune_detections(object detections, const blitz::Array<double,1>& 
   std::vector<BoundingBox> pruned_bbs;
 
   // prune
-  pruneDetections(bbs, predictions, threshold, pruned_bbs, pruned_predictions);
+  pruneDetections(bbs, predictions, threshold, pruned_bbs, pruned_predictions, number_of_detections);
 
   // convert back to list
   list ret;
@@ -103,6 +103,27 @@ static object prune_detections(object detections, const blitz::Array<double,1>& 
 
   return make_tuple(ret, pruned_predictions);
 }
+
+static object overlapping_detections(object detections, const blitz::Array<double,1>& predictions, double threshold){
+  // extract the bounding boxes
+  stl_input_iterator<BoundingBox> dbegin(detections), dend;
+  std::vector<BoundingBox> bbs(dbegin, dend);
+
+  blitz::Array<double,1> overlapping_predictions;
+  std::vector<BoundingBox> overlapping_bbs;
+
+  // get overlapping bounding boxes
+  bestOverlap(bbs, predictions, threshold, overlapping_bbs, overlapping_predictions);
+
+  // convert back to list
+  list ret;
+  for (std::vector<BoundingBox>::const_iterator it = overlapping_bbs.begin(); it != overlapping_bbs.end(); ++it){
+    ret.append(*it);
+  }
+
+  return make_tuple(ret, overlapping_predictions);
+}
+
 
 
 BOOST_PYTHON_MODULE(_features) {
@@ -131,7 +152,8 @@ BOOST_PYTHON_MODULE(_features) {
     .add_property("area", &BoundingBox::area)
   ;
 
-  def("prune_detections", &prune_detections, (arg("detections"), arg("predictions"), arg("threshold")), "Prunes the given detected bounding boxes according to their predictions and returns the pruned bounding boxes and their predictions");
+  def("prune_detections", &prune_detections, (arg("detections"), arg("predictions"), arg("threshold"), arg("number_of_detections")=-1), "Prunes the given detected bounding boxes according to their predictions and returns the pruned bounding boxes and their predictions");
+  def("overlapping_detections", &overlapping_detections, (arg("detections"), arg("predictions"), arg("threshold")), "Returns the detections and predictions that overlap with the best detection.");
 
   class_<FeatureExtractor, boost::shared_ptr<FeatureExtractor> >("FeatureExtractor",  "A class to extract several kinds of LBP features", no_init)
     .def(init<const blitz::TinyVector<int,2>&, const bob::ip::LBP& , bool, bool>((arg("self"), arg("patch_size"), arg("template"), arg("overlap")=false, arg("square")=false), "Creates LBP extractor classes of the given template for all possible radii/ block size."))

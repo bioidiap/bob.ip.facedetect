@@ -41,9 +41,6 @@ def main(command_line_arguments = None):
   validation_files = utils.test_image_annot(args.databases, [None for i in range(len(args.databases))], args.limit_validation_files)
   preprocessor = facereclib.preprocessing.NullPreprocessor()
 
-  facereclib.utils.info("Loading %d validation images" % len(validation_files))
-  validation_files = [(preprocessor(preprocessor.read_original_data(filename)), annotation) for filename, annotation, _ in validation_files]
-
   facereclib.utils.debug("Loading strong classifier from file %s" % args.trained_file)
   # load classifier and feature extractor
   classifier, feature_extractor, is_cpp_extractor, mean, variance = detector.load(args.trained_file)
@@ -61,15 +58,18 @@ def main(command_line_arguments = None):
   # compute cascade values (thresholds, steps)
   last_cascade_index = 0
   cascade_step = 0
-  cascade = detector.Cascade()
+  cascade = detector.Cascade(feature_extractor=feature_extractor)
 
+  facereclib.utils.info("Starting validation with %d images" % len(validation_files))
   # iterate over all weak classifiers
   for index, predictor in enumerate(classifiers):
     facereclib.utils.info("Starting evaluation of round %d of %d" % (index+1, len(classifiers)))
     feature_extractor.model_indices = predictor.indices
     # iterate over the validation files and generate values for ALL classifiers in ALL subwindows
     pos_index = neg_index = 0
-    for image, annotations in validation_files:
+    for filename, annotations, _ in validation_files:
+      # load image
+      image = preprocessor(preprocessor.read_original_data(filename))
       # get ground truth bounding boxes from annotations
       if is_cpp_extractor:
         ground_truth = [utils.bounding_box_from_annotation(**annotation) for annotation in annotations]

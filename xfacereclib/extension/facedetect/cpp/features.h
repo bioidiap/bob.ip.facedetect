@@ -42,7 +42,8 @@ class BoundingBox{
     int m_area;
 };
 
-void pruneDetections(const std::vector<BoundingBox>& detections, const blitz::Array<double, 1>& predictions, double threshold, std::vector<BoundingBox>& pruned_boxes, blitz::Array<double, 1>& pruned_weights);
+void pruneDetections(const std::vector<BoundingBox>& detections, const blitz::Array<double, 1>& predictions, double threshold, std::vector<BoundingBox>& pruned_boxes, blitz::Array<double, 1>& pruned_weights, const int number_of_detections);
+void bestOverlap(const std::vector<BoundingBox>& detections, const blitz::Array<double, 1>& predictions, double threshold, std::vector<BoundingBox>& pruned_boxes, blitz::Array<double, 1>& pruned_weights);
 
 class FeatureExtractor{
 

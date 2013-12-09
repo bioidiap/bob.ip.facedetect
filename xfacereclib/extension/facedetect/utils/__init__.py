@@ -3,7 +3,6 @@ from boundingbox import BoundingBox, bounding_box_from_annotation, prune
 from ..detector import LBPFeatures, MBLBPFeatures
 import bob
 import facereclib
-import xbob.db.detection.utils
 import xbob.db.verification.utils
 
 
@@ -19,6 +18,7 @@ def irnd(x):
 
 def _annotations(db, file):
   # returns the annotations for the given file object
+  import xbob.db.detection.utils
   if isinstance(db, xbob.db.detection.utils.Database):
     # detection databases have multiple annotations per file
     return db.annotations(file.id)

@@ -30,7 +30,7 @@ bool gt(const indexer& a, const indexer& b){
   return a.first > b.first;
 }
 
-void pruneDetections(const std::vector<BoundingBox>& boxes, const blitz::Array<double, 1>& weights, double threshold, std::vector<BoundingBox>& pruned_boxes, blitz::Array<double, 1>& pruned_weights){
+void pruneDetections(const std::vector<BoundingBox>& boxes, const blitz::Array<double, 1>& weights, double threshold, std::vector<BoundingBox>& pruned_boxes, blitz::Array<double, 1>& pruned_weights, const int number_of_detections){
   // sort boxes
   std::vector<indexer> sorted(boxes.size());
   for (int i = boxes.size(); i--;){
@@ -48,6 +48,9 @@ void pruneDetections(const std::vector<BoundingBox>& boxes, const blitz::Array<d
     }
     if (pit == pruned.end()){
       pruned.push_back(*sit);
+      if (number_of_detections > 0 && pruned.size() == (unsigned)number_of_detections){
+        break;
+      }
     }
   }
 
@@ -58,6 +61,37 @@ void pruneDetections(const std::vector<BoundingBox>& boxes, const blitz::Array<d
   for (pit = pruned.begin(); pit != pruned.end(); ++pit, ++i){
     pruned_boxes.push_back(boxes[pit->second]);
     pruned_weights(i) = pit->first;
+  }
+
+  // done.
+}
+
+void bestOverlap(const std::vector<BoundingBox>& boxes, const blitz::Array<double, 1>& weights, double threshold, std::vector<BoundingBox>& overlapping_boxes, blitz::Array<double, 1>& overlapping_weights){
+  // sort boxes
+  std::vector<indexer> sorted(boxes.size());
+  for (int i = boxes.size(); i--;){
+    sorted[i] = std::make_pair(weights(i), i);
+  }
+  std::sort(sorted.begin(), sorted.end(), gt);
+
+  // prune detections (attention, this is O(n^2)!)
+  std::list<indexer> overlapping;
+  BoundingBox best = boxes[sorted.front().second];
+  std::vector<indexer>::const_iterator sit;
+  std::list<indexer>::const_iterator pit;
+  for (sit = sorted.begin(); sit != sorted.end(); ++sit){
+    if (boxes[sit->second].similarity(best) > threshold){
+      overlapping.push_back(*sit);
+    }
+  }
+
+  // fill pruned boxes
+  overlapping_boxes.reserve(overlapping.size());
+  overlapping_weights.resize(overlapping.size());
+  int i = 0;
+  for (pit = overlapping.begin(); pit != overlapping.end(); ++pit, ++i){
+    overlapping_boxes.push_back(boxes[pit->second]);
+    overlapping_weights(i) = pit->first;
   }
 
   // done.
