@@ -7,8 +7,9 @@ from .io import save
 
 class Bootstrap:
   """This class deals with selecting new training examples for each boosting round."""
-  def __init__(self, number_of_rounds = 10, number_of_positive_examples_per_round = 10000, number_of_negative_examples_per_round = 10000):
+  def __init__(self, number_of_rounds = 7, number_of_weak_learners_in_first_round = 8, number_of_positive_examples_per_round = 5000, number_of_negative_examples_per_round = 5000):
     self.m_number_of_rounds = number_of_rounds
+    self.m_number_of_weak_learners_per_round = [number_of_weak_learners_in_first_round * 2**i for i in range(number_of_rounds)]
     self.m_number_of_positive_examples_per_round = number_of_positive_examples_per_round
     self.m_number_of_negative_examples_per_round = number_of_negative_examples_per_round
 
@@ -31,6 +32,7 @@ class Bootstrap:
       training_labels = numpy.append(training_labels, new_labels)
 
       facereclib.utils.info("Starting training with %d examples" % (training_data.shape[0]))
+      trainer.num_rnds = self.m_number_of_weak_learners_per_round[b]
       model = trainer.train(training_data, training_labels, model)
 
       # write model and extractor to temporary file to be able to catch up later

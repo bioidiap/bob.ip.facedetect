@@ -23,8 +23,8 @@ class SamplerTest (unittest.TestCase):
 
   def test01_count(self):
     # test that the count of samples is correct
-    test_image = bob.ip.rgb_to_gray(bob.io.load(bob.test.utils.datafile("testimage.jpg", 'xfacereclib.extension.facedetect', 'tests')))
-    ground_truth = vu.read_annotation_file(bob.test.utils.datafile("testimage.pos", 'xfacereclib.extension.facedetect', 'tests'), 'named')
+    test_image = bob.ip.rgb_to_gray(bob.io.load(bob.test.utils.datafile("testimage.jpg", 'facereclib', 'tests')))
+    ground_truth = vu.read_annotation_file(bob.test.utils.datafile("testimage.pos", 'facereclib', 'tests'), 'named')
 
     # sample the image
     sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), first_scale=0.5, cpp_implementation=True)
@@ -39,7 +39,7 @@ class SamplerTest (unittest.TestCase):
 
   def test02_detect(self):
     # test that the detection works as expected
-    test_image = bob.ip.rgb_to_gray(bob.io.load(bob.test.utils.datafile("testimage.jpg", 'xfacereclib.extension.facedetect', 'tests')))
+    test_image = bob.ip.rgb_to_gray(bob.io.load(bob.test.utils.datafile("testimage.jpg", 'facereclib', 'tests')))
 
     classifier, extractor, is_cpp_extractor, mean, variance = fd.detector.load(bob.test.utils.datafile("extractor.hdf5", 'xfacereclib.extension.facedetect', 'tests'))
     sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), first_scale=0.5, cpp_implementation=is_cpp_extractor)
@@ -66,7 +66,7 @@ class SamplerTest (unittest.TestCase):
 
   def test03_cascade(self):
     # test that the count of samples is correct
-    test_image = bob.ip.rgb_to_gray(bob.io.load(bob.test.utils.datafile("testimage.jpg", 'xfacereclib.extension.facedetect', 'tests')))
+    test_image = bob.ip.rgb_to_gray(bob.io.load(bob.test.utils.datafile("testimage.jpg", 'facereclib', 'tests')))
 
     # sample the image
     classifier, extractor, is_cpp_extractor, mean, variance = fd.detector.load(bob.test.utils.datafile("extractor.hdf5", 'xfacereclib.extension.facedetect', 'tests'))

@@ -30,7 +30,7 @@ class ExtractorTests(unittest.TestCase):
       self.assertEqual(cpp.number_of_features, feature_length)
 
       # check that both feature extractors extract the same features
-      test_image = bob.ip.rgb_to_gray(bob.io.load(bob.test.utils.datafile("testimage.jpg", 'xfacereclib.extension.facedetect', 'tests')))
+      test_image = bob.ip.rgb_to_gray(bob.io.load(bob.test.utils.datafile("testimage.jpg", 'facereclib', 'tests')))
 
       py_feat = numpy.ndarray((1,feature_length), dtype=numpy.uint16)
       cpp_feat = numpy.ndarray((1,feature_length), dtype=numpy.uint16)
@@ -87,7 +87,7 @@ class ExtractorTests(unittest.TestCase):
           self.assertEqual(cpp.number_of_features, feature_length)
 
           # check that both feature extractors extract the same features
-          test_image = bob.ip.rgb_to_gray(bob.io.load(bob.test.utils.datafile("testimage.jpg", 'xfacereclib.extension.facedetect', 'tests')))
+          test_image = bob.ip.rgb_to_gray(bob.io.load(bob.test.utils.datafile("testimage.jpg", 'facereclib', 'tests')))
 
           py_feat = numpy.ndarray((1,feature_length), dtype=numpy.uint16)
           cpp_feat = numpy.ndarray((1,feature_length), dtype=numpy.uint16)

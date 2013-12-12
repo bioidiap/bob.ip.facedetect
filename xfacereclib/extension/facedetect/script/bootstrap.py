@@ -67,16 +67,16 @@ def command_line_options(command_line_arguments):
 
   parser.add_argument('--parallel', '-P', default=1, type=int, help = "The number of parallel threads to use for feature extraction.")
   parser.add_argument('--mirror-samples', '-m', action='store_false', help = "Disable the mirroring of the training samples.")
-  parser.add_argument('--training-rounds', '-r', default=10, type=int, help = "The number of rounds to perform training during bootstrapping.")
-  parser.add_argument('--bootstrapping-rounds', '-R', default=10, type=int, help = "The number of bootstrapping rounds to perform.")
+  parser.add_argument('--features-in-first-round', '-r', default=8, type=int, help = "The number of features to extract in the first bootstrapping round (will be doubled in each bootstrapping round).")
+  parser.add_argument('--bootstrapping-rounds', '-R', default=7, type=int, help = "The number of bootstrapping rounds to perform.")
   parser.add_argument('--patch-size', '-p', type=int, nargs=2, default=(24,20), help = "The size of the patch for the image in y and x.")
   parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
   parser.add_argument('--scale-base', '-S', type=float, default=math.pow(2.,-1./4.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--first-scale', '-f', type=float, default=math.sqrt(0.5), help = "The first scale of the image to consider (should be between 0 and 1, higher values will slow down the training process).")
-  parser.add_argument('--similarity-thresholds', '-t', type=float, nargs=2, default=(0.3, 0.7), help = "The bounding box overlap thresholds for which negative (< thres[0]) and positive (> thers[1]) examples are accepted.")
+  parser.add_argument('--similarity-thresholds', '-t', type=float, nargs=2, default=(0.2, 0.8), help = "The bounding box overlap thresholds for which negative (< thres[0]) and positive (> thers[1]) examples are accepted.")
 
   parser.add_argument('--examples-per-image-scale', '-e', type=int, nargs=2, default = [100, 100], help = "The number of positive and negative training examples for each image scale.")
-  parser.add_argument('--training-examples', '-E', type=int, nargs=2, default = [10000, 10000], help = "The number of positive and negative training examples to sample.")
+  parser.add_argument('--training-examples', '-E', type=int, nargs=2, default = [5000, 5000], help = "The number of positive and negative training examples to sample.")
   parser.add_argument('--limit-training-files', '-y', type=int, help = "Limit the number of training files (for debug purposes only).")
 
   parser.add_argument('--trained-file', '-w', default = 'bootstrapped.hdf5', help = "The file to write the resulting trained detector into.")
@@ -125,8 +125,9 @@ def main(command_line_arguments = None):
   # train the classifier using bootstrapping
   facereclib.utils.info("Extracting training features")
   feature_extractor = lbp_variant(args.lbp_class, args.lbp_variant, args.lbp_overlap, args.lbp_scale, args.lbp_square, args.lbp_cpp_implementation)
-  trainer = xbob.boosting.core.boosting.Boost('LutTrainer', args.training_rounds, feature_extractor.maximum_label())
-  bootstrapping = Bootstrap(number_of_rounds=args.bootstrapping_rounds, number_of_positive_examples_per_round=args.training_examples[0], number_of_negative_examples_per_round=args.training_examples[1])
+  # create trainer (number of rounds will be set during bootstrapping)
+  trainer = xbob.boosting.core.boosting.Boost('LutTrainer', 0, feature_extractor.maximum_label())
+  bootstrapping = Bootstrap(number_of_rounds=args.bootstrapping_rounds, number_of_weak_learners_in_first_round=args.features_in_first_round, number_of_positive_examples_per_round=args.training_examples[0], number_of_negative_examples_per_round=args.training_examples[1])
 
   # perform the bootstrapping
   classifier, mean, variance = bootstrapping(trainer, sampler, feature_extractor, filename=args.trained_file)

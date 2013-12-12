@@ -4,6 +4,7 @@ import facereclib
 import math
 
 from .._features import BoundingBox as CppBoundingBox
+from .._features import overlapping_detections
 
 
 available_sources = {
@@ -253,4 +254,23 @@ def prune(detections, predictions, threshold=None):
 
   return (pruned_detections, pruned_predictions)
 
+def best_detection(detections, predictions):
+  # keep only the bounding boxes that overlap with the highest detection
+  detections, predictions = overlapping_detections(detections, numpy.array(predictions), 0.6)
+
+  detections = [detections[i] for i in range(len(detections)) if predictions[i] > 0]
+  predictions = predictions[predictions>0]
+#    utils.debug("Found %d detections with predictions %s" % (len(detections), str(predictions)))
+
+  # compute the mean of the detected bounding boxes
+  s = sum(predictions)
+  weights = [p/s for p in predictions]
+  top = sum(w * b.top for w, b in zip(weights, detections))
+  left = sum(w * b.left for w, b in zip(weights, detections))
+  bottom = sum(w * b.bottom for w, b in zip(weights, detections))
+  right = sum(w * b.right for w, b in zip(weights, detections))
+
+  value = sum(w*p for w,p in zip(weights, predictions))
+
+  return top, left, bottom, right, value
 

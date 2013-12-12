@@ -168,11 +168,18 @@ setup(
         'web               = xfacereclib.extension.facedetect.databases.web:database',
       ],
 
+      # registered preprocessors
+      'facereclib.preprocessor': [
+        'face-detect             = xfacereclib.extension.facedetect.configurations.face_crop:preprocessor',
+        'face-detect+tan-triggs  = xfacereclib.extension.facedetect.configurations.tan_triggs:preprocessor',
+        'face-detect+inorm-lbp   = xfacereclib.extension.facedetect.configurations.inorm_lbp:preprocessor',
+      ],
+
       # tests that are _exported_ (that can be executed by other packages) can
       # be signalized like this:
       'bob.test': [
-#         'example = xbob.example.test:MyTests',
-         ],
+         'facedetect = xfacereclib.extension.facedetect.tests.test_facereclib:DetectionTest'
+      ],
 
       # finally, if you are writing a database package, you must declare the
       # relevant entries like this:

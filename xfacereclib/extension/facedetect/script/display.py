@@ -9,7 +9,8 @@ import math
 import xbob.boosting
 import os
 
-from .. import utils, detector
+from .. import utils, detector, overlapping_detections
+from .._features import BoundingBox
 
 def command_line_options(command_line_arguments):
 
@@ -29,11 +30,10 @@ def command_line_options(command_line_arguments):
 
   return args
 
-#def classify(classifier, features):
-#  return classifier(features)
 
 def draw_bb(image, bb, color):
   bob.ip.draw_box(image, y=bb.top, x=bb.left, height=bb.bottom - bb.top + 1, width=bb.right - bb.left + 1, color=color)
+
 
 def main(command_line_arguments = None):
   args = command_line_options(command_line_arguments)
@@ -68,9 +68,13 @@ def main(command_line_arguments = None):
   facereclib.utils.info("Best detection with value %f at %s: " % (highest_detection, str(detections[0])))
 
   if args.prediction_threshold is None:
-    detections = detections[:1]
+    top, left, bottom, right, result = utils.best_detection(detections, predictions)
+    detections = [BoundingBox(int(top), int(left), int(bottom-top+1), int(right-left+1))]
+    facereclib.utils.info("Limiting to a single BoundingBox %s with value %f" % (str(detections[0]), result))
 
-  test_image = bob.ip.gray_to_rgb(test_image)
+  test_image = bob.io.load(args.test_image)
+  if test_image.ndim == 2:
+    test_image = bob.ip.gray_to_rgb(test_image)
   for detection, prediction in zip(detections, predictions):
     color = (255,0,0) if args.prediction_threshold is None else (int(255. * (prediction - args.prediction_threshold) / (highest_detection-args.prediction_threshold)),0,0)
     draw_bb(test_image, detection, color)

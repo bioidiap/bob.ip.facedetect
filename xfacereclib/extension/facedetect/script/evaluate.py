@@ -104,8 +104,6 @@ def _plot_froc(fa, dr, colors, labels, title, max_r):
   # finalize plot
 #  mpl.xticks((1, 10, 100, 1000, 10000), ('1', '10', '100', '1000', '10000'))
 #  mpl.xticks([100*i for i in range(11)])
-  mpl.xlabel('False Alarm')
-  mpl.ylabel('Detection Rate (\%)')
 #  mpl.xlim((0.1, 100000))
   mpl.xlim((0, max_r[0]))
   mpl.ylim((max_r[1], 100))
@@ -219,8 +217,10 @@ def main(command_line_parameters=None):
   facereclib.utils.info("Plotting FROC curves to file '%s'" % args.output)
   # create a multi-page PDF for the ROC curve
   pdf = PdfPages(args.output)
-  # create a separate figure for dev and eval
-  pdf.savefig(_plot_froc(false_alarms, detection_rate, colors, args.legends, args.title, args.max))
+  figure = _plot_froc(false_alarms, detection_rate, colors, args.legends, args.title, args.max)
+  mpl.xlabel('False Alarm (of %d pruned)' % len(scores[0][2]))
+  mpl.ylabel('Detection Rate in \%% (total %d faces)' % scores[0][0])
+  pdf.savefig(figure)
   pdf.close()
 
   if args.count_detections:

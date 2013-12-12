@@ -1,4 +1,4 @@
-from boundingbox import BoundingBox, bounding_box_from_annotation, prune
+from boundingbox import BoundingBox, bounding_box_from_annotation, prune, best_detection
 
 from ..detector import LBPFeatures, MBLBPFeatures
 import bob

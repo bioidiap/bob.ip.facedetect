@@ -24,7 +24,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--classifiers-per-round', '-n', type=int, default=25, help = "The number of classifiers that should be applied in each cascade.")
   parser.add_argument('--limit-by-variance', '-V', action='store_false', help = "Disable the mean/variance limitation.")
   parser.add_argument('--cascade-threshold', '-t', type=float, default=0., help = "Detections with values below this threshold will be discarded in each round.")
-  parser.add_argument('--prediction-threshold', '-T', type=float, help = "Detections with values below this threshold will be rejected by by the complete detector.")
+  parser.add_argument('--prediction-threshold', '-T', type=float, help = "Detections with values below this threshold will be rejected by the detector.")
   parser.add_argument('--score-file', '-w', default='cascaded_scores.txt', help = "The score file to be written.")
   parser.add_argument('--prune-detections', '-p', type=float, help = "If given, detections that overlap with the given threshold are pruned")
   parser.add_argument('--detection-threshold', '-j', type=float, default=0.5, help = "The overlap from Ground Truth for which a detection should be considered as successful")
