@@ -26,6 +26,7 @@ It also is able to plot CMC and ROC curves."""
 import matplotlib; matplotlib.use('pdf') #avoids TkInter threaded start
 import matplotlib.pyplot as mpl
 from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib.gridspec as gridspec
 
 
 import facereclib
@@ -51,7 +52,8 @@ def command_line_arguments(command_line_parameters):
   parser = argparse.ArgumentParser(description=__doc__,
       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-  parser.add_argument('-d', '--files', required=True, nargs='+', help = "A list of score files to evaluate.")
+  parser.add_argument('-d', '--files', nargs='+', help = "A list of score files to evaluate.")
+  parser.add_argument('-e', '--error-files', nargs='+', help = "A list of eye position error files to evaluate")
   parser.add_argument('-b', '--baselines', default=[], nargs='+', help = "A list of baseline results to add to the plot")
 
   parser.add_argument('-D', '--directory', default = '.', help = "A directory, where to find the --files")
@@ -74,23 +76,24 @@ def command_line_arguments(command_line_parameters):
 
   facereclib.utils.set_verbosity_level(args.verbose)
 
-  if args.legends is not None:
-    count = len(args.files) + (len(args.baselines) if args.baselines is not None else 0)
-    if len(args.legends) != count:
-      facereclib.utils.error("The number of --files (%d) plus --baselines (%d) must be the same as --legends (%d)" % (len(args.files), len(args.baselines) if args.baselines else 0, len(args.legends)))
-      args.legends = None
+  if args.files is not None:
+    if args.legends is not None:
+      count = len(args.files) + (len(args.baselines) if args.baselines is not None else 0)
+      if len(args.legends) != count:
+        facereclib.utils.error("The number of --files (%d) plus --baselines (%d) must be the same as --legends (%d)" % (len(args.files), len(args.baselines) if args.baselines else 0, len(args.legends)))
+        args.legends = None
 
-  # update legends when they are not specified on command line
-  if args.legends is None:
-    args.legends = args.files if not args.baselines else args.files + args.baselines
-    args.legends = [l.replace("_","-") for l in args.legends]
+    # update legends when they are not specified on command line
+    if args.legends is None:
+      args.legends = args.files if not args.baselines else args.files + args.baselines
+      args.legends = [l.replace("_","-") for l in args.legends]
 
-  if args.auto_baselines == 'bioid':
-    args.baselines.extend(["baselines/baseline_detection_froba_mct_BIOID", "cosmin/BIOID/face.elbp.proj0.var.levels10.roc"])
-    args.legends.extend(["Froba", "Cosmin"])
-  elif args.auto_baselines == 'mit-cmu':
-    args.baselines.extend(["baselines/baseline_detection_fcboost_MIT+CMU", "baselines/baseline_detection_viola_rapid1_MIT+CMU", "cosmin/MIT+CMU/face.elbp.proj0.var.levels10.roc"])
-    args.legends.extend(["FcBoost", "Viola", "Cosmin"])
+    if args.auto_baselines == 'bioid':
+      args.baselines.extend(["baselines/baseline_detection_froba_mct_BIOID", "cosmin/BIOID/face.elbp.proj0.var.levels10.roc"])
+      args.legends.extend(["Froba", "Cosmin"])
+    elif args.auto_baselines == 'mit-cmu':
+      args.baselines.extend(["baselines/baseline_detection_fcboost_MIT+CMU", "baselines/baseline_detection_viola_rapid1_MIT+CMU", "cosmin/MIT+CMU/face.elbp.proj0.var.levels10.roc"])
+      args.legends.extend(["FcBoost", "Viola", "Cosmin"])
 
   return args
 
@@ -110,6 +113,27 @@ def _plot_froc(fa, dr, colors, labels, title, max_r):
   mpl.grid(True, color=(0.6,0.6,0.6))
   mpl.legend(loc=4,prop={'size': 16})
   mpl.title(title)
+
+  return figure
+
+
+def _plot_errors(hist_r, hist_l, count_r, count_l):
+  figure = mpl.figure(figsize=(10,6))
+  # define sub-figures
+  grid = gridspec.GridSpec(1,2)
+#  grid.update(left=0.09, right=0.97, top=0.97, bottom=0.06, wspace=0.3, hspace=0.4)
+
+  mpl.subplot(grid[0])
+  mpl.imshow(hist_r, extent=[-10, 10, -10, 10], interpolation='nearest')
+  mpl.xticks(range(-10,11,5))
+  mpl.yticks(range(-10,11,5))
+  mpl.title("Right eye, outliers: %d" % count_r)
+
+  mpl.subplot(grid[1])
+  mpl.imshow(hist_l, extent=[-10, 10, -10, 10], interpolation='nearest')
+  mpl.xticks(range(-10,11,5))
+  mpl.yticks(range(-10,11,5))
+  mpl.title("Right eye, outliers: %d" % count_l)
 
   return figure
 
@@ -169,62 +193,120 @@ def read_score_file(filename):
   return (ground_truth, positives, negatives)
 
 
+def read_error_file(filename):
+  errors = []
+  with open(filename) as f:
+    for line in f:
+      line = line.rstrip()
+      if not line or line[0] == '#':
+        continue
+      splits = line.split()
+      assert len(splits) == 5
+      errors.append([float(splits[i]) for i in range(1,5)])
+
+  return errors
+
 def main(command_line_parameters=None):
   """Reads score files, computes error measures and plots curves."""
 
   args = command_line_arguments(command_line_parameters)
 
-  # get some colors for plotting
-  cmap = mpl.cm.get_cmap(name='hsv')
-  count = len(args.files) + (len(args.baselines) if args.baselines else 0)
-  colors = [cmap(i) for i in numpy.linspace(0, 1.0, count+1)]
+  if args.files:
 
-  # First, read the score files
-  facereclib.utils.info("Loading %d score files" % len(args.files))
+    # get some colors for plotting
+    cmap = mpl.cm.get_cmap(name='hsv')
+    count = len(args.files) + (len(args.baselines) if args.baselines else 0)
+    colors = [cmap(i) for i in numpy.linspace(0, 1.0, count+1)]
 
-  scores = [read_score_file(os.path.join(args.directory, f)) for f in args.files]
+    # First, read the score files
+    facereclib.utils.info("Loading %d score files" % len(args.files))
 
-  false_alarms = []
-  detection_rate = []
-  facereclib.utils.info("Computing FROC curves")
-  for score in scores:
-    # compute some thresholds
-    tmin = min(score[2])
-    tmax = max(score[2])
-    count = 100
-    thresholds = [tmin + float(x)/count * (tmax - tmin) for x in range(count+2)]
-    false_alarms.append([])
-    detection_rate.append([])
-    for threshold in thresholds:
-      detection_rate[-1].append(numpy.count_nonzero(numpy.array(score[1]) >= threshold) / float(score[0]))
-      false_alarms[-1].append(numpy.count_nonzero(numpy.array(score[2]) >= threshold))
-    # to display 0 in a semilogx plot, we have to add a little
-#    false_alarms[-1][-1] += 1e-8
+    scores = [read_score_file(os.path.join(args.directory, f)) for f in args.files]
 
-  # also read baselines
-  if args.baselines is not None:
-    for baseline in args.baselines:
-      dr = []
-      fa = []
-      with open(os.path.join(args.baseline_directory, baseline)) as f:
-        for line in f:
-          splits = line.rstrip().split()
-          dr.append(float(splits[0]))
-          fa.append(int(splits[1]))
-      false_alarms.append(fa)
-      detection_rate.append(dr)
+    false_alarms = []
+    detection_rate = []
+    facereclib.utils.info("Computing FROC curves")
+    for score in scores:
+      # compute some thresholds
+      tmin = min(score[2])
+      tmax = max(score[2])
+      count = 100
+      thresholds = [tmin + float(x)/count * (tmax - tmin) for x in range(count+2)]
+      false_alarms.append([])
+      detection_rate.append([])
+      for threshold in thresholds:
+        detection_rate[-1].append(numpy.count_nonzero(numpy.array(score[1]) >= threshold) / float(score[0]))
+        false_alarms[-1].append(numpy.count_nonzero(numpy.array(score[2]) >= threshold))
+      # to display 0 in a semilogx plot, we have to add a little
+  #    false_alarms[-1][-1] += 1e-8
 
-  facereclib.utils.info("Plotting FROC curves to file '%s'" % args.output)
-  # create a multi-page PDF for the ROC curve
-  pdf = PdfPages(args.output)
-  figure = _plot_froc(false_alarms, detection_rate, colors, args.legends, args.title, args.max)
-  mpl.xlabel('False Alarm (of %d pruned)' % len(scores[0][2]))
-  mpl.ylabel('Detection Rate in \%% (total %d faces)' % scores[0][0])
-  pdf.savefig(figure)
-  pdf.close()
+    # also read baselines
+    if args.baselines is not None:
+      for baseline in args.baselines:
+        dr = []
+        fa = []
+        with open(os.path.join(args.baseline_directory, baseline)) as f:
+          for line in f:
+            splits = line.rstrip().split()
+            dr.append(float(splits[0]))
+            fa.append(int(splits[1]))
+        false_alarms.append(fa)
+        detection_rate.append(dr)
 
-  if args.count_detections:
-    for i, f in enumerate(args.files):
-      det, all = count_detections(f)
-      print("The number of detected faces for %s is %d out of %d" % (args.legends[i], det, all))
+    facereclib.utils.info("Plotting FROC curves to file '%s'" % args.output)
+    # create a multi-page PDF for the ROC curve
+    pdf = PdfPages(args.output)
+    figure = _plot_froc(false_alarms, detection_rate, colors, args.legends, args.title, args.max)
+    mpl.xlabel('False Alarm (of %d pruned)' % len(scores[0][2]))
+    mpl.ylabel('Detection Rate in \%% (total %d faces)' % scores[0][0])
+    pdf.savefig(figure)
+    pdf.close()
+
+    if args.count_detections:
+      for i, f in enumerate(args.files):
+        det, all = count_detections(f)
+        print("The number of detected faces for %s is %d out of %d" % (args.legends[i], det, all))
+
+  if args.error_files:
+
+    pdf = PdfPages("eye_errors.pdf")
+    # evaluate the error files
+    for error_file in args.error_files:
+      # read errors
+      errors = read_error_file(error_file)
+
+      error_y = 0.
+      error_x = 0.
+
+      hist_r = numpy.zeros((21,21), numpy.int)
+      hist_l = numpy.zeros((21,21), numpy.int)
+
+      outside_r = 0
+      outside_l = 0
+
+      for ry, rx, ly, lx in errors:
+        # compute errors in x and y for both eyes
+        # error in y might be influenced by rotation; we explicitely subtract the rotation here!
+        error_y += abs(ry - ly)
+        # error in x is not so much influenced by rotation; we average both errors
+        error_x += (abs(rx) + abs(lx)) / 2.
+
+        bins = [int(round(a * 33.)) + 10 for a in (ry, rx, ly, lx)]
+        if bins[0] < 0 or bins[0] > 20 or bins[1] < 0 or bins[1] > 20:
+          outsize_r += 1
+        else:
+          hist_r[bins[0], bins[1]] += 1
+
+        if bins[2] < 0 or bins[2] > 20 or bins[3] < 0 or bins[3] > 20:
+          outsize_l += 1
+        else:
+          hist_l[bins[2], bins[3]] += 1
+
+      print("Average errors for error file %s is y: %f x: %f" % (error_file, error_y / len(errors), error_x / len(errors)))
+
+      # plot histograms of eye errors
+      figure = _plot_errors(hist_r, hist_l, outside_r, outside_l)
+      pdf.savefig(figure)
+    pdf.close()
+
 
