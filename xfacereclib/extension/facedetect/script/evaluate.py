@@ -133,7 +133,7 @@ def _plot_errors(hist_r, hist_l, count_r, count_l):
   mpl.imshow(hist_l, extent=[-10, 10, -10, 10], interpolation='nearest')
   mpl.xticks(range(-10,11,5))
   mpl.yticks(range(-10,11,5))
-  mpl.title("Right eye, outliers: %d" % count_l)
+  mpl.title("Left eye, outliers: %d" % count_l)
 
   return figure
 
@@ -293,12 +293,12 @@ def main(command_line_parameters=None):
 
         bins = [int(round(a * 33.)) + 10 for a in (ry, rx, ly, lx)]
         if bins[0] < 0 or bins[0] > 20 or bins[1] < 0 or bins[1] > 20:
-          outsize_r += 1
+          outside_r += 1
         else:
           hist_r[bins[0], bins[1]] += 1
 
         if bins[2] < 0 or bins[2] > 20 or bins[3] < 0 or bins[3] > 20:
-          outsize_l += 1
+          outside_l += 1
         else:
           hist_l[bins[2], bins[3]] += 1
 

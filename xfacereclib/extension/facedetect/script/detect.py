@@ -7,6 +7,7 @@ import math
 import xbob.boosting
 import xbob.flandmark
 import os
+import matplotlib.pyplot
 
 from .. import utils, detector
 from .._features import prune_detections, FeatureExtractor
@@ -144,7 +145,7 @@ def main(command_line_arguments = None):
           bob.ip.draw_box(colored, y=int(lm['reye'][0]) - 5, x=int(lm['reye'][1]) - 5, height = 10, width=10,  color=(0,0,255))
           bob.ip.draw_box(colored, y=int(lm['leye'][0]) - 5, x=int(lm['leye'][1]) - 5, height = 10, width=10,  color=(0,0,255))
 
-        import matplotlib.pyplot, time
+        matplotlib.pyplot.clf()
         matplotlib.pyplot.imshow(numpy.rollaxis(numpy.rollaxis(colored, 2),2))
         matplotlib.pyplot.draw()
 
