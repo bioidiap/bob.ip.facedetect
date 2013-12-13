@@ -16,6 +16,7 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
         cascade,
         cropped_image_size,
         detection_threshold = 0,
+        detection_overlap = 0.2,
         distance = 2,
         scale_base = math.pow(2., -1./16.),
         lowest_scale = 0.5,
@@ -29,6 +30,8 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
         self,
         cascade = cascade,
         cropped_image_size = cropped_image_size,
+        detection_threshold = detection_threshold,
+        detection_overlap = detection_overlap,
         distance = distance,
         scale_base = scale_base,
         lowest_scale = lowest_scale,
@@ -40,11 +43,12 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
     self.m_sampler = xfacereclib.extension.facedetect.Sampler(scale_factor=scale_base, first_scale=lowest_scale, distance=distance)
     self.m_cascade = xfacereclib.extension.facedetect.Cascade(classifier_file=bob.io.HDF5File(cascade))
     self.m_detection_threshold = detection_threshold
+    self.m_detection_overlap = detection_overlap
     self.m_color_channel = color_channel
     self.m_last_prediction = None
     self.m_post_processor = facereclib.utils.resources.load_resource(post_processor, "preprocessor")
     # overwrite the cropped positions of the post processor to use the top-left and bottom-right bounding box values
-    self.m_post_processor.m_cropped_positions = {'topleft':(0,0), 'bottomright':(cropped_image_size[0]-1, cropped_image_size[1]-1)}
+#    self.m_post_processor.m_cropped_positions = {'topleft':(0,0), 'bottomright':(cropped_image_size[0]-1, cropped_image_size[1]-1)}
 
 
   def __call__(self, image, annotation):
@@ -63,12 +67,13 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
       utils.warning("No face found")
       return None
 
-    top, left, bottom, right, value = xfacereclib.extension.facedetect.utils.best_detection(detections, predictions)
+    bb, value = xfacereclib.extension.facedetect.utils.best_detection(detections, predictions, self.m_detection_overlap)
+    annots = xfacereclib.extension.facedetect.utils.expected_eye_positions(bb)
 
     self.m_last_prediction = value
 
     # perform preprocessing
-    return self.m_post_processor(image, annotations={'topleft':(top, left), 'bottomright':(bottom, right)})
+    return self.m_post_processor(image, annotations=annots)
 
 
   def quality(self):

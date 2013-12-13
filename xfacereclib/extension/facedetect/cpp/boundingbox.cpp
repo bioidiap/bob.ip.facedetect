@@ -2,10 +2,10 @@
 
 BoundingBox BoundingBox::overlap(const BoundingBox& other) const{
   // compute intersection rectangle
-  int t = std::max(top(), other.top()),
-      b = std::min(bottom(), other.bottom()),
-      l = std::max(left(), other.left()),
-      r = std::min(right(), other.right());
+  double t = std::max(top(), other.top()),
+         b = std::min(bottom(), other.bottom()),
+         l = std::max(left(), other.left()),
+         r = std::min(right(), other.right());
   return BoundingBox(t, l, b-t+1, r-l+1);
 }
 

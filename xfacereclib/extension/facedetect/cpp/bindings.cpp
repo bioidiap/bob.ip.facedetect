@@ -130,6 +130,7 @@ BOOST_PYTHON_MODULE(_features) {
   bob::python::setup_python("Bindings for the xfacereclib.extension.facedetect machines.");
 
   class_<BoundingBox, boost::shared_ptr<BoundingBox> >("BoundingBox", "A bounding box class storing top, left, height and width of an rectangle", no_init)
+    .def(init<double, double, double, double>((arg("self"), arg("top"), arg("left"), arg("height"), arg("width")), "Constructor taking top-left position and height, width of the rectangle"))
     .def(init<int, int, int, int>((arg("self"), arg("top"), arg("left"), arg("height"), arg("width")), "Constructor taking top-left position and height, width of the rectangle"))
     .def(init<BoundingBox>((arg("self"), arg("other")), "Copy constructor"))
     .def(self == self)
@@ -143,13 +144,21 @@ BOOST_PYTHON_MODULE(_features) {
     .def("__str__", &bb_str, (arg("self")), "Returns a string representing this bounding box")
     .def("__repr__", &bb_str, (arg("self")), "Returns a string representing this bounding box")
 
-    .add_property("top", &BoundingBox::top)
-    .add_property("left", &BoundingBox::left)
-    .add_property("height", &BoundingBox::height)
-    .add_property("width", &BoundingBox::width)
-    .add_property("bottom", &BoundingBox::bottom)
-    .add_property("right", &BoundingBox::right)
+    .add_property("top", &BoundingBox::itop)
+    .add_property("left", &BoundingBox::ileft)
+    .add_property("height", &BoundingBox::iheight)
+    .add_property("width", &BoundingBox::iwidth)
+    .add_property("bottom", &BoundingBox::ibottom)
+    .add_property("right", &BoundingBox::iright)
     .add_property("area", &BoundingBox::area)
+
+    .add_property("top_f", &BoundingBox::top)
+    .add_property("left_f", &BoundingBox::left)
+    .add_property("height_f", &BoundingBox::height)
+    .add_property("width_f", &BoundingBox::width)
+    .add_property("bottom_f", &BoundingBox::bottom)
+    .add_property("right_f", &BoundingBox::right)
+
   ;
 
   def("prune_detections", &prune_detections, (arg("detections"), arg("predictions"), arg("threshold"), arg("number_of_detections")=-1), "Prunes the given detected bounding boxes according to their predictions and returns the pruned bounding boxes and their predictions");

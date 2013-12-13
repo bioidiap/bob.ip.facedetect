@@ -97,6 +97,15 @@ def bounding_box_from_annotation(source=None, padding=None, **kwargs):
   return CppBoundingBox(top, left, bottom - top + 1, right - left + 1)
 
 
+def expected_eye_positions(bounding_box):
+  """Computes the expected eye positions based on the relative coordinates of the bounding box."""
+  t, l, b, r = default_paddings['eyes']['top'], default_paddings['eyes']['left'], default_paddings['eyes']['bottom'], default_paddings['eyes']['right']
+  inter_eye_distance = (bounding_box.width) / (r - l)
+  return {
+    'reye':(bounding_box.top - t*inter_eye_distance, bounding_box.left - l/2.*inter_eye_distance),
+    'leye':(bounding_box.top - t*inter_eye_distance, bounding_box.right - r/2.*inter_eye_distance)
+  }
+
 class BoundingBox:
 
   def __init__(self, source=None, padding=None, **kwargs):
@@ -254,9 +263,9 @@ def prune(detections, predictions, threshold=None):
 
   return (pruned_detections, pruned_predictions)
 
-def best_detection(detections, predictions):
+def best_detection(detections, predictions, minimum_overlap = 0.2):
   # keep only the bounding boxes that overlap with the highest detection
-  detections, predictions = overlapping_detections(detections, numpy.array(predictions), 0.6)
+  detections, predictions = overlapping_detections(detections, numpy.array(predictions), minimum_overlap)
 
   detections = [detections[i] for i in range(len(detections)) if predictions[i] > 0]
   predictions = predictions[predictions>0]
@@ -272,5 +281,5 @@ def best_detection(detections, predictions):
 
   value = sum(w*p for w,p in zip(weights, predictions))
 
-  return top, left, bottom, right, value
+  return CppBoundingBox(top, left, bottom-top+1, right-left+1), value
 

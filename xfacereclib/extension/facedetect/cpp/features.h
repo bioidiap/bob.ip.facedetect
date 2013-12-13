@@ -8,12 +8,12 @@
 class BoundingBox{
   public:
     // default constructor
-    BoundingBox(int top, int left, int height, int width) : m_top(top), m_left(left), m_height(height), m_width(width), m_area(width*height) {}
+    BoundingBox(double top, double left, double height, double width) : m_top(top), m_left(left), m_height(height), m_width(width), m_area(width*height) {}
     // copy constructor
     BoundingBox(const BoundingBox& other) : m_top(other.m_top), m_left(other.m_left), m_height(other.m_height), m_width(other.m_width), m_area(m_width*m_height) {}
 
     // create boundingbox by shifting
-    BoundingBox shift(int y, int x) const {return BoundingBox(m_top + y, m_left + x, m_height, m_width);}
+    BoundingBox shift(double y, double x) const {return BoundingBox(m_top + y, m_left + x, m_height, m_width);}
     // create boundingbox by scaling
     BoundingBox scale(double scale) const {return BoundingBox(irnd(m_top*scale), irnd(m_left*scale), irnd(m_height*scale), irnd(m_width*scale));}
     // create a bounding box that is mirrored horizontically, adapted to the image width
@@ -24,13 +24,21 @@ class BoundingBox{
     bool operator == (const BoundingBox& other){return top() == other.top() && left() == other.left() && height() == other.height() && width() == other.width();}
 
     // query functions
-    int top() const {return m_top;}
-    int bottom() const {return m_top + m_height - 1;}
-    int left() const {return m_left;}
-    int right() const {return m_left + m_width - 1;}
-    int height() const {return m_height;}
-    int width() const {return m_width;}
-    int area() const{return m_area;}
+    double top() const {return m_top;}
+    double bottom() const {return m_top + m_height - 1;}
+    double left() const {return m_left;}
+    double right() const {return m_left + m_width - 1;}
+    double height() const {return m_height;}
+    double width() const {return m_width;}
+
+    int itop() const {return irnd(top());}
+    int ibottom() const {return irnd(bottom());}
+    int ileft() const {return irnd(left());}
+    int iright() const {return irnd(right());}
+    int iheight() const {return irnd(height());}
+    int iwidth() const {return irnd(width());}
+
+    double area() const{return m_area;}
 
     // Jesorsky distance between bounding boxes
     double similarity(const BoundingBox& other) const;
@@ -38,8 +46,8 @@ class BoundingBox{
   private:
     int irnd(double x) const {return (int)round(x);}
 
-    int m_top, m_left, m_height, m_width;
-    int m_area;
+    double m_top, m_left, m_height, m_width;
+    double m_area;
 };
 
 void pruneDetections(const std::vector<BoundingBox>& detections, const blitz::Array<double, 1>& predictions, double threshold, std::vector<BoundingBox>& pruned_boxes, blitz::Array<double, 1>& pruned_weights, const int number_of_detections);

@@ -8,7 +8,7 @@ import xbob.boosting
 import os
 
 from .. import utils, detector
-from .._features import prune_detections
+from .._features import prune_detections, FeatureExtractor
 
 def command_line_options(command_line_arguments):
 
@@ -18,14 +18,18 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--protocol', '-P', help = "If given, the test files from the given protocol are detected.")
   parser.add_argument('--limit-test-files', '-y', type=int, help = "Limit the test files to the given number (for debug purposes mainly)")
   parser.add_argument('--distance', '-s', type=int, default=4, help = "The distance with which the image should be scanned.")
-  parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./4.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
+  parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./16.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--first-scale', '-f', type=float, default = 0.5, help = "The first scale of the image to consider (should be between 0 and 1, higher values will slow down the detection process).")
-  parser.add_argument('--trained-file', '-r', default = 'detector.hdf5', help = "The file to write the resulting trained detector into.")
-  parser.add_argument('--prediction-threshold', '-t', type = float, help = "If given, detections with values below this threshold will not be handled further.")
-  parser.add_argument('--score-file', '-w', default='detection_scores.txt', help = "The score file to be written.")
-  parser.add_argument('--prune-detections', '-p', type=float, help = "If given, detections that overlap with the given threshold are pruned")
-  parser.add_argument('--detection-threshold', '-j', type=float, default=0.5, help = "The overlap from Ground Truth for which a detection should be considered as successful")
-
+  parser.add_argument('--cascade-file', '-r', default = 'detector.hdf5', help = "The file to read the cascade (or the strong classifier) from.")
+  parser.add_argument('--classifiers-per-round', '-n', type=int, default=25, help = "The number of classifiers that should be applied in each cascade.")
+  parser.add_argument('--limit-by-variance', '-V', action='store_false', help = "Disable the mean/variance limitation.")
+  parser.add_argument('--cascade-threshold', '-t', type=float, default=0., help = "Detections with values below this threshold will be discarded in each round.")
+  parser.add_argument('--prediction-threshold', '-T', type=float, help = "Detections with values below this threshold will be rejected by the detector.")
+  parser.add_argument('--output-directory', '-o', help = "If given, the extracted faces will be written to the given directory.")
+  parser.add_argument('--output-size', '-O', default=(80,64), nargs+2, type=int, help = "The size to which the output files should be cropped.")
+  parser.add_argument('--display', '-x', action='store_true', help = "If enabled, the detected faces will be displayed. Please start the program with 'ipython -pylab' to see the window.")
+  parser.add_argument('--error-file', '-e', default="eye_errors.txt", help = "File to write the eye localization files to.")
+  parser.add_argument('--best-detection-overlap', '-b', type=float, help = "If given, the average of the overlapping detections with this minimum overlap will be considered.")
 
   facereclib.utils.add_logger_command_line_option(parser)
   args = parser.parse_args(command_line_arguments)
@@ -33,8 +37,6 @@ def command_line_options(command_line_arguments):
 
   return args
 
-#def classify(classifier, features):
-#  return classifier(features)
 
 def main(command_line_arguments = None):
   args = command_line_options(command_line_arguments)
@@ -42,21 +44,30 @@ def main(command_line_arguments = None):
   # open database to collect test images
   test_files = utils.test_image_annot([args.database], [args.protocol], args.limit_test_files)
 
-  facereclib.utils.debug("Loading strong classifier from file %s" % args.trained_file)
-  # load classifier and feature extractor
-  classifier, feature_extractor, is_cpp_extractor, mean, variance = detector.load(args.trained_file)
-  feature_vector = numpy.zeros(feature_extractor.number_of_features, numpy.uint16)
+  try:
+    facereclib.utils.info("Loading cascade from file %s" % args.cascade_file)
+    hdf5 = bob.io.HDF5File(args.cascade_file)
+    cascade = detector.Cascade(classifier_file=hdf5)
+  except:
+    facereclib.utils.info("Creating regular cascade from strong classifier %s" % args.cascade_file)
+    # load classifier and feature extractor
+    classifier, feature_extractor, is_cpp_extractor, mean, variance = detector.load(args.cascade_file)
+    feature_vector = numpy.zeros(feature_extractor.number_of_features, numpy.uint16)
+
+    cascade = detector.Cascade(classifier=classifier, classifiers_per_round=args.classifiers_per_round, classification_thresholds=args.cascade_threshold, feature_extractor=feature_extractor)
+    # write temporary cascade file
+    cascade.save(bob.io.HDF5File("__cascade__.hdf5", 'w'))
 
   # create the test examples
   preprocessor = facereclib.preprocessing.NullPreprocessor()
-  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, first_scale=args.first_scale, cpp_implementation=is_cpp_extractor)
+  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, first_scale=args.first_scale, cpp_implementation=True)
 
   # iterate over the test files and detect the faces
   i = 1
-  with open(args.score_file, 'w') as f:
+  with open(args.error_file, 'w') as f:
     # write configuration
-    f.write("# --trained-file %s --distance %d --scale-base %f ---first-scale %s --detection-threshold %f --prune-detections %s\n" % (args.trained_file, args.distance, args.scale_base, args.first_scale, args.detection_threshold, "%f" args.prune_detections if args.prune_detections is not None else "None"))
-    for filename, annotations, file in test_files:
+    f.write("# --cascade-file %s --distance %d --scale-base %f --first-scale %s --cascade-threshold %f --prediction-threshold %s\n" % (args.cascade_file, args.distance, args.scale_base, args.first_scale, args.cascade_threshold, "None" if args.prediction_threshold is None else "%f" % args.prediction_threshold))
+    for filename, annotations, f in test_files:
       facereclib.utils.info("Loading image %d of %d from file '%s'" % (i, len(test_files), filename))
       i += 1
       image = preprocessor(preprocessor.read_original_data(filename))
@@ -64,37 +75,54 @@ def main(command_line_arguments = None):
       # get the detection scores for the image
       predictions = []
       detections = []
-      for bounding_box in sampler.iterate(image, feature_extractor, feature_vector):
-        prediction = classifier(feature_vector)
+      for prediction, bounding_box in sampler.iterate_cascade(cascade, image):
         if args.prediction_threshold is None or prediction > args.prediction_threshold:
           predictions.append(prediction)
           detections.append(bounding_box)
-#          facereclib.utils.debug("Found bounding box %s with value %f" % (str(bounding_box), prediction))
 
-      facereclib.utils.info("Number of detections: %d" % len(detections))
+      facereclib.utils.info(".. number of detections: %d" % len(detections))
 
-      # prune detections
-      detections, predictions = utils.prune(detections, predictions, args.prune_detections)
-      facereclib.utils.info("Number of pruned detections: %d" % len(predictions))
+      # compute best location
+      if args.best_detection_overlap is not None:
+        # compute average over the best locations
+        bb, value = utils.best_detection(detections, predictions, args.best_detection_overlap)
+      else:
+        # get the detection with the highest value
+        d,p = prune_detections(detections, numpy.array(predictions), 0.01, 1)
+        bb = d[0]
+
+      # compute expected eye locations
+      annots = utils.expected_eye_positions(bb)
+
 
       # get ground truth bounding boxes from annotations
-      if is_cpp_extractor:
-        ground_truth = [utils.bounding_box_from_annotation(**annotation) for annotation in annotations]
-      else:
-        ground_truth = [utils.BoundingBox(**annotation) for annotation in annotations]
-      f.write("%s %d\n" % (file.path, len(ground_truth)))
+      assert len(annotations) == 1
+      gt = annotations[0]
 
-      # check if we have found a bounding box
-      all_positives = set()
-      for bounding_box in ground_truth:
-        for value, detection in zip(predictions, detections):
-          if detection.similarity(bounding_box) > args.detection_threshold:
-            f.write("%f " % value)
-            all_positives.add(detection)
-        f.write("\n")
-      # write all others as negatives
-      for value, detection in zip(predictions, detections):
-        if detection not in all_positives:
-          f.write("%f " % value)
-      f.write("\n")
+      # compute distance between ground-truth and estimated eye positions
+      inter_eye_distance = math.sqrt((gt['reye'][0] - gt['leye'][0])**2 + (gt['reye'][1] - gt['leye'][1])**2)
+      errors = [(gt[a][b] - annots[a][b]) / inter_eye_distance for a in ('reye', 'leye') for b in (0,1)]
+
+      f.write("%s %f %f %f %f\n" % tuple([filename] + errors))
+
+      facereclib.utils.info(".. relative eye distance errors: right (%f,%f), left (%f,%f)" % tuple(errors))
+
+      if args.output_directory:
+        output_filename = f.make_path(args.output_directory, '.png')
+        cut = image[
+
+      if args.display:
+        colored = bob.ip.gray_to_rgb(image).astype(numpy.uint8)
+        bob.ip.draw_box(colored, y=int(top), x=int(left), height=int(bottom - top + 1), width=int(right - left + 1), color=(255,0,0))
+        bob.ip.draw_cross(colored, y=int(annots['reye'][0]), x=int(annots['reye'][1]), radius=5, color=(255,0,0))
+        bob.ip.draw_cross(colored, y=int(annots['leye'][0]), x=int(annots['leye'][1]), radius=5, color=(255,0,0))
+        bb = utils.bounding_box_from_annotation(**gt)
+        bob.ip.draw_box(colored, y=bb.top, x=bb.left, height=bb.height, width=bb.width, color=(0,255,0))
+        bob.ip.draw_cross_plus(colored, y=int(gt['reye'][0]), x=int(gt['reye'][1]), radius=5, color=(0,255,0))
+        bob.ip.draw_cross_plus(colored, y=int(gt['leye'][0]), x=int(gt['leye'][1]), radius=5, color=(0,255,0))
+
+        import matplotlib.pyplot, time
+        matplotlib.pyplot.imshow(numpy.rollaxis(numpy.rollaxis(colored, 2),2))
+        matplotlib.pyplot.draw()
+
 
