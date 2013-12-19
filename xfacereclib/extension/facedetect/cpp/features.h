@@ -15,7 +15,9 @@ class BoundingBox{
     // create boundingbox by shifting
     BoundingBox shift(double y, double x) const {return BoundingBox(m_top + y, m_left + x, m_height, m_width);}
     // create boundingbox by scaling
-    BoundingBox scale(double scale) const {return BoundingBox(irnd(m_top*scale), irnd(m_left*scale), irnd(m_height*scale), irnd(m_width*scale));}
+    BoundingBox scale(double scale) const {return BoundingBox(m_top*scale, m_left*scale, m_height*scale, m_width*scale);}
+    // create boundingbox by scaling based on the center of the bounding box
+    BoundingBox scaleCentered(double scale) const {return BoundingBox(m_top - m_height/2.*(scale-1.), m_left - m_width/2.*(scale-1.), m_height*scale, m_width*scale);}
     // create a bounding box that is mirrored horizontically, adapted to the image width
     BoundingBox mirrorX(int width) const {return BoundingBox(m_top, width - m_width - m_left, m_height, m_width);}
 

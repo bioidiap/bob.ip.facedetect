@@ -1,4 +1,5 @@
 #include "features.h"
+#include <bob/core/logging.h>
 
 BoundingBox BoundingBox::overlap(const BoundingBox& other) const{
   // compute intersection rectangle
@@ -67,6 +68,10 @@ void pruneDetections(const std::vector<BoundingBox>& boxes, const blitz::Array<d
 }
 
 void bestOverlap(const std::vector<BoundingBox>& boxes, const blitz::Array<double, 1>& weights, double threshold, std::vector<BoundingBox>& overlapping_boxes, blitz::Array<double, 1>& overlapping_weights){
+  if (boxes.empty()){
+    bob::core::error << "Cannot find any box to compute overlaps" << std::endl;
+    return;
+  }
   // sort boxes
   std::vector<indexer> sorted(boxes.size());
   for (int i = boxes.size(); i--;){
@@ -74,24 +79,52 @@ void bestOverlap(const std::vector<BoundingBox>& boxes, const blitz::Array<doubl
   }
   std::sort(sorted.begin(), sorted.end(), gt);
 
-  // prune detections (attention, this is O(n^2)!)
   std::list<indexer> overlapping;
-  BoundingBox best = boxes[sorted.front().second];
-  std::vector<indexer>::const_iterator sit;
-  std::list<indexer>::const_iterator pit;
-  for (sit = sorted.begin(); sit != sorted.end(); ++sit){
-    if (boxes[sit->second].similarity(best) > threshold){
-      overlapping.push_back(*sit);
+  std::list<indexer>::const_iterator oit;
+
+  // compute all overlapping detections
+  // **this is O(n^2)!**
+  std::list<std::list<indexer> > collected;
+  std::list<indexer> best;
+  best.push_back(sorted.front());
+  collected.push_back(best);
+
+  std::vector<indexer>::const_iterator sit = sorted.begin();
+  std::list<std::list<indexer> >::iterator cit;
+  for (++sit; sit != sorted.end(); ++sit){
+    for (cit = collected.begin(); cit != collected.end(); ++cit){
+      if (boxes[sit->second].similarity(boxes[cit->front().second]) > threshold){
+        cit->push_back(*sit);
+        break;
+      }
+    }
+    if (cit == collected.end()){
+      std::list<indexer> novel;
+      novel.push_back(*sit);
+      collected.push_back(novel);
     }
   }
 
-  // fill pruned boxes
+  // now, take the list with the highest TOTAL detection value
+  double best_total = 0.;
+  for (cit = collected.begin(); cit != collected.end(); ++cit){
+    double current_total = 0.;
+    for (oit = cit->begin(); oit != cit->end(); ++oit){
+      current_total += oit->first;
+    }
+    if (current_total > best_total){
+      best_total = current_total;
+      overlapping = *cit;
+    }
+  }
+
+  // fill overlapping boxes
   overlapping_boxes.reserve(overlapping.size());
   overlapping_weights.resize(overlapping.size());
   int i = 0;
-  for (pit = overlapping.begin(); pit != overlapping.end(); ++pit, ++i){
-    overlapping_boxes.push_back(boxes[pit->second]);
-    overlapping_weights(i) = pit->first;
+  for (oit = overlapping.begin(); oit != overlapping.end(); ++oit, ++i){
+    overlapping_boxes.push_back(boxes[oit->second]);
+    overlapping_weights(i) = oit->first;
   }
 
   // done.

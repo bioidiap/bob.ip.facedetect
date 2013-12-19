@@ -15,7 +15,7 @@ import threading
 class Sampler:
   """This class generates and contains bounding boxes positive and negative examples used for face detection."""
 
-  def __init__(self, patch_size = (24,20), scale_factor = math.pow(2., -1./4.), first_scale = 0.5, distance = 2, similarity_thresholds = (0.3, 0.7), mirror_samples=False, cpp_implementation=True, number_of_parallel_threads=1):
+  def __init__(self, patch_size = (24,20), scale_factor = math.pow(2., -1./16.), lowest_scale = math.pow(2., -6.), distance = 2, similarity_thresholds = (0.3, 0.7), mirror_samples=False, cpp_implementation=True, number_of_parallel_threads=1):
     """Generates an example extractor for the given patch size.
 
     Parameters:
@@ -48,7 +48,7 @@ class Sampler:
     else:
       self.m_patch_box = BoundingBox("direct", topleft=(0,0), bottomright=(patch_size[0]-1, patch_size[1]-1))
     self.m_scale_factor = scale_factor
-    self.m_first_scale = first_scale
+    self.m_lowest_scale = lowest_scale
     self.m_distance = distance
     self.m_similarity_thresholds = similarity_thresholds
     self.m_number_of_parallel_threads = number_of_parallel_threads
@@ -56,15 +56,21 @@ class Sampler:
 
 
   def _scales(self, image):
+    minimum_scale = max(self.m_patch_box.height_f / image.shape[0], self.m_patch_box.width_f / image.shape[1])
+    if self.m_lowest_scale:
+      maximum_scale = min(minimum_scale / self.m_lowest_scale, 1.)
+    else:
+      maximum_scale = 1.
     current_scale_power = 0.
+
     while True:
       # scale the image
-      scale = self.m_first_scale * math.pow(self.m_scale_factor, current_scale_power)
-      current_scale_power += 1.
-      scaled_image_shape = bob.ip.get_scaled_output_shape(image, scale)
-      if scaled_image_shape[0] <= self.m_patch_box.bottom or scaled_image_shape[1] <= self.m_patch_box.right:
-        # image is too small since there is not enough space to put in the complete patch box
+      scale = minimum_scale * math.pow(self.m_scale_factor, current_scale_power)
+      if scale > maximum_scale:
+        # image is smaller than the requested minimum size
         break
+      current_scale_power -= 1.
+      scaled_image_shape = bob.ip.get_scaled_output_shape(image, scale)
 
       yield scale, scaled_image_shape
 

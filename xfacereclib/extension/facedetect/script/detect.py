@@ -5,9 +5,7 @@ import bob
 import numpy
 import math
 import xbob.boosting
-import xbob.flandmark
 import os
-import matplotlib.pyplot
 
 from .. import utils, detector
 from .._features import prune_detections, FeatureExtractor
@@ -19,20 +17,18 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--database', '-d', default = 'banca', help = "Select the database to get the training images from.")
   parser.add_argument('--protocol', '-P', help = "If given, the test files from the given protocol are detected.")
   parser.add_argument('--limit-test-files', '-y', type=int, help = "Limit the test files to the given number (for debug purposes mainly)")
-  parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
-  parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./16.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
-  parser.add_argument('--first-scale', '-f', type=float, default = 0.5, help = "The first scale of the image to consider (should be between 0 and 1, higher values will slow down the detection process).")
-  parser.add_argument('--cascade-file', '-r', default = 'detector.hdf5', help = "The file to read the cascade (or the strong classifier) from.")
+  parser.add_argument('--distance', '-s', type=int, default=4, help = "The distance with which the image should be scanned.")
+  parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./4.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
+  parser.add_argument('--lowest-scale', '-f', type=float, default = 0.125, help = "Faces which will be lower than the given scale times the image resolution will not be found.")
+  parser.add_argument('--cascade-file', '-r', default = 'cascade.hdf5', help = "The file to read the cascade from.")
   parser.add_argument('--classifiers-per-round', '-n', type=int, default=25, help = "The number of classifiers that should be applied in each cascade.")
   parser.add_argument('--limit-by-variance', '-V', action='store_false', help = "Disable the mean/variance limitation.")
   parser.add_argument('--cascade-threshold', '-t', type=float, default=0., help = "Detections with values below this threshold will be discarded in each round.")
   parser.add_argument('--prediction-threshold', '-T', type=float, help = "Detections with values below this threshold will be rejected by the detector.")
-  parser.add_argument('--output-directory', '-o', help = "If given, the extracted faces will be written to the given directory.")
-  parser.add_argument('--preprocessor', '-O', default='face-crop', help = "The preprocessor to be used to crop the faces.")
-  parser.add_argument('--display', '-x', action='store_true', help = "If enabled, the detected faces will be displayed. Please start the program with 'ipython -pylab' to see the window.")
-  parser.add_argument('--error-file', '-e', default="eye_errors.txt", help = "File to write the eye localization files to.")
-  parser.add_argument('--best-detection-overlap', '-b', type=float, help = "If given, the average of the overlapping detections with this minimum overlap will be considered.")
-  parser.add_argument('--include-landmarks', '-l', action='store_true', help = "Detect the landmarks in the face using flandmark?")
+  parser.add_argument('--score-file', '-w', default='cascaded_scores.txt', help = "The score file to be written.")
+  parser.add_argument('--prune-detections', '-p', type=float, help = "If given, detections that overlap with the given threshold are pruned")
+  parser.add_argument('--detection-threshold', '-j', type=float, default=0.5, help = "The overlap from Ground Truth for which a detection should be considered as successful")
+
 
   facereclib.utils.add_logger_command_line_option(parser)
   args = parser.parse_args(command_line_arguments)
@@ -40,6 +36,8 @@ def command_line_options(command_line_arguments):
 
   return args
 
+#def classify(classifier, features):
+#  return classifier(features)
 
 def main(command_line_arguments = None):
   args = command_line_options(command_line_arguments)
@@ -62,18 +60,14 @@ def main(command_line_arguments = None):
     cascade.save(bob.io.HDF5File("__cascade__.hdf5", 'w'))
 
   # create the test examples
-  preprocessor = facereclib.utils.resources.load_resource(args.preprocessor, 'preprocessor')
-  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, first_scale=args.first_scale, cpp_implementation=True)
-
-  if args.include_landmarks:
-    flandmark = xbob.flandmark.Localizer()
+  preprocessor = facereclib.preprocessing.NullPreprocessor()
+  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale, cpp_implementation=True)
 
   # iterate over the test files and detect the faces
   i = 1
-  with open(args.error_file, 'w') as f:
+  with open(args.score_file, 'w') as f:
     # write configuration
-    f.write("# --cascade-file %s --distance %d --scale-base %f --first-scale %s --cascade-threshold %f --prediction-threshold %s\n" % (args.cascade_file, args.distance, args.scale_base, args.first_scale, args.cascade_threshold, "None" if args.prediction_threshold is None else "%f" % args.prediction_threshold))
-    f.write("# file re-y re-x le-y le-x")
+    f.write("# --cascade-file %s --distance %d --scale-base %f --lowest-scale %s --cascade-threshold %f --prediction-threshold %s --detection-threshold %f\n" % (args.cascade_file, args.distance, args.scale_base, args.lowest_scale, args.cascade_threshold, "None" if args.prediction_threshold is None else "%f" % args.prediction_threshold, args.detection_threshold))
     for filename, annotations, file in test_files:
       facereclib.utils.info("Loading image %d of %d from file '%s'" % (i, len(test_files), filename))
       i += 1
@@ -87,66 +81,27 @@ def main(command_line_arguments = None):
           predictions.append(prediction)
           detections.append(bounding_box)
 
-      facereclib.utils.info(".. number of detections: %d" % len(detections))
+      facereclib.utils.info("Number of detections: %d" % len(detections))
 
-      # compute best location
-      if args.best_detection_overlap is not None:
-        # compute average over the best locations
-        bb, value = utils.best_detection(detections, predictions, args.best_detection_overlap)
-      else:
-        # get the detection with the highest value
-        d,p = prune_detections(detections, numpy.array(predictions), 0.01, 1)
-        bb = d[0]
-
-      # compute expected eye locations
-      annots = utils.expected_eye_positions(bb)
+      # prune detections
+      detections, predictions = utils.prune(detections, numpy.array(predictions), args.prune_detections)
+      facereclib.utils.info("Number of pruned detections: %d" % len(detections))
 
       # get ground truth bounding boxes from annotations
-      assert len(annotations) == 1
-      gt = annotations[0]
+      ground_truth = [utils.bounding_box_from_annotation(**annotation) for annotation in annotations]
+      f.write("%s %d\n" % (file.path, len(ground_truth)))
 
-      if args.include_landmarks:
-        landmarks = flandmark.localize(image.astype(numpy.uint8), bb.top, bb.left, bb.height, bb.width)
-        lm = None
-        if len(landmarks):
-          lm = {
-            'reye' : ((landmarks[1][0] + landmarks[5][0])/2., (landmarks[1][1] + landmarks[5][1])/2.),
-            'leye' : ((landmarks[2][0] + landmarks[6][0])/2., (landmarks[2][1] + landmarks[6][1])/2.)
-          }
-
-
-      # compute distance between ground-truth and estimated eye positions
-      inter_eye_distance = math.sqrt((gt['reye'][0] - gt['leye'][0])**2 + (gt['reye'][1] - gt['leye'][1])**2)
-      errors = [(gt[a][b] - annots[a][b]) / inter_eye_distance for a in ('reye', 'leye') for b in (0,1)]
-
-      f.write("%s %f %f %f %f\n" % tuple([filename] + errors))
-
-      facereclib.utils.info(".. relative eye distance errors: right (%f,%f), left (%f,%f)" % tuple(errors))
-
-      if args.output_directory:
-        output_filename = file.make_path(args.output_directory, '.png')
-        cut = preprocessor(image, annots)
-        bob.io.save(cut.astype(numpy.uint8), output_filename, True)
-        facereclib.utils.info(".. wrote image %s" % output_filename)
-
-      if args.display:
-        colored = bob.ip.gray_to_rgb(image).astype(numpy.uint8)
-        bob.ip.draw_box(colored, y=bb.top, x=bb.left, height=bb.height, width=bb.width, color=(255,0,0))
-        bob.ip.draw_cross(colored, y=int(annots['reye'][0]), x=int(annots['reye'][1]), radius=5, color=(255,0,0))
-        bob.ip.draw_cross(colored, y=int(annots['leye'][0]), x=int(annots['leye'][1]), radius=5, color=(255,0,0))
-        bb = utils.bounding_box_from_annotation(**gt)
-        bob.ip.draw_box(colored, y=bb.top, x=bb.left, height=bb.height, width=bb.width, color=(0,255,0))
-        bob.ip.draw_cross_plus(colored, y=int(gt['reye'][0]), x=int(gt['reye'][1]), radius=5, color=(0,255,0))
-        bob.ip.draw_cross_plus(colored, y=int(gt['leye'][0]), x=int(gt['leye'][1]), radius=5, color=(0,255,0))
-
-        if args.include_landmarks and lm is not None:
-          bb = utils.bounding_box_from_annotation(**lm)
-          bob.ip.draw_box(colored, y=bb.top, x=bb.left, height=bb.height, width=bb.width, color=(0,0,255))
-          bob.ip.draw_box(colored, y=int(lm['reye'][0]) - 5, x=int(lm['reye'][1]) - 5, height = 10, width=10,  color=(0,0,255))
-          bob.ip.draw_box(colored, y=int(lm['leye'][0]) - 5, x=int(lm['leye'][1]) - 5, height = 10, width=10,  color=(0,0,255))
-
-        matplotlib.pyplot.clf()
-        matplotlib.pyplot.imshow(numpy.rollaxis(numpy.rollaxis(colored, 2),2))
-        matplotlib.pyplot.draw()
-
+      # check if we have found a bounding box
+      all_positives = set()
+      for bounding_box in ground_truth:
+        for value, detection in zip(predictions, detections):
+          if detection.similarity(bounding_box) > args.detection_threshold:
+            f.write("%f " % value)
+            all_positives.add(detection)
+        f.write("\n")
+      # write all others as negatives
+      for value, detection in zip(predictions, detections):
+        if detection not in all_positives:
+          f.write("%f " % value)
+      f.write("\n")
 

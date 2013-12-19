@@ -143,12 +143,12 @@ setup(
       # scripts should be declared using this entry:
       'console_scripts': [
         'train.py = xfacereclib.extension.facedetect.script.train:main',
-        'bootstrap.py = xfacereclib.extension.facedetect.script.bootstrap:main',
         'validate.py = xfacereclib.extension.facedetect.script.validate:main',
         'display.py = xfacereclib.extension.facedetect.script.display:main',
         'detect.py = xfacereclib.extension.facedetect.script.detect:main',
-        'cascade.py = xfacereclib.extension.facedetect.script.cascade:main',
-        'froc.py = xfacereclib.extension.facedetect.script.evaluate:main',
+        'localize.py = xfacereclib.extension.facedetect.script.localize:main',
+        'plots.py = xfacereclib.extension.facedetect.script.evaluate:main',
+        'error.py = xfacereclib.extension.facedetect.script.errors:main',
       ],
 
       # registered database short cuts

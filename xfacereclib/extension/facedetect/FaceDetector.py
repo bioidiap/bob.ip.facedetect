@@ -19,7 +19,7 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
         detection_overlap = 0.2,
         distance = 2,
         scale_base = math.pow(2., -1./16.),
-        lowest_scale = 0.5,
+        lowest_scale = 0.125,
         post_processor = "face-crop",
         color_channel = 'gray',
         **kwargs
@@ -40,7 +40,7 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
         **kwargs
     )
 
-    self.m_sampler = xfacereclib.extension.facedetect.Sampler(scale_factor=scale_base, first_scale=lowest_scale, distance=distance)
+    self.m_sampler = xfacereclib.extension.facedetect.Sampler(scale_factor=scale_base, lowest_scale=lowest_scale, distance=distance)
     self.m_cascade = xfacereclib.extension.facedetect.Cascade(classifier_file=bob.io.HDF5File(cascade))
     self.m_detection_threshold = detection_threshold
     self.m_detection_overlap = detection_overlap

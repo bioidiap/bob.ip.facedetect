@@ -137,6 +137,7 @@ BOOST_PYTHON_MODULE(_features) {
 
     .def("shift", &BoundingBox::shift, (arg("self"), arg("y"), arg("x")), "Returns a shifted version of this BoundingBox")
     .def("scale", &BoundingBox::scale, (arg("self"), arg("scale")), "Returns a scaled version of this BoundingBox (transformation center is (0,0))")
+    .def("scale_centered", &BoundingBox::scaleCentered, (arg("self"), arg("scale")), "Returns a scaled version of this BoundingBox (transformation center is the center of the bounding box)")
     .def("mirror_x", &BoundingBox::mirrorX, (arg("self"), arg("width")), "Returns a copy of this bounding box mirrored for the given image width")
     .def("overlap", &BoundingBox::overlap, (arg("self"), arg("other")), "Returns the overlap between this and the given bounding box.")
     .def("similarity", &BoundingBox::similarity, (arg("self"), arg("other")), "Computes the Jaccard similarity index between this and the given BoundingBox")

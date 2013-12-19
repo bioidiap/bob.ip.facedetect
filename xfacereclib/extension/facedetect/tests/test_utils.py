@@ -87,9 +87,14 @@ class UtilsTests(unittest.TestCase):
     self.assertEqual(sbb.bottom, 14)
     self.assertEqual(sbb.left, 0)
     self.assertEqual(sbb.right, 19)
+    sbb = bb.scale_centered(2.)
+    self.assertEqual(sbb.top, -30)
+    self.assertEqual(sbb.bottom, 49)
+    self.assertEqual(sbb.left, -20)
+    self.assertEqual(sbb.right, 59)
     sbb = bb.scale(0.84)
     self.assertEqual(sbb.top, -8)
-    self.assertEqual(sbb.bottom, 25)
+    self.assertEqual(sbb.bottom, 24)
     self.assertEqual(sbb.left, 0)
     self.assertEqual(sbb.right, 33)
 
@@ -147,7 +152,7 @@ class UtilsTests(unittest.TestCase):
     self.assertTrue((x == y[:,::-1]).all())
 
 
-  def test03_pruning(self):
+  def test10_pruning(self):
     # tests that the pruning functionality from C++ and python works similarly
 
     # read boxes and according detection values from files
@@ -160,7 +165,7 @@ class UtilsTests(unittest.TestCase):
     cpp_bb, cpp_val = fd.prune_detections(detections, predictions, 0.3)
 
     self.assertEqual(len(py_val), len(cpp_val))
-    self.assertEqual(len(py_bb), 267)
+    self.assertEqual(len(py_bb), 149)
 
     for (v1, v2, b1, b2) in zip(py_val, cpp_val, py_bb, cpp_bb):
       self.assertAlmostEqual(v1, v2)
