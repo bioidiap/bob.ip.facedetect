@@ -1,8 +1,5 @@
-
 import numpy
-import bob
 import facereclib
-import os
 from .io import save
 
 class Bootstrap:
@@ -36,12 +33,8 @@ class Bootstrap:
       model = trainer.train(training_data, training_labels, model)
 
       # write model and extractor to temporary file to be able to catch up later
-      is_cpp = not hasattr(feature_extractor, "set_model")
-      save("%s_round_%d.hdf5" % (os.path.splitext(filename)[0], b+1), model, feature_extractor, is_cpp, mean, variance)
-      if is_cpp:
-        feature_extractor.model_indices = model.indices
-      else:
-        feature_extractor.set_model(model)
+      save("%s_round_%d.hdf5" % (os.path.splitext(filename)[0], b+1), model, feature_extractor, mean, variance)
+      feature_extractor.model_indices = model.indices
 
     # finally, return the trained model
     return model, mean, variance

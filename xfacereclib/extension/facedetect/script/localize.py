@@ -23,9 +23,6 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./16.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--lowest-scale', '-f', type=float, default = 0.125, help = "Faces which will be lower than the given scale times the image resolution will not be found.")
   parser.add_argument('--cascade-file', '-r', default = 'detector.hdf5', help = "The file to read the cascade (or the strong classifier) from.")
-  parser.add_argument('--classifiers-per-round', '-n', type=int, default=25, help = "The number of classifiers that should be applied in each cascade.")
-  parser.add_argument('--limit-by-variance', '-V', action='store_false', help = "Disable the mean/variance limitation.")
-  parser.add_argument('--cascade-threshold', '-t', type=float, default=0., help = "Detections with values below this threshold will be discarded in each round.")
   parser.add_argument('--prediction-threshold', '-T', type=float, help = "Detections with values below this threshold will be rejected by the detector.")
   parser.add_argument('--output-directory', '-o', help = "If given, the extracted faces will be written to the given directory.")
   parser.add_argument('--preprocessor', '-O', default='face-crop', help = "The preprocessor to be used to crop the faces.")
@@ -79,19 +76,9 @@ def main(command_line_arguments = None):
   # open database to collect test images
   test_files = utils.test_image_annot([args.database], [args.protocol], args.limit_test_files)
 
-  try:
-    facereclib.utils.info("Loading cascade from file %s" % args.cascade_file)
-    hdf5 = bob.io.HDF5File(args.cascade_file)
-    cascade = detector.Cascade(classifier_file=hdf5)
-  except:
-    facereclib.utils.info("Creating regular cascade from strong classifier %s" % args.cascade_file)
-    # load classifier and feature extractor
-    classifier, feature_extractor, is_cpp_extractor, mean, variance = detector.load(args.cascade_file)
-    feature_vector = numpy.zeros(feature_extractor.number_of_features, numpy.uint16)
-
-    cascade = detector.Cascade(classifier=classifier, classifiers_per_round=args.classifiers_per_round, classification_thresholds=args.cascade_threshold, feature_extractor=feature_extractor)
-    # write temporary cascade file
-    cascade.save(bob.io.HDF5File("__cascade__.hdf5", 'w'))
+  facereclib.utils.info("Loading cascade from file %s" % args.cascade_file)
+  hdf5 = bob.io.HDF5File(args.cascade_file)
+  cascade = detector.Cascade(classifier_file=hdf5)
 
   # create the test examples
   preprocessor = facereclib.utils.resources.load_resource(args.preprocessor, 'preprocessor')

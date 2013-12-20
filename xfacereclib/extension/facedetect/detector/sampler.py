@@ -5,8 +5,7 @@ import bob
 import facereclib
 import itertools
 
-from ..utils import BoundingBox
-from .._features import BoundingBox as CppBoundingBox
+from .._features import BoundingBox
 
 
 import threading
@@ -15,7 +14,7 @@ import threading
 class Sampler:
   """This class generates and contains bounding boxes positive and negative examples used for face detection."""
 
-  def __init__(self, patch_size = (24,20), scale_factor = math.pow(2., -1./16.), lowest_scale = math.pow(2., -6.), distance = 2, similarity_thresholds = (0.3, 0.7), mirror_samples=False, cpp_implementation=True, number_of_parallel_threads=1):
+  def __init__(self, patch_size = (24,20), scale_factor = math.pow(2., -1./16.), lowest_scale = math.pow(2., -6.), distance = 2, similarity_thresholds = (0.3, 0.7), mirror_samples=False, number_of_parallel_threads=1):
     """Generates an example extractor for the given patch size.
 
     Parameters:
@@ -43,10 +42,7 @@ class Sampler:
     self.m_positives = []
     self.m_negatives = []
 
-    if cpp_implementation:
-      self.m_patch_box = CppBoundingBox(0, 0, patch_size[0], patch_size[1])
-    else:
-      self.m_patch_box = BoundingBox("direct", topleft=(0,0), bottomright=(patch_size[0]-1, patch_size[1]-1))
+    self.m_patch_box = BoundingBox(0, 0, patch_size[0], patch_size[1])
     self.m_scale_factor = scale_factor
     self.m_lowest_scale = lowest_scale
     self.m_distance = distance
@@ -374,20 +370,4 @@ class Sampler:
         # return bounding box and result
         yield cascade(bb), bb.scale(1./scale)
 
-
-
-  def _write(self, name="/scratch/mguenther/temp/examples/image_%i.png", write_positives = True, write_negatives = False):
-    """Writes the positive (and negative) training examples to the file with the given file name."""
-    if write_positives:
-      i = 0
-      for image_index, image in enumerate(self.m_images):
-        for scale_index, scale in enumerate(self.scales[image_index]):
-          if len(self.m_positives[image_index][scale_index]):
-            # scale image
-            scaled_image = bob.ip.scale(image, scale)
-
-            for bb in self.m_positives[image_index][scale_index]:
-              # save part of the
-              bob.io.save(scaled_image[bb.top:bb.bottom+1, bb.left:bb.right+1].astype(numpy.uint8), name % i)
-              i += 1
 

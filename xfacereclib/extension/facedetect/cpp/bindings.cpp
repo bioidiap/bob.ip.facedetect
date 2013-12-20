@@ -170,6 +170,7 @@ BOOST_PYTHON_MODULE(_features) {
     .def("__init__", make_constructor(&init_from_vector_of_lbp, default_call_policies(), (arg("patch_size"), arg("extractors"))), "Uses the given list of LBP extractors.")
     .def(init<const FeatureExtractor&>((arg("self"), arg("other")), "Copy constructor"))
     .def(init<bob::io::HDF5File&>((arg("self"), arg("file")), "Creates a feature extractor by reading it from file"))
+    .def("append", &FeatureExtractor::append, "Appends the given feature extractor to this one.")
 
     .def("load", &FeatureExtractor::load, (arg("self"), arg("hdf5File")), "Loads the extractors from the given file.")
     .def("save", &FeatureExtractor::save, (arg("self"), arg("hdf5File")), "Writes the extractors to the given file.")

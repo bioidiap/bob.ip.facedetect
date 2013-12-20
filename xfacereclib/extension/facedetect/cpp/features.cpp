@@ -89,6 +89,21 @@ FeatureExtractor::FeatureExtractor(bob::io::HDF5File& file){
   load(file);
 }
 
+void FeatureExtractor::append(const FeatureExtractor& other){
+  // read information from file
+  if (other.m_isMultiBlock != m_isMultiBlock)
+    throw std::runtime_error("Cannot append given extractor since multi-block types differ.");
+
+  if (other.m_patchSize[0] != m_patchSize[0] || other.m_patchSize[1] != m_patchSize[1] )
+    throw std::runtime_error("Cannot append given extractor since patch sizes differ.");
+
+  // copy LBP classes
+  m_extractors.insert(m_extractors.end(), other.m_extractors.begin(), other.m_extractors.end());
+  // re-initialize
+  init();
+}
+
+
 void FeatureExtractor::init(){
   // initialize the indices for the full feature vector extraction
   m_featureStarts.resize(m_extractors.size()+1);

@@ -29,7 +29,7 @@ class SamplerTest (unittest.TestCase):
     ground_truth = vu.read_annotation_file(bob.test.utils.datafile("testimage.pos", 'facereclib', 'tests'), 'named')
 
     # sample the image
-    sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), lowest_scale=0.125, cpp_implementation=True)
+    sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), lowest_scale=0.125)
     sampler.add(test_image, [fd.utils.bounding_box_from_annotation(**ground_truth)])
     extractor = fd.FeatureExtractor(patch_size = (24,20), extractors = [bob.ip.LBP(8)])
 
@@ -37,14 +37,14 @@ class SamplerTest (unittest.TestCase):
     dataset, labels = sampler.get(extractor)
 
     self.assertEqual(numpy.count_nonzero(labels==1), 12)
-    self.assertEqual(numpy.count_nonzero(labels==-1), 13999)
+    self.assertEqual(numpy.count_nonzero(labels==-1), 14000)
 
   def test02_detect(self):
     # test that the detection works as expected
     test_image = bob.ip.rgb_to_gray(bob.io.load(bob.test.utils.datafile("testimage.jpg", 'facereclib', 'tests')))
 
-    classifier, extractor, is_cpp_extractor, mean, variance = fd.detector.load(bob.test.utils.datafile("extractor.hdf5", 'xfacereclib.extension.facedetect', 'tests'))
-    sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), lowest_scale=0.125, cpp_implementation=is_cpp_extractor)
+    classifier, extractor, mean, variance = fd.detector.load(bob.test.utils.datafile("extractor.hdf5", 'xfacereclib.extension.facedetect', 'tests'))
+    sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), lowest_scale=0.125)
 
     # get predictions
     feature = numpy.zeros(extractor.number_of_features, numpy.uint16)
@@ -73,8 +73,8 @@ class SamplerTest (unittest.TestCase):
     test_image = bob.ip.rgb_to_gray(bob.io.load(bob.test.utils.datafile("testimage.jpg", 'facereclib', 'tests')))
 
     # sample the image
-    classifier, extractor, is_cpp_extractor, mean, variance = fd.detector.load(bob.test.utils.datafile("extractor.hdf5", 'xfacereclib.extension.facedetect', 'tests'))
-    sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), lowest_scale=0.125, cpp_implementation=is_cpp_extractor)
+    classifier, extractor, mean, variance = fd.detector.load(bob.test.utils.datafile("extractor.hdf5", 'xfacereclib.extension.facedetect', 'tests'))
+    sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), lowest_scale=0.125)
 
     # get predictions
     cascade = fd.detector.Cascade(classifier, classifiers_per_round=500, classification_thresholds=0., feature_extractor=extractor)

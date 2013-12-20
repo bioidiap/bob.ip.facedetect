@@ -70,9 +70,10 @@ def main(command_line_arguments = None):
 
   facereclib.utils.debug("Loading strong classifier from file %s" % args.trained_file)
   # load classifier and feature extractor
+  cascade = detector.Cascade(classifier_file=bob.io.HDF5File(args.cascade_file))
   classifier, feature_extractor, is_cpp_extractor, mean, variance = detector.load(args.trained_file)
 
-  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale, cpp_implementation=is_cpp_extractor)
+  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
 
   # load test file
   test_image = bob.io.load(args.test_image)
@@ -82,9 +83,7 @@ def main(command_line_arguments = None):
   detections = []
   predictions = []
   # get the detection scores for the image
-  feature_vector = numpy.zeros(feature_extractor.number_of_features, numpy.uint16)
-  for bounding_box in sampler.iterate(test_image, feature_extractor, feature_vector):
-    prediction = classifier(feature_vector)
+  for prediction, bounding_box in sampler.iterate_cascade(cascade, test_image):
     if args.prediction_threshold is None or prediction > args.prediction_threshold:
       detections.append(bounding_box)
       predictions.append(prediction)

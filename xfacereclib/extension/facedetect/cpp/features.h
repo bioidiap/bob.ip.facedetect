@@ -70,6 +70,9 @@ class FeatureExtractor{
     // Reads the LBP extractor types from File
     FeatureExtractor(bob::io::HDF5File& file);
 
+    // concatenates the given FeatureExtractor to this one
+    void append(const FeatureExtractor& other);
+
     void load(bob::io::HDF5File& file);
     void save(bob::io::HDF5File& file) const;
     const std::vector<bob::ip::LBP>& getExtractors() const {return m_extractors;}
