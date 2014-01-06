@@ -61,6 +61,13 @@ class DetectionTest (unittest.TestCase):
     # execute preprocessor
     self.execute(preprocessor, test_image, None, 'detected+lbp.hdf5')
 
+  def test04_flandmark(self):
+    # read input
+    test_image = bob.io.load(bob.test.utils.datafile("testimage.jpg", 'facereclib', 'tests'))
+    preprocessor = facereclib.utils.tests.load_resource('face-detect-flandmark', 'preprocessor')
+    # execute preprocessor
+    self.execute(preprocessor, test_image, None, 'detected+flandmark.hdf5')
+
 
 
 

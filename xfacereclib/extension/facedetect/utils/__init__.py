@@ -1,6 +1,9 @@
 from boundingbox import bounding_box_from_annotation, expected_eye_positions, best_detection
 from database import training_image_annot, test_image_annot
 
+import numpy
+import facereclib
+
 def sqr(x):
   """This function computes the square of the given value.
   (I don't know why such a function is not part of the math module)."""
