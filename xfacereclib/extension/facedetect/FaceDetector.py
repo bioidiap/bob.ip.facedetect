@@ -6,6 +6,7 @@ import numpy
 
 try:
   import xfacereclib.extension.facedetect
+  import xbob.flandmark
 except:
   pass
 
@@ -14,13 +15,13 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
   def __init__(
         self,
         cascade,
-        cropped_image_size,
         detection_threshold = 0,
         detection_overlap = 0.2,
         distance = 2,
         scale_base = math.pow(2., -1./16.),
         lowest_scale = 0.125,
         post_processor = "face-crop",
+        use_flandmark = False,
         color_channel = 'gray',
         **kwargs
   ):
@@ -29,7 +30,6 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
     facereclib.preprocessing.Preprocessor.__init__(
         self,
         cascade = cascade,
-        cropped_image_size = cropped_image_size,
         detection_threshold = detection_threshold,
         detection_overlap = detection_overlap,
         distance = distance,
@@ -46,7 +46,12 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
     self.m_detection_overlap = detection_overlap
     self.m_color_channel = color_channel
     self.m_last_prediction = None
-    self.m_post_processor = facereclib.utils.resources.load_resource(post_processor, "preprocessor")
+    if isinstance(post_processor, facereclib.preprocessing.Preprocessor):
+      self.m_post_processor = post_processor
+    else:
+      self.m_post_processor = facereclib.utils.resources.load_resource(post_processor, "preprocessor")
+    self.m_flandmark = xbob.flandmark.Localizer() if use_flandmark else None
+
     # overwrite the cropped positions of the post processor to use the top-left and bottom-right bounding box values
 #    self.m_post_processor.m_cropped_positions = {'topleft':(0,0), 'bottomright':(cropped_image_size[0]-1, cropped_image_size[1]-1)}
 
@@ -64,11 +69,21 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
         predictions.append(prediction)
 
     if not detections:
-      utils.warning("No face found")
+      facereclib.utils.warn("No face found")
       return None
 
     bb, value = xfacereclib.extension.facedetect.utils.best_detection(detections, predictions, self.m_detection_overlap)
-    annots = xfacereclib.extension.facedetect.utils.expected_eye_positions(bb)
+    # get the landmarks in the face
+    if self.m_flandmark is not None:
+      # use the flandmark detector
+      landmarks = xfacereclib.extension.facedetect.utils.detect_landmarks(self.m_flandmark, image, bb)
+      annots = {
+        'reye' : ((landmarks[1][0] + landmarks[5][0])/2., (landmarks[1][1] + landmarks[5][1])/2.),
+        'leye' : ((landmarks[2][0] + landmarks[6][0])/2., (landmarks[2][1] + landmarks[6][1])/2.)
+      }
+    else:
+      # estimate from default locations
+      annots = xfacereclib.extension.facedetect.utils.expected_eye_positions(bb)
 
     self.m_last_prediction = value
 

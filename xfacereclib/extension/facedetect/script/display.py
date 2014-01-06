@@ -7,10 +7,11 @@ import bob
 import numpy
 import math
 import xbob.boosting
+import xbob.flandmark
 import os
 
 from .. import utils, detector, overlapping_detections
-from .._features import BoundingBox
+from .._features import BoundingBox, prune_detections
 
 def command_line_options(command_line_arguments):
 
@@ -20,7 +21,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
   parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./16.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--lowest-scale', '-f', type=float, default = 0.125, help = "Faces which will be lower than the given scale times the image resolution will not be found.")
-  parser.add_argument('--trained-file', '-r', default = 'detector.hdf5', help = "The file to write the resulting trained detector into.")
+  parser.add_argument('--cascade-file', '-r', default = 'cascade.hdf5', help = "The file to write the resulting trained detector into.")
   parser.add_argument('--prediction-threshold', '-T', type = float, help = "If given, all detection above this threshold will be displayed.")
   parser.add_argument('--prune-detections', '-p', type=float, help = "If given, detections that overlap with the given threshold are pruned")
   parser.add_argument('--best-detection-overlap', '-b', type=float, help = "If given, the average of the overlapping detections with this minimum overlap will be considered.")
@@ -33,34 +34,6 @@ def command_line_options(command_line_arguments):
   return args
 
 
-def detect_landmarks(image, bounding_box):
-  import xbob.flandmark
-  localizer = xbob.flandmark.Localizer()
-  scales = [1., 0.9, 0.8, 1.1, 1.2]
-  shifts = [0, 0.1, 0.2, -0.1, -0.2]
-
-  uint8_image = image.astype(numpy.uint8)
-
-  for scale in scales:
-    bs = bounding_box.scale_centered(scale)
-    for y in shifts:
-      by = bs.shift(y * bs.height, 0)
-      for x in shifts:
-        bb = by.shift(0, x * bs.width)
-
-        top = max(bb.top, 0)
-        left = int(max(bb.left, 0))
-        bottom = min(bb.bottom, image.shape[0]-1)
-        right = int(min(bb.right, image.shape[1]-1))
-        landmarks = localizer.localize(uint8_image, top, left, bottom-top+1, right-left+1)
-
-        if len(landmarks):
-          facereclib.utils.debug("Found landmarks with scale %1.1f, and shift %1.1fx%1.1f" % (scale, y, x))
-          return landmarks
-
-  return []
-
-
 def draw_bb(image, bb, color):
   bob.ip.draw_box(image, y=bb.top, x=bb.left, height=bb.bottom - bb.top + 1, width=bb.right - bb.left + 1, color=color)
 
@@ -68,10 +41,9 @@ def draw_bb(image, bb, color):
 def main(command_line_arguments = None):
   args = command_line_options(command_line_arguments)
 
-  facereclib.utils.debug("Loading strong classifier from file %s" % args.trained_file)
+  facereclib.utils.debug("Loading cascade from file %s" % args.cascade_file)
   # load classifier and feature extractor
   cascade = detector.Cascade(classifier_file=bob.io.HDF5File(args.cascade_file))
-  classifier, feature_extractor, is_cpp_extractor, mean, variance = detector.load(args.trained_file)
 
   sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
 
@@ -90,7 +62,11 @@ def main(command_line_arguments = None):
       facereclib.utils.debug("Found bounding box %s with value %f" % (str(bounding_box), prediction))
 
   # prune detections
-  detections, predictions = utils.prune(detections, predictions, args.prune_detections)
+  if args.prune_detections is None:
+    detections, predictions = prune_detections(detections, numpy.array(predictions), 1)
+  else:
+    detections, predictions = prune_detections(detections, numpy.array(predictions), args.prune_detections)
+
 
   facereclib.utils.info("Number of (pruned) detections: %d" % len(detections))
   highest_detection = predictions[0]
@@ -116,7 +92,7 @@ def main(command_line_arguments = None):
     draw_bb(color_image, detection, color)
 
   if len(detections) == 1 and args.show_landmarks:
-    landmarks = detect_landmarks(test_image, detections[0])
+    landmarks = utils.detect_landmarks(xbob.flandmark.Localizer(), test_image, detections[0])
     facereclib.utils.info("Detected %d landmarks" % (len(landmarks)))
     for i in range(len(landmarks)):
       bob.ip.draw_cross(color_image, y=int(landmarks[i][0]), x=int(landmarks[i][1]), radius=detections[0].height/30, color = (0,255,0) if i else (0,0,255))

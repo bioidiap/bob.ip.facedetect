@@ -15,5 +15,3 @@ preprocessor = xfacereclib.extension.facedetect.FaceDetector(
     cascade = cascade_file,
     post_processor = 'face-crop'
 )
-
-

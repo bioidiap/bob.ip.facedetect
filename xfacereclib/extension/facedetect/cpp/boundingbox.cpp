@@ -39,18 +39,24 @@ void pruneDetections(const std::vector<BoundingBox>& boxes, const blitz::Array<d
   }
   std::sort(sorted.begin(), sorted.end(), gt);
 
-  // prune detections (attention, this is O(n^2)!)
   std::list<indexer> pruned;
   std::vector<indexer>::const_iterator sit;
   std::list<indexer>::const_iterator pit;
-  for (sit = sorted.begin(); sit != sorted.end(); ++sit){
-    for (pit = pruned.begin(); pit != pruned.end(); ++pit){
-      if (boxes[pit->second].similarity(boxes[sit->second]) > threshold) break;
-    }
-    if (pit == pruned.end()){
-      pruned.push_back(*sit);
-      if (number_of_detections > 0 && pruned.size() == (unsigned)number_of_detections){
-        break;
+
+  if (threshold >= 1.){
+    // for overlap == 1 (or larger), all detections will be returned, but sorted
+    pruned.insert(pruned.end(), sorted.begin(), sorted.end());
+  } else {
+    // prune detections (attention, this is O(n^2)!)
+    for (sit = sorted.begin(); sit != sorted.end(); ++sit){
+      for (pit = pruned.begin(); pit != pruned.end(); ++pit){
+        if (boxes[pit->second].similarity(boxes[sit->second]) > threshold) break;
+      }
+      if (pit == pruned.end()){
+        pruned.push_back(*sit);
+        if (number_of_detections > 0 && pruned.size() == (unsigned)number_of_detections){
+          break;
+        }
       }
     }
   }

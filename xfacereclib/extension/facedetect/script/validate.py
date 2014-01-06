@@ -23,7 +23,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--rejection-rates', '-L', type=float, nargs='+', default=[0.05, 0.07, 0.1, 0.11, 0.12, 0.13, 0.14, 0.15], help = "The relative number of **positive** values rejected in the step of the cascade")
   parser.add_argument('--distance', '-s', type=int, default=4, help = "The distance with which the image should be scanned.")
   parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./4.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
-  parser.add_argument('--first-scale', '-f', type=float, default = 0.5, help = "The first scale of the image to consider (should be between 0 and 1, higher values will slow down the detection process).")
+  parser.add_argument('--lowest-scale', '-f', type=float, default=0.125, help = "Patches which will be lower than the given scale times the image resolution will not be taken into account; if 0. (the default) all patches will be considered.")
   parser.add_argument('--trained-file', '-r', default = 'detector.hdf5', help = "The file to compute the cascade for.")
   parser.add_argument('--cascade-file', '-w', default = 'cascade.hdf5', help = "The file to write the resulting cascade into.")
 #  parser.add_argument('--prune-detections', '-p', type=float, help = "If given, detections that overlap with the given threshold are pruned")
@@ -57,7 +57,7 @@ def main(command_line_arguments = None):
     feature_vector = numpy.zeros(feature_extractor.number_of_features, numpy.uint16)
 
     # create the test examples
-    sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, first_scale=args.first_scale, cpp_implementation=is_cpp_extractor)
+    sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
 
     # generate a DENSE cascade of classifiers
     classifiers = [classifier.__class__(classifier.weak_machines[i:i+1], classifier.weights[i:i+1, 0]) for i in range(args.limit_classifiers if args.limit_classifiers is not None else len(classifier.weak_machines))]

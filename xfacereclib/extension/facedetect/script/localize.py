@@ -22,7 +22,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
   parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./16.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--lowest-scale', '-f', type=float, default = 0.125, help = "Faces which will be lower than the given scale times the image resolution will not be found.")
-  parser.add_argument('--cascade-file', '-r', default = 'detector.hdf5', help = "The file to read the cascade (or the strong classifier) from.")
+  parser.add_argument('--cascade-file', '-r', default = 'cascade.hdf5', help = "The file to read the cascade (or the strong classifier) from.")
   parser.add_argument('--prediction-threshold', '-T', type=float, help = "Detections with values below this threshold will be rejected by the detector.")
   parser.add_argument('--output-directory', '-o', help = "If given, the extracted faces will be written to the given directory.")
   parser.add_argument('--preprocessor', '-O', default='face-crop', help = "The preprocessor to be used to crop the faces.")
@@ -38,29 +38,6 @@ def command_line_options(command_line_arguments):
   facereclib.utils.set_verbosity_level(args.verbose)
 
   return args
-
-def detect_landmarks(localizer, image, bounding_box):
-  scales = [1, 0.9, 0.8, 1.1, 1.2]
-  shifts = [0, 0.1, 0.2, -0.1, -0.2]
-
-  uint8_image = image.astype(numpy.uint8)
-
-  for scale in scales:
-    bs = bounding_box.scale_centered(scale)
-    for y in shifts:
-      by = bs.shift(y * bs.height, 0)
-      for x in shifts:
-        bb = by.shift(0, x * bs.width)
-
-        top = max(bb.top, 0)
-        left = max(bb.left, 0)
-        bottom = min(bb.bottom, image.shape[0]-1)
-        right = min(bb.right, image.shape[1]-1)
-        landmarks = localizer.localize(uint8_image, top, left, bottom-top+1, right-left+1)
-
-        if len(landmarks):
-          return landmarks
-  return []
 
 
 def draw_box(image, bb, color):
@@ -129,7 +106,7 @@ def main(command_line_arguments = None):
       gt = annotations[0]
 
       if args.include_landmarks:
-        landmarks = detect_landmarks(flandmark, image.astype(numpy.uint8), bb)
+        landmarks = utils.detect_landmarks(flandmark, image.astype(numpy.uint8), bb)
         l.write(("%s" + " %f %f"*len(landmarks) + "\n") % tuple([file.path] + [landmarks[a][b] for a in range(len(landmarks)) for b in range(2)]))
 
 
