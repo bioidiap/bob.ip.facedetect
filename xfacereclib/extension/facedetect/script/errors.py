@@ -102,7 +102,7 @@ def _plot_errors(hist_r, hist_l, count_r, count_l):
 
 def _plot_cumulative(J, P):
   # define sub-figures
-  grid = gridspec.GridSpec(1,2)
+  grid = gridspec.GridSpec(2,1)
   grid.update(left=0.09, right=0.96, top=0.9, bottom=0.15, wspace=0.3, hspace=0.4)
 
   plt.subplot(grid[0])

@@ -7,8 +7,8 @@ import numpy
 try:
   import xfacereclib.extension.facedetect
   import xbob.flandmark
-except:
-  pass
+except ImportError as e:
+  facereclib.utils.error("Import Error: %s" % e)
 
 class FaceDetector (facereclib.preprocessing.Preprocessor):
 
@@ -55,10 +55,45 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
     # overwrite the cropped positions of the post processor to use the top-left and bottom-right bounding box values
 #    self.m_post_processor.m_cropped_positions = {'topleft':(0,0), 'bottomright':(cropped_image_size[0]-1, cropped_image_size[1]-1)}
 
+  def _landmarks(self, image, bounding_box):
+    # get the landmarks in the face
+    if self.m_flandmark is not None:
+      # use the flandmark detector
+      landmarks = xfacereclib.extension.facedetect.utils.detect_landmarks(self.m_flandmark, image, bounding_box)
+      if landmarks is not None and len(landmarks):
+        annots = {
+          'reye' : ((landmarks[1][0] + landmarks[5][0])/2., (landmarks[1][1] + landmarks[5][1])/2.),
+          'leye' : ((landmarks[2][0] + landmarks[6][0])/2., (landmarks[2][1] + landmarks[6][1])/2.)
+        }
+      else:
+        facereclib.utils.warn("Could not detect landmarks -- using default landmarks")
+        annots = xfacereclib.extension.facedetect.utils.expected_eye_positions(bounding_box)
+
+    else:
+      # estimate from default locations
+      annots = xfacereclib.extension.facedetect.utils.expected_eye_positions(bounding_box)
+
+    return annots
 
   def __call__(self, image, annotation):
     # convert to the desired color channel
     image = facereclib.utils.gray_channel(image, self.m_color_channel)
+
+    # if annotations are given, use these annotations to initialize the bounding box, instead of detecting the face
+    if annotation is not None and self.m_flandmark is not None and 'leye' in annotation and 'reye' in annotation:
+      bounding_box = xfacereclib.extension.facedetect.utils.bounding_box_from_annotation(source='eyes', **annotation)
+      self.m_annots = self._landmarks(image, bounding_box)
+      detected = True
+      for lm in ('reye', 'leye'):
+        for i in range(2):
+          detected = detected and (self.m_annots[lm][i] - annotation[lm][i] < 5)
+      # if the annotations are close enough to the old annotations, we don't need to perform face detection
+      # NOTE: the quality is NOT UPDATED in this case!
+      if detected:
+        facereclib.utils.debug("Skipping face detection since new annotations %s are close enough to last annotations %s" % (str(self.m_annots), str(annotation)))
+        return self.m_post_processor(image, annotations=self.m_annots)
+      facereclib.utils.debug("Running face detection since new annotations %s are to far from last annotations %s" % (str(self.m_annots), str(annotation)))
+
 
     # detect the face
     detections = []
@@ -72,23 +107,12 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
       facereclib.utils.warn("No face found")
       return None
 
-    bb, value = xfacereclib.extension.facedetect.utils.best_detection(detections, predictions, self.m_detection_overlap)
-    # get the landmarks in the face
-    if self.m_flandmark is not None:
-      # use the flandmark detector
-      landmarks = xfacereclib.extension.facedetect.utils.detect_landmarks(self.m_flandmark, image, bb)
-      annots = {
-        'reye' : ((landmarks[1][0] + landmarks[5][0])/2., (landmarks[1][1] + landmarks[5][1])/2.),
-        'leye' : ((landmarks[2][0] + landmarks[6][0])/2., (landmarks[2][1] + landmarks[6][1])/2.)
-      }
-    else:
-      # estimate from default locations
-      annots = xfacereclib.extension.facedetect.utils.expected_eye_positions(bb)
+    bb, self.m_last_prediction = xfacereclib.extension.facedetect.utils.best_detection(detections, predictions, self.m_detection_overlap)
 
-    self.m_last_prediction = value
+    self.m_annots = self._landmarks(image, bb)
 
     # perform preprocessing
-    return self.m_post_processor(image, annotations=annots)
+    return self.m_post_processor(image, annotations=self.m_annots)
 
 
   def quality(self):

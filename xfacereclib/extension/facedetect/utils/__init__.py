@@ -1,5 +1,6 @@
 from boundingbox import bounding_box_from_annotation, expected_eye_positions, best_detection
 from database import training_image_annot, test_image_annot
+from .._features import BoundingBox
 
 import numpy
 import facereclib
@@ -19,9 +20,11 @@ def detect_landmarks(localizer, image, bounding_box):
   shifts = [0, 0.1, 0.2, -0.1, -0.2]
 
   uint8_image = image.astype(numpy.uint8)
+  # make the bounding box square shape by extending the horizontal position by 2 pixels times width/20
+  corrected_bounding_box = BoundingBox(top = bounding_box.top, left = bounding_box.left - bounding_box.width / 10., height = bounding_box.height, width = bounding_box.height)
 
   for scale in scales:
-    bs = bounding_box.scale_centered(scale)
+    bs = corrected_bounding_box.scale_centered(scale)
     for y in shifts:
       by = bs.shift(y * bs.height, 0)
       for x in shifts:

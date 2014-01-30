@@ -74,7 +74,8 @@ setup(
       'setuptools',
       'bob', # base signal proc./machine learning library
       'facereclib',
-      'xbob.boosting'
+      'xbob.boosting',
+      'xbob.flandmark'
     ],
 
     cmdclass={
