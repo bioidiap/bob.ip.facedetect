@@ -37,6 +37,28 @@ from setuptools import setup, find_packages, dist
 dist.Distribution(dict(setup_requires='xbob.extension'))
 from xbob.extension import Extension, build_ext
 
+ext_debug = False
+
+if ext_debug:
+  ext_arguments = {
+    'extra_compile_args' : [
+      '-ggdb',
+       '-std=c++11',
+    ],
+    'define_macros' : [
+      ('BZ_DEBUG', 1)
+    ],
+   'undef_macros' : [
+     'NDEBUG'
+    ]
+  }
+else:
+  ext_arguments = {
+    'extra_compile_args' : [
+       '-std=c++11',
+    ],
+  }
+
 # The only thing we do in this file is to call the setup() function with all
 # parameters that define our package.
 setup(
@@ -98,15 +120,7 @@ setup(
 #          "xfacereclib/extension/facedetect/cpp"
         ],
 # STUFF for DEBUGGING goes here (requires DEBUG bob version...):
-#        extra_compile_args = [
-#          '-ggdb',
-#        ],
-#        define_macros = [
-#          ('BZ_DEBUG', 1)
-#        ],
-#        undef_macros=[
-#          'NDEBUG'
-#        ]
+        **ext_arguments
       )
     ],
 
@@ -143,7 +157,8 @@ setup(
 
       # scripts should be declared using this entry:
       'console_scripts': [
-        'train.py = xfacereclib.extension.facedetect.script.train:main',
+        'train_detector.py = xfacereclib.extension.facedetect.script.train:main',
+        'train_localizer.py = xfacereclib.extension.facedetect.script.train_localizer:main',
         'validate.py = xfacereclib.extension.facedetect.script.validate:main',
         'display.py = xfacereclib.extension.facedetect.script.display:main',
         'detect.py = xfacereclib.extension.facedetect.script.detect:main',
@@ -167,6 +182,7 @@ setup(
         'cmu-pie           = xfacereclib.extension.facedetect.databases.pie:database',
         'yale-b            = xfacereclib.extension.facedetect.databases.yale_b:database',
         'web               = xfacereclib.extension.facedetect.databases.web:database',
+        'multipie          = xfacereclib.extension.facedetect.databases.multipie:database',
       ],
 
       # registered preprocessors

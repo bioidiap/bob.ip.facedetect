@@ -22,7 +22,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
   parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./16.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--lowest-scale', '-f', type=float, default = 0.125, help = "Faces which will be lower than the given scale times the image resolution will not be found.")
-  parser.add_argument('--cascade-file', '-r', default = 'cascade.hdf5', help = "The file to read the cascade (or the strong classifier) from.")
+  parser.add_argument('--cascade-file', '-r', required=True, help = "The file to read the cascade (or the strong classifier) from.")
   parser.add_argument('--prediction-threshold', '-T', type=float, help = "Detections with values below this threshold will be rejected by the detector.")
   parser.add_argument('--output-directory', '-o', help = "If given, the extracted faces will be written to the given directory.")
   parser.add_argument('--preprocessor', '-O', default='face-crop', help = "The preprocessor to be used to crop the faces.")
@@ -31,11 +31,15 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--detection-error-file', '-e', default="detections.txt", help = "File to write the eyes located based on the detected faces.")
   parser.add_argument('--landmark-error-file', '-E', default="landmarks.txt", help = "File to write the landmarks of flandmark.")
   parser.add_argument('--best-detection-overlap', '-b', type=float, help = "If given, the average of the overlapping detections with this minimum overlap will be considered.")
-  parser.add_argument('--include-landmarks', '-l', action='store_true', help = "Detect the landmarks in the face using flandmark?")
+  parser.add_argument('--include-landmarks', '-L', action='store_true', help = "Detect the landmarks in the face using flandmark?")
+  parser.add_argument('--localizer-file', '-l', help = "Use the given localizer instead of flandmark.")
 
   facereclib.utils.add_logger_command_line_option(parser)
   args = parser.parse_args(command_line_arguments)
   facereclib.utils.set_verbosity_level(args.verbose)
+
+  if args.localizer_file is not None:
+    args.include_landmarks = True
 
   return args
 
@@ -52,6 +56,7 @@ def main(command_line_arguments = None):
 
   # open database to collect test images
   test_files = utils.test_image_annot([args.database], [args.protocol], args.limit_test_files)
+#  test_files = utils.training_image_annot([args.database], args.limit_test_files)
 
   facereclib.utils.info("Loading cascade from file %s" % args.cascade_file)
   hdf5 = bob.io.HDF5File(args.cascade_file)
@@ -59,19 +64,22 @@ def main(command_line_arguments = None):
 
   # create the test examples
   preprocessor = facereclib.utils.resources.load_resource(args.preprocessor, 'preprocessor')
-  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_image_scale=args.lowest_scale, cpp_implementation=True)
+  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
 
   if args.include_landmarks:
-    flandmark = xbob.flandmark.Localizer()
+    if args.localizer_file is not None:
+      localizer, feature_extractor, _, _ = detector.load(args.localizer_file)
+    else:
+      flandmark = xbob.flandmark.Localizer()
     l = open(args.landmark_error_file, 'w')
-    l.write("# --cascade-file %s --distance %d --scale-base %f --lowest-scale %s --cascade-threshold %f --prediction-threshold %s\n" % (args.cascade_file, args.distance, args.scale_base, args.lowest_scale, args.cascade_threshold, "None" if args.prediction_threshold is None else "%f" % args.prediction_threshold))
+    l.write("# --cascade-file %s --distance %d --scale-base %f --lowest-scale %s --prediction-threshold %s\n" % (args.cascade_file, args.distance, args.scale_base, args.lowest_scale, "None" if args.prediction_threshold is None else "%f" % args.prediction_threshold))
     l.write("# file y x y x ...\n")
 
   # iterate over the test files and detect the faces
   i = 1
   with open(args.detection_error_file, 'w') as e, open(args.ground_truth_file, 'w') as g:
     # write configuration
-    e.write("# --cascade-file %s --distance %d --scale-base %f --lowest-scale %s --cascade-threshold %f --prediction-threshold %s\n" % (args.cascade_file, args.distance, args.scale_base, args.lowest_scale, args.cascade_threshold, "None" if args.prediction_threshold is None else "%f" % args.prediction_threshold))
+    e.write("# --cascade-file %s --distance %d --scale-base %f --lowest-scale %s --prediction-threshold %s\n" % (args.cascade_file, args.distance, args.scale_base, args.lowest_scale, "None" if args.prediction_threshold is None else "%f" % args.prediction_threshold))
     e.write("# file re-y re-x le-y le-x\n")
     g.write("# file re-y re-x le-y le-x\n")
     for filename, annotations, file in test_files:
@@ -87,7 +95,7 @@ def main(command_line_arguments = None):
           predictions.append(prediction)
           detections.append(bounding_box)
 
-      facereclib.utils.info(".. number of detections: %d" % len(detections))
+      facereclib.utils.debug(".. number of detections: %d" % len(detections))
 
       # compute best location
       if args.best_detection_overlap is not None:
@@ -106,7 +114,10 @@ def main(command_line_arguments = None):
       gt = annotations[0]
 
       if args.include_landmarks:
-        landmarks = utils.detect_landmarks(flandmark, image.astype(numpy.uint8), bb)
+        if args.localizer_file is not None:
+          landmarks =  utils.localize(localizer, feature_extractor, image, bb)
+        else:
+          landmarks = utils.detect_landmarks(flandmark, image.astype(numpy.uint8), bb)
         l.write(("%s" + " %f %f"*len(landmarks) + "\n") % tuple([file.path] + [landmarks[a][b] for a in range(len(landmarks)) for b in range(2)]))
 
 
@@ -131,10 +142,16 @@ def main(command_line_arguments = None):
 
         if args.include_landmarks:
           if len(landmarks):
-            lm = {
-              'reye' : ((landmarks[1][0] + landmarks[5][0])/2., (landmarks[1][1] + landmarks[5][1])/2.),
-              'leye' : ((landmarks[2][0] + landmarks[6][0])/2., (landmarks[2][1] + landmarks[6][1])/2.)
-            }
+            if args.localizer_file is None:
+              lm = {
+                'reye' : ((landmarks[1][0] + landmarks[5][0])/2., (landmarks[1][1] + landmarks[5][1])/2.),
+                'leye' : ((landmarks[2][0] + landmarks[6][0])/2., (landmarks[2][1] + landmarks[6][1])/2.)
+              }
+            else:
+              lm = {
+                'reye' : landmarks[0],
+                'leye' : landmarks[1]
+              }
             bb = utils.bounding_box_from_annotation(**lm)
             draw_box(colored, bb, color=(0,0,255))
             bob.ip.draw_box(colored, y=int(lm['reye'][0]) - 5, x=int(lm['reye'][1]) - 5, height = 10, width=10,  color=(0,0,255))

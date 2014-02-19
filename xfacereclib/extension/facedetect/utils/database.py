@@ -5,17 +5,21 @@ def _annotations(db, file):
   # returns the annotations for the given file object
   import xbob.db.detection.utils
   import xbob.db.verification.utils
-  if isinstance(db, xbob.db.detection.utils.Database):
-    # detection databases have multiple annotations per file
-    return db.annotations(file.id)
-  elif isinstance(db, xbob.db.verification.utils.Database):
-    # verification databases have just one annotation per file
-    return [db.annotations(file.id)]
-  elif isinstance(db, facereclib.databases.DatabaseXBob):
-    # verification databases have just one annotation per file
-    return [db.annotations(file)]
-  else:
-    raise NotImplementedError("The given database is of no known type.")
+  try:
+    if isinstance(db, xbob.db.detection.utils.Database):
+      # detection databases have multiple annotations per file
+      return db.annotations(file.id)
+    elif isinstance(db, xbob.db.verification.utils.Database):
+      # verification databases have just one annotation per file
+      return [db.annotations(file.id)]
+    elif isinstance(db, facereclib.databases.DatabaseXBob):
+      # verification databases have just one annotation per file
+      return [db.annotations(file)]
+    else:
+      raise NotImplementedError("The given database is of no known type.")
+  except IOError as e:
+    facereclib.utils.warn("Could not get annotations for file %s -- skipping (Error message is: %s)" % (file.path, e))
+    return None
 
 
 def training_image_annot(databases, limit):
@@ -27,15 +31,15 @@ def training_image_annot(databases, limit):
     db = facereclib.utils.resources.load_resource(database, 'database')
     if isinstance(db, facereclib.databases.DatabaseXBob):
       # collect image name and annotations
-      training_files.extend([(db.m_database.original_file_name(f), _annotations(db,f)) for f in db.training_files()])
+      training_files.extend([(db.m_database.original_file_name(f), _annotations(db,f), f) for f in db.training_files()])
     else:
       # collect image name and annotations
-      training_files.extend([(db.original_file_name(f), _annotations(db,f)) for f in db.training_files()])
+      training_files.extend([(db.original_file_name(f), _annotations(db,f), f) for f in db.training_files()])
 
+  training_files = [training_files[t] for t in facereclib.utils.quasi_random_indices(len(training_files), limit) if training_files[t][1] is not None]
 
-  training_files = [training_files[t] for t in facereclib.utils.quasi_random_indices(len(training_files), limit)]
-
-  for file, annot in training_files:
+#  for file, annot in training_files:
+  for file, annot, _ in training_files:
     facereclib.utils.debug("For training file '%s' loaded annotations '%s'" % (file, str(annot)))
 
   return training_files

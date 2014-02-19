@@ -4,6 +4,7 @@
 #include <bob/ip/scale.h>
 #include <bob/core/array_convert.h>
 #include <boost/shared_ptr.hpp>
+#include <limits.h>
 
 class BoundingBox{
   public:
@@ -33,6 +34,8 @@ class BoundingBox{
     double height() const {return m_height;}
     double width() const {return m_width;}
 
+    blitz::TinyVector<double,2> center() const {return blitz::TinyVector<double,2>(m_top + m_height/2, m_left + m_width/2.);}
+
     int itop() const {return irnd(top());}
     int ibottom() const {return irnd(bottom());}
     int ileft() const {return irnd(left());}
@@ -44,6 +47,8 @@ class BoundingBox{
 
     // Jesorsky distance between bounding boxes
     double similarity(const BoundingBox& other) const;
+
+    bool isValidFor(blitz::TinyVector<int,2> shape) const {return m_top >= 0 && m_top + m_height < shape[0] && m_left >= 0 && m_left + m_width < shape[1];}
 
   private:
     int irnd(double x) const {return (int)round(x);}
@@ -58,8 +63,9 @@ void bestOverlap(const std::vector<BoundingBox>& detections, const blitz::Array<
 class FeatureExtractor{
 
   public:
+    FeatureExtractor(const blitz::TinyVector<int,2>& patchSize);
     // Creates all possible combinations of LBP extractors using the given template
-    FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const bob::ip::LBP& templAte, bool overlap = false, bool square = false);
+    FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const bob::ip::LBP& templAte, bool overlap = false, bool square = false, int min_size=1, int max_size=INT_MAX, int distance=1);
 
     // Uses the given LBP extractors only; Please don't mix MB-LBP with regular LBP's
     FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const std::vector<bob::ip::LBP>& extractors);
@@ -71,7 +77,10 @@ class FeatureExtractor{
     FeatureExtractor(bob::io::HDF5File& file);
 
     // concatenates the given FeatureExtractor to this one
-    void append(const FeatureExtractor& other);
+    void append1(const FeatureExtractor& other);
+
+    // append the given LBP extractor ONLY at the given offset positions
+    void append2(const bob::ip::LBP& lbp, const std::vector<blitz::TinyVector<int32_t,2> >& offsets);
 
     void load(bob::io::HDF5File& file);
     void save(bob::io::HDF5File& file) const;
@@ -102,6 +111,11 @@ class FeatureExtractor{
     double variance(const BoundingBox& boundingBox) const;
     blitz::TinyVector<double,2> meanAndVariance(const BoundingBox& boundingBox) const;
 
+    blitz::TinyVector<int,2> patchSize() const {return m_patchSize;}
+
+    const bob::ip::LBP extractor(int32_t index) const {return m_extractors[m_lookUpTable(index,0)];}
+    blitz::TinyVector<int32_t,2> offset(int32_t index) const {return blitz::TinyVector<int,2>(m_lookUpTable(index,1), m_lookUpTable(index,2));}
+
   private:
 
     void init();
@@ -121,6 +135,7 @@ class FeatureExtractor{
 
     mutable std::vector<blitz::Array<uint16_t,2> > m_featureImages;
     bool m_isMultiBlock;
+    bool m_hasSingleOffsets;
 };
 
 template <typename T>

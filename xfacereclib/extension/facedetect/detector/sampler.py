@@ -41,7 +41,9 @@ class Sampler:
     self.m_images = []
     self.m_positives = []
     self.m_negatives = []
+    self.m_targets = []
 
+    self.m_patch_size = patch_size
     self.m_patch_box = BoundingBox(0, 0, patch_size[0], patch_size[1])
     self.m_scale_factor = scale_factor
     self.m_lowest_scale = lowest_scale
@@ -49,6 +51,22 @@ class Sampler:
     self.m_similarity_thresholds = similarity_thresholds
     self.m_number_of_parallel_threads = number_of_parallel_threads
     self.m_mirror_samples = mirror_samples
+    self.m_target_length = 0
+
+
+  def scale_self(self, scale):
+    patch_size = (int(round(self.m_patch_box.height*scale)), int(round(self.m_patch_box.width * scale)))
+    sampler = Sampler(patch_size, scale_factor=self.m_scale_factor, lowest_scale=self.m_lowest_scale, distance=int(math.ceil(self.m_distance * scale)), similarity_thresholds=self.m_similarity_thresholds, mirror_samples=self.m_mirror_samples, number_of_parallel_threads=self.m_number_of_parallel_threads)
+
+    sampler.m_scales = [[s * scale for s in scales] for scales in self.m_scales]
+    sampler.m_images = self.m_images
+    sampler.m_positives = [[[b.scale(scale) for b in bb] for bb in bbs] for bbs in self.m_positives]
+    sampler.m_negatives = [[[b.scale(scale) for b in bb] for bb in bbs] for bbs in self.m_negatives]
+    sampler.m_targets = [[[t * scale for t in tar] for tar in target] for target in self.m_targets]
+    sampler.m_target_length = self.m_target_length
+
+    return sampler
+
 
 
   def _scales(self, image):
@@ -128,7 +146,63 @@ class Sampler:
       self.m_negatives[-1].append([negatives[i] for i in facereclib.utils.quasi_random_indices(len(negatives), number_of_negatives_per_scale)])
 
 
-  def get(self, feature_extractor, model = None, maximum_number_of_positives = None, maximum_number_of_negatives = None, delete_samples = False, compute_means_and_variances = False):
+  def add_targets(self, image, bounding_boxes, annotations, number_of_samples_per_scale = None, annotation_types = ['reye', 'leye']):
+    """Adds examples from the given image, using the given ground_truth bounding boxes and the given ."""
+
+    def _targets(bb, ann):
+      # extracts the targets for the current bounding box from the given annotations
+      target = numpy.ndarray((self.m_target_length,), numpy.float64)
+      for i, t in enumerate(annotation_types):
+        # we define the annotation positions relative to the center of the bounding box
+        # This is different to Cosmins implementation, who used the top-left corner instead of the center
+        target[2*i] = (ann[i][0] - bb.center[0])
+        target[2*i+1] = (ann[i][1] - bb.center[1])
+      return target
+
+    # assure that the eye positions are the first two annotations (required by the Jesorsky error measure)
+    assert 'reye' in annotation_types[:2] and 'leye' in annotation_types[:2]
+    # remove the annotations that are incomplete
+    for i in range(len(annotations)-1, 0, -1):
+      for t in annotation_types:
+        if t not in annoations[i]:
+          facereclib.utils.warning("Removing bounding box since annotations are incomplete.")
+          del annotations[i]
+          del bounding_boxes[i]
+          break
+
+    self.m_target_length = 2*len(annotation_types)
+
+    # remeber the image
+    self.m_images.append(image)
+    # remember the possible scales for this image
+    self.m_scales.append([])
+    self.m_targets.append([])
+    self.m_positives.append([])
+
+    for scale, scaled_image_shape in self._scales(image):
+
+      scaled_gt = [bb.scale(scale) for bb in bounding_boxes]
+      scaled_ann = [[(a[t][0]*scale, a[t][1]*scale) for t in annotation_types] for a in annotations]
+      positives = []
+      targets = []
+
+      # iterate over all possible positions in the image
+      for bb in self._sample(scaled_image_shape):
+        # check if the patch is a positive example
+        for i, gt in enumerate(scaled_gt):
+          similarity = bb.similarity(gt)
+          if similarity > self.m_similarity_thresholds[1]:
+            positives.append(bb)
+            targets.append(_targets(bb, scaled_ann[i]))
+
+      # at the end, add found patches
+      if len(targets):
+        self.m_scales[-1].append(scale)
+        self.m_positives[-1].append([positives[i] for i in facereclib.utils.quasi_random_indices(len(positives), number_of_samples_per_scale)])
+        self.m_targets[-1].append([targets[i] for i in facereclib.utils.quasi_random_indices(len(targets), number_of_samples_per_scale)])
+
+
+  def get(self, feature_extractor, model = None, maximum_number_of_positives = None, maximum_number_of_negatives = None, delete_samples = False, compute_means_and_variances = False, loss_function = None):
 
     def _get_parallel(pos, neg, first, last):
       """Extracts the feature for the given set of feature type and return the model response"""
@@ -144,15 +218,21 @@ class Sampler:
             # extract the features for the current bounding box
             fex.extract_single_p(bb, feature_vector)
             # compute the current prediction of the model
-            pos.append((model.forward_p(feature_vector), image_index, scale_index, bb_index))
-          for bb_index, bb in enumerate(self.m_negatives[image_index][scale_index]):
-            # extract the features for the current bounding box
-            fex.extract_single_p(bb, feature_vector)
-            # compute the current prediction of the model
-            neg.append((model.forward_p(feature_vector), image_index, scale_index, bb_index))
+            if self.m_target_length != 0:
+              scores = numpy.ndarray(self.m_target_length)
+              model.forward_p(feature_vector, scores)
+              pos.append((scores, self.m_targets[image_index][scale_index][bb_index], image_index, scale_index, bb_index))
+            else:
+              pos.append((model.forward_p(feature_vector), image_index, scale_index, bb_index))
+          if self.m_target_length == 0:
+            for bb_index, bb in enumerate(self.m_negatives[image_index][scale_index]):
+              # extract the features for the current bounding box
+              fex.extract_single_p(bb, feature_vector)
+              # compute the current prediction of the model
+              neg.append((model.forward_p(feature_vector), image_index, scale_index, bb_index))
 
 
-    def _extract_parallel(examples, bounding_boxes, dataset, first, last, offset, compute_means = False, means=[], variances=[], mirror_offset = 0):
+    def _extract_parallel(examples, bounding_boxes, dataset, first, last, offset, compute_means = False, means=[], variances=[], mirror_offset = 0, labels = None):
       last_image_index = -1
       last_scale_index = 1
       fex = feature_extractor.__class__(feature_extractor)
@@ -170,8 +250,13 @@ class Sampler:
         # extract and append features
         bb = bounding_boxes[image_index][scale_index][bb_index]
         fex.extract_p(bb, dataset, index + offset)
+        if self.m_target_length != 0:
+          labels[index+offset] = self.m_targets[image_index][scale_index][bb_index]
         if mirror_offset:
           mex.extract_p(bb.mirror_x(mex.image.shape[1]), dataset, index + offset + mirror_offset)
+          if self.m_target_length != 0:
+            raise NotImplementedError("Using mirrored regression data is not supported (yet).")
+            labels[index+offset+mirror_offset] = [b if a % 2 == 0 else -b for (a,b) in enumerate(self.m_targets[image_index][scale_index][bb_index])]
         if compute_means:
           m,v = fex.mean_and_variance(bb)
           means[index+offset] = m
@@ -185,6 +270,7 @@ class Sampler:
 
     """Returns a pair of features and labels that can be used for training, after extracting the features using the given feature extractor.
     If number_of_positives and/or number_of_negatives are given, the number of examples is limited to these numbers."""
+
     # get the maximum number of examples
     pos_count = len(list(_get_all(self.m_positives)))
     neg_count = len(list(_get_all(self.m_negatives)))
@@ -195,11 +281,15 @@ class Sampler:
     num_neg = neg_count if maximum_number_of_negatives is None else min(maximum_number_of_negatives, neg_count)
 
 
-    # create feature and labels as required for training
+    # create feature as required for training
     dataset = numpy.ndarray((num_pos + num_neg, feature_extractor.number_of_features), numpy.uint16)
-    labels = numpy.ones((num_pos + num_neg, ), numpy.float64)
+    if self.m_target_length:
+      labels = numpy.ndarray((num_pos + num_neg, self.m_target_length), numpy.float64)
+    else:
+      labels = numpy.ones((num_pos + num_neg, ), numpy.float64)
     means = numpy.ndarray((num_pos/2 if self.m_mirror_samples else num_pos, ), numpy.float64)
     variances = numpy.ndarray((num_pos/2 if self.m_mirror_samples else num_pos, ), numpy.float64)
+
 
     # get the positive and negative examples
     if model is None:
@@ -227,13 +317,19 @@ class Sampler:
             for bb_index, bb in enumerate(self.m_positives[image_index][scale_index]):
               # extract the features for the current bounding box
               feature_extractor.extract_single(bb, feature_vector)
-              # compute the current prediction of the model
-              positive_values.append((model(feature_vector), image_index, scale_index, bb_index))
-            for bb_index, bb in enumerate(self.m_negatives[image_index][scale_index]):
-              # extract the features for the current bounding box
-              feature_extractor.extract_single(bb, feature_vector)
-              # compute the current prediction of the model
-              negative_values.append((model(feature_vector), image_index, scale_index, bb_index))
+              if self.m_target_length != 0:
+                scores = numpy.ndarray(self.m_target_length)
+                model.forward_p(feature_vector, scores)
+                positive_values.append((scores, self.m_targets[image_index][scale_index][bb_index], image_index, scale_index, bb_index))
+              else:
+                positive_values.append((model.forward_p(feature_vector), image_index, scale_index, bb_index))
+
+            if self.m_target_length == 0:
+              for bb_index, bb in enumerate(self.m_negatives[image_index][scale_index]):
+                # extract the features for the current bounding box
+                feature_extractor.extract_single(bb, feature_vector)
+                # compute the current prediction of the model
+                negative_values.append((model(feature_vector), image_index, scale_index, bb_index))
 
       else:
 
@@ -251,6 +347,14 @@ class Sampler:
         positive_values = [x for pos in parallel_positive_results for x in pos]
         negative_values = [x for neg in parallel_negative_results for x in neg]
 
+      # in case of multi-variate regression, the real error has to be computed:
+      if self.m_target_length != 0 and len(positive_values) != 0:
+        assert loss_function is not None
+        # compute the loss for the positive examples
+        targets = numpy.vstack([p[1] for p in positive_values])
+        scores = numpy.vstack([p[0] for p in positive_values])
+        errors = loss_function.loss(targets, scores)
+        positive_values = [[-errors[i,0]] + list(positive_values[i][2:]) for i in range(len(positive_values))]
 
       # get the prediction errors (lowest for pos. class and highest for neg. class)
       positive_values = sorted(positive_values)[:num_pos/2 if self.m_mirror_samples else num_pos]
@@ -282,9 +386,19 @@ class Sampler:
             mirror_extractor.prepare(self.m_images[image_index][:,::-1].copy(), self.m_scales[image_index][scale_index])
         # extract and append features
         bb = self.m_positives[image_index][scale_index][bb_index]
-        feature_extractor.extract(bb, dataset, i)
+#        print "extracted features", i, bb, self.m_images[image_index].shape, self.m_scales[image_index][scale_index]
+        try:
+          feature_extractor.extract(bb, dataset, i)
+        except Exception as e:
+          print bb, self.m_scales[image_index][scale_index], [s*self.m_scales[image_index][scale_index] for s in self.m_images[image_index].shape]
+          raise e
+        if self.m_target_length != 0:
+          labels[i] = self.m_targets[image_index][scale_index][bb_index]
         if self.m_mirror_samples:
           mirror_extractor.extract(bb.mirror_x(mirror_extractor.image.shape[1]), dataset, i + mirror_offset)
+          if self.m_target_length != 0:
+            raise NotImplementedError("Using mirrored regression data is not supported (yet).")
+            labels[i + mirror_offset] = [b if a % 2 == 0 else -b for (a,b) in enumerate(self.m_targets[image_index][scale_index][bb_index])]
         if compute_means_and_variances:
           m,v = feature_extractor.mean_and_variance(bb)
           if m == 0 or v == 0:
@@ -320,18 +434,19 @@ class Sampler:
       pos_mirror_offset = len(used_positive_examples) if self.m_mirror_samples else 0
       number_of_indices = len(used_positive_examples)
       indices = [i * number_of_indices / self.m_number_of_parallel_threads for i in range(self.m_number_of_parallel_threads)] + [number_of_indices]
-      threads = [threading.Thread(target=_extract_parallel, args=(used_positive_examples, self.m_positives, dataset, indices[i], indices[i+1], 0, compute_means_and_variances, means, variances), kwargs={'mirror_offset': pos_mirror_offset}) for i in range(self.m_number_of_parallel_threads)]
+      threads = [threading.Thread(target=_extract_parallel, args=(used_positive_examples, self.m_positives, dataset, indices[i], indices[i+1], 0, compute_means_and_variances, means, variances), kwargs={'mirror_offset': pos_mirror_offset, 'labels':labels}) for i in range(self.m_number_of_parallel_threads)]
       [t.start() for t in threads]
       [t.join() for t in threads]
 
       # negatives
-      neg_mirror_offset = len(used_negative_examples) if self.m_mirror_samples else 0
-      number_of_indices = len(used_negative_examples)
-      indices = [i * number_of_indices / self.m_number_of_parallel_threads for i in range(self.m_number_of_parallel_threads)] + [number_of_indices]
-      threads = [threading.Thread(target=_extract_parallel, args=(used_negative_examples, self.m_negatives, dataset, indices[i], indices[i+1], len(used_positive_examples)+pos_mirror_offset), kwargs={'mirror_offset': neg_mirror_offset}) for i in range(self.m_number_of_parallel_threads)]
-      [t.start() for t in threads]
-      [t.join() for t in threads]
-      labels[len(used_positive_examples)+pos_mirror_offset:] = -1.
+      if self.m_target_length == 0:
+        neg_mirror_offset = len(used_negative_examples) if self.m_mirror_samples else 0
+        number_of_indices = len(used_negative_examples)
+        indices = [i * number_of_indices / self.m_number_of_parallel_threads for i in range(self.m_number_of_parallel_threads)] + [number_of_indices]
+        threads = [threading.Thread(target=_extract_parallel, args=(used_negative_examples, self.m_negatives, dataset, indices[i], indices[i+1], len(used_positive_examples)+pos_mirror_offset), kwargs={'mirror_offset': neg_mirror_offset}) for i in range(self.m_number_of_parallel_threads)]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
+        labels[len(used_positive_examples)+pos_mirror_offset:] = -1.
 
     # finally, delete all examples that we returned
     if delete_samples:

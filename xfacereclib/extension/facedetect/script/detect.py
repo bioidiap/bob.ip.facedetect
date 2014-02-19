@@ -20,21 +20,21 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
   parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./16.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--lowest-scale', '-f', type=float, default = 0.125, help = "Faces which will be lower than the given scale times the image resolution will not be found.")
-  parser.add_argument('--cascade-file', '-r', default = 'cascade.hdf5', help = "The file to read the cascade from.")
+  parser.add_argument('--cascade-file', '-r', help = "The file to read the cascade from (has a proper default).")
   parser.add_argument('--prediction-threshold', '-T', type=float, help = "Detections with values below this threshold will be rejected by the detector.")
   parser.add_argument('--score-file', '-w', default='cascaded_scores.txt', help = "The score file to be written.")
   parser.add_argument('--prune-detections', '-p', type=float, help = "If given, detections that overlap with the given threshold are pruned")
   parser.add_argument('--detection-threshold', '-j', type=float, default=0.5, help = "The overlap from Ground Truth for which a detection should be considered as successful")
 
-
   facereclib.utils.add_logger_command_line_option(parser)
   args = parser.parse_args(command_line_arguments)
   facereclib.utils.set_verbosity_level(args.verbose)
 
+  if args.cascade_file is None:
+    args.cascade_file = pkg_resources.resource_filename('xfacereclib.extension.facedetect', 'MCT_cascade.hdf5')
+
   return args
 
-#def classify(classifier, features):
-#  return classifier(features)
 
 def main(command_line_arguments = None):
   args = command_line_options(command_line_arguments)
@@ -48,7 +48,7 @@ def main(command_line_arguments = None):
 
   # create the test examples
   preprocessor = facereclib.preprocessing.NullPreprocessor()
-  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale, cpp_implementation=True)
+  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
 
   # iterate over the test files and detect the faces
   i = 1

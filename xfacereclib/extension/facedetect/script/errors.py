@@ -210,7 +210,12 @@ def main(command_line_parameters=None):
   # if given, also read the landmark file
   if args.landmark_file:
     landmarks = _read_landmark_file(args.landmark_file)
-    lm_eyes = {key : [(lm[2] + lm[10])/2., (lm[3] + lm[11])/2., (lm[4] + lm[12])/2., (lm[5] + lm[13])/2.] for key, lm in landmarks.iteritems()}
+    lm_eyes = {}
+    for key, lm in landmarks.iteritems():
+      if len(lm) == 4:
+        lm_eyes[key] = [lm[0], lm[1], lm[2], lm[3]]
+      else:
+        lm_eyes[key] = [(lm[2] + lm[10])/2., (lm[3] + lm[11])/2., (lm[4] + lm[12])/2., (lm[5] + lm[13])/2.]
 
     figure = plt.figure(figsize=(10,5))
     jesorsky, ptp = _compute_error(ground_truth, lm_eyes)

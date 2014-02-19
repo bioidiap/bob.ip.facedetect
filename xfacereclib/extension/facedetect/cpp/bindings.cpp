@@ -59,6 +59,14 @@ static blitz::TinyVector<double,2> mv_p(const FeatureExtractor& extractor, const
   return extractor.meanAndVariance(boundingBox);
 }
 
+static void append2(FeatureExtractor& extractor, const bob::ip::LBP& lbp, list offsets){
+  std::vector<blitz::TinyVector<int32_t,2>> o;
+  for (int i = 0; i < len(offsets); ++i)
+  {
+    o.push_back(boost::python::extract<blitz::TinyVector<int32_t,2>>(offsets[i]));
+  }
+  extractor.append2(lbp, o);
+}
 
 
 static object get_extractors(const FeatureExtractor& extractor){
@@ -141,6 +149,7 @@ BOOST_PYTHON_MODULE(_features) {
     .def("mirror_x", &BoundingBox::mirrorX, (arg("self"), arg("width")), "Returns a copy of this bounding box mirrored for the given image width")
     .def("overlap", &BoundingBox::overlap, (arg("self"), arg("other")), "Returns the overlap between this and the given bounding box.")
     .def("similarity", &BoundingBox::similarity, (arg("self"), arg("other")), "Computes the Jaccard similarity index between this and the given BoundingBox")
+    .def("is_valid_for", &BoundingBox::isValidFor, (arg("self"), arg("shape")), "Checks if the bounding box is inside the given image shape.")
 
     .def("__str__", &bb_str, (arg("self")), "Returns a string representing this bounding box")
     .def("__repr__", &bb_str, (arg("self")), "Returns a string representing this bounding box")
@@ -152,6 +161,7 @@ BOOST_PYTHON_MODULE(_features) {
     .add_property("bottom", &BoundingBox::ibottom)
     .add_property("right", &BoundingBox::iright)
     .add_property("area", &BoundingBox::area)
+    .add_property("center", &BoundingBox::center)
 
     .add_property("top_f", &BoundingBox::top)
     .add_property("left_f", &BoundingBox::left)
@@ -166,14 +176,19 @@ BOOST_PYTHON_MODULE(_features) {
   def("overlapping_detections", &overlapping_detections, (arg("detections"), arg("predictions"), arg("threshold")), "Returns the detections and predictions that overlap with the best detection.");
 
   class_<FeatureExtractor, boost::shared_ptr<FeatureExtractor> >("FeatureExtractor",  "A class to extract several kinds of LBP features", no_init)
-    .def(init<const blitz::TinyVector<int,2>&, const bob::ip::LBP& , bool, bool>((arg("self"), arg("patch_size"), arg("template"), arg("overlap")=false, arg("square")=false), "Creates LBP extractor classes of the given template for all possible radii/ block size."))
+    .def(init<const blitz::TinyVector<int,2>&>((arg("self"), arg("patch_size")), "Creates an empty feature extractor (with no LBP extractors attached)."))
+    .def(init<const blitz::TinyVector<int,2>&, const bob::ip::LBP& , bool, bool, int, int>((arg("self"), arg("patch_size"), arg("template"), arg("overlap")=false, arg("square")=false, arg("min_size")=1, arg("max_size")=INT_MAX), "Creates LBP extractor classes of the given template for all possible radii/ block size."))
     .def("__init__", make_constructor(&init_from_vector_of_lbp, default_call_policies(), (arg("patch_size"), arg("extractors"))), "Uses the given list of LBP extractors.")
     .def(init<const FeatureExtractor&>((arg("self"), arg("other")), "Copy constructor"))
     .def(init<bob::io::HDF5File&>((arg("self"), arg("file")), "Creates a feature extractor by reading it from file"))
-    .def("append", &FeatureExtractor::append, "Appends the given feature extractor to this one.")
+    .def("append", &FeatureExtractor::append1, "Appends the given feature extractor to this one.")
+    .def("append", &append2, "Appends the given LBP class and the according offset positions.")
 
     .def("load", &FeatureExtractor::load, (arg("self"), arg("hdf5File")), "Loads the extractors from the given file.")
     .def("save", &FeatureExtractor::save, (arg("self"), arg("hdf5File")), "Writes the extractors to the given file.")
+
+    .def("extractor", &FeatureExtractor::extractor, (arg("self"), arg("index")), "Get the LBP feature extractor associated with the given feature index")
+    .def("offset", &FeatureExtractor::offset, (arg("self"), arg("index")), "Get the offset in the patch associated with the given feature index")
 
     .def("prepare", &FeatureExtractor::prepare<double>, (arg("self"), arg("image"), arg("scale"), arg("compute_integral_square_image")=false), "Take the given image to perform the next extraction steps for the given scale")
     .def("prepare", &FeatureExtractor::prepare<uint8_t>, (arg("self"), arg("image"), arg("scale"), arg("compute_integral_square_image")=false), "Take the given image to perform the next extraction steps for the given scale")
@@ -202,6 +217,8 @@ BOOST_PYTHON_MODULE(_features) {
     .add_property("image", make_function(&FeatureExtractor::getImage, return_value_policy<copy_const_reference>()), "The (prepared) image the next features will be extracted from.")
     .add_property("model_indices", &FeatureExtractor::getModelIndices, &FeatureExtractor::setModelIndices, "The indices at which the features are extracted")
     .add_property("number_of_features", &FeatureExtractor::numberOfFeatures, "The length of the feature vector that will be extracted by this class")
+    .add_property("number_of_labels", &FeatureExtractor::getMaxLabel, "The length of the feature vector that will be extracted by this class")
     .add_property("extractors", &get_extractors, "The LBP extractors used by this class.")
+    .add_property("patch_size", &FeatureExtractor::patchSize, "The expected size of the patch that this extractor can handle.")
   ;
 }

@@ -110,7 +110,7 @@ def expected_eye_positions(bounding_box):
 def best_detection(detections, predictions, minimum_overlap = 0.2):
   # remove all negative predictions since they harm the calculation of the weights
   detections = [detections[i] for i in range(len(detections)) if predictions[i] > 0]
-  predictions = [predictions[i] for i in range(len(detections)) if predictions[i] > 0]
+  predictions = [predictions[i] for i in range(len(predictions)) if predictions[i] > 0]
 
   # keep only the bounding boxes with the highest overlap
   detections, predictions = overlapping_detections(detections, numpy.array(predictions), minimum_overlap)
