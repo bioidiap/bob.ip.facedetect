@@ -117,7 +117,8 @@ def main(command_line_arguments = None):
   feature_extractor = lbp_variant([p/4 for p in args.patch_size], args.lbp_multi_block, args.lbp_variant, args.lbp_overlap, args.lbp_scale, args.lbp_square, args.limit_feature_size)
 
   # create trainer (number of rounds will be set during bootstrapping)
-  weak_trainer = xbob.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, feature_extractor.number_of_features, len(ANNOTATION_TYPES[args.annotation_types])*2, 'independent')
+#  weak_trainer = xbob.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, feature_extractor.number_of_features, len(ANNOTATION_TYPES[args.annotation_types])*2, 'independent')
+  weak_trainer = xbob.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, len(ANNOTATION_TYPES[args.annotation_types])*2, xbob.boosting.trainer.SelectionStyle.independent)
   trainer = xbob.boosting.trainer.Boosting(weak_trainer, xbob.boosting.loss.JesorskyLoss(), 0)
   bootstrapping = Bootstrap(number_of_rounds=args.bootstrapping_rounds, number_of_weak_learners_in_first_round=args.features_in_first_round, number_of_positive_examples_per_round=args.training_examples, number_of_negative_examples_per_round=0, init_with_average=args.init_with_average)
 

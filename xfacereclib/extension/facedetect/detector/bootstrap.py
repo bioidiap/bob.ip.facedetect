@@ -147,5 +147,6 @@ class Bootstrap:
       for k in sorted(lbps.keys()):
         feature_extractor.append(lbps[k], positions[k])
 
-      trainer.m_trainer = xbob.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, feature_extractor.number_of_features, trainer.m_trainer.m_number_of_outputs, trainer.m_trainer.m_selection_type)
+#      trainer.m_trainer = xbob.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, feature_extractor.number_of_features, trainer.m_trainer.m_number_of_outputs, trainer.m_trainer.m_selection_type)
+      trainer.m_trainer = xbob.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, trainer.m_trainer.number_of_outputs, trainer.m_trainer.selection_type)
 
