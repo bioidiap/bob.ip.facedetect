@@ -52,9 +52,12 @@ def command_line_arguments(command_line_parameters):
   parser = argparse.ArgumentParser(description=__doc__,
       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-  parser.add_argument('-d', '--detected-file', required=True, help = "The file containing the expected eye locations based on the face detector")
-  parser.add_argument('-g', '--ground-truth-file', required=True, help = "The file containing the ground truth eye locations")
-  parser.add_argument('-l', '--landmark-file', help = "The file containing the landmarks from xbob.flandmark")
+  parser.add_argument('-D', '--directory', help = "If given, files will be read and written to this directory")
+  parser.add_argument('-d', '--detected-file', default = "detections.txt", help = "The file containing the expected eye locations based on the face detector")
+  parser.add_argument('-g', '--ground-truth-file', default = "ground_truth.txt", help = "The file containing the ground truth eye locations")
+  parser.add_argument('-l', '--landmark-file', default = "landmarks.txt", help = "The file containing the detected landmarks")
+  parser.add_argument('-f', '--flandmark-file', default = "flandmark.txt", help = "The file containing the landmarks from xbob.flandmark")
+  parser.add_argument('-a', '--all-landmarks', action = "store_true", help = "If given, Point-to-Point errors will be computes with all landmarks (not only with the eyes)")
 
 #  parser.add_argument('-l', '--legends', nargs='+', help = "A list of legend strings used for ROC, CMC and DET plots; if given, must be the same number than --files plus --baselines.")
   parser.add_argument('-w', '--output', default = 'Errors.pdf', help = "If given, FROC curves will be plotted into the given pdf file.")
@@ -67,6 +70,15 @@ def command_line_arguments(command_line_parameters):
 
   # parse arguments
   args = parser.parse_args(command_line_parameters)
+
+  if args.directory is not None:
+    args.detected_file = os.path.join(args.directory, args.detected_file)
+    args.ground_truth_file = os.path.join(args.directory, args.ground_truth_file)
+    args.output = os.path.join(args.directory, args.output)
+    if args.landmark_file is not None:
+      args.landmark_file = os.path.join(args.directory, args.landmark_file)
+    if args.flandmark_file is not None:
+      args.flandmark_file = os.path.join(args.directory, args.flandmark_file)
 
   facereclib.utils.set_verbosity_level(args.verbose)
 
@@ -108,7 +120,7 @@ def _plot_cumulative(J, P):
   plt.subplot(grid[0])
   for i,j in enumerate(J):
     j_hist, first, last, outliers = scipy.stats.cumfreq(j, 100, (0,0.2))
-    plt.plot(j_hist / len(j) * 100., label=["detected", "landmarks"][i] + " (+%d)" % outliers)
+    plt.plot(j_hist / len(j) * 100., label=["detected", "landmarks", "flandmark"][i] + " (+%d)" % outliers)
   plt.xticks(numpy.arange(0, 101, 50), numpy.arange(0, 0.21, 0.1) )
   plt.xlabel("Jesorsky error value")
   plt.legend(loc=4)
@@ -116,7 +128,7 @@ def _plot_cumulative(J, P):
   plt.subplot(grid[1])
   for i,p in enumerate(P):
     p_hist, first, last, outliers = scipy.stats.cumfreq(p, 100, (0,1))
-    plt.plot(p_hist / len(p) * 100., label=["detected", "landmarks"][i] + " (+%d)" % outliers)
+    plt.plot(p_hist / len(p) * 100., label=["detected", "landmarks", "flandmark"][i] + " (+%d)" % outliers)
   plt.xticks(numpy.arange(0, 101, 20), numpy.arange(0, 1.01, 0.2))
   plt.xlabel("Point-To-Point error value")
   plt.legend(loc=4)
@@ -162,7 +174,7 @@ def _compute_error(ground_truth, detected):
       dt = detected[key]
       # order is: re_y, re_x, le_y, le_x
       inter_eye_distance = math.sqrt((gt[0] - gt[2])**2 + (gt[1] - gt[3])**2)
-      errors = [(gt[i] - dt[i]) / inter_eye_distance for i in (0,1,2,3)]
+      errors = [(dt[i] - gt[i]) / inter_eye_distance for i in (0,1,2,3)]
 
       # compute histogram
       bins = [int(round(e * 33.)) + 10 for e in errors]
@@ -177,7 +189,7 @@ def _compute_error(ground_truth, detected):
 
       # compute Jesorsky measure
       jesorsky.append(max(errors[0]**2 + errors[1]**2, errors[2]**2 + errors[3]**2))
-      ptp.append(math.sqrt(errors[0]**2 + errors[1]**2) + math.sqrt(errors[2]**2 + errors[3]**2))
+      ptp.append(math.sqrt(errors[0]**2 + errors[1]**2) + math.sqrt(errors[2]**2 + errors[3]**2)/2)
 
   # plot histograms
   _plot_errors(hist_r, hist_l, outside_r, outside_l)
@@ -185,6 +197,22 @@ def _compute_error(ground_truth, detected):
 
   # return Jesorsky and Point-To-Point errors
   return jesorsky, ptp
+
+def _ptp_all(ground_truth, detected):
+  ptps = []
+  for key in ground_truth:
+    if key not in detected or not detected[key]:
+      facereclib.utils.warn("The detected eye locations for file %s are not available" % key)
+    else:
+      gt = ground_truth[key]
+      dt = detected[key]
+      inter_eye_distance = math.sqrt((gt[0] - gt[2])**2 + (gt[1] - gt[3])**2)
+      errors = [(dt[i] - gt[i]) / inter_eye_distance for i in range(len(gt))]
+      ptp = 0.
+      for i in range(0, len(ground_truth[key]), 2):
+        ptp += math.sqrt((errors[0])**2 + (errors[1])**2)
+      ptps.append(ptp / len(ground_truth[key]) * 2.)
+  return ptps
 
 
 def main(command_line_parameters=None):
@@ -208,21 +236,38 @@ def main(command_line_parameters=None):
   P = [ptp]
 
   # if given, also read the landmark file
-  if args.landmark_file:
+  if args.landmark_file and os.path.exists(args.landmark_file):
     landmarks = _read_landmark_file(args.landmark_file)
     lm_eyes = {}
     for key, lm in landmarks.iteritems():
-      if len(lm) == 4:
-        lm_eyes[key] = [lm[0], lm[1], lm[2], lm[3]]
-      else:
-        lm_eyes[key] = [(lm[2] + lm[10])/2., (lm[3] + lm[11])/2., (lm[4] + lm[12])/2., (lm[5] + lm[13])/2.]
+      lm_eyes[key] = [lm[0], lm[1], lm[2], lm[3]]
 
     figure = plt.figure(figsize=(10,5))
     jesorsky, ptp = _compute_error(ground_truth, lm_eyes)
+    if args.all_landmarks:
+      # overwrite the PTP value with all
+      ptp = _ptp_all(ground_truth, landmarks)
     figure.suptitle("Ground truth vs. landmarks")
     pdf.savefig(figure)
 
     J.append(jesorsky)
+    P.append(ptp)
+
+  # if given, also read the flandmark file
+  if args.flandmark_file and os.path.exists(args.flandmark_file):
+    landmarks = _read_landmark_file(args.flandmark_file)
+    lm_eyes = {}
+    for key, lm in landmarks.iteritems():
+      lm_eyes[key] = [(lm[2] + lm[10])/2., (lm[3] + lm[11])/2., (lm[4] + lm[12])/2., (lm[5] + lm[13])/2.]
+
+    figure = plt.figure(figsize=(10,5))
+    jesorsky, ptp = _compute_error(ground_truth, lm_eyes)
+    figure.suptitle("Ground truth vs. flandmark")
+    pdf.savefig(figure)
+
+    J.append(jesorsky)
+#    if not args.all_landmarks:
+    # for FLandmark, we don't have all corresponding landmarks...
     P.append(ptp)
 
   figure = plt.figure(figsize=(10,5))

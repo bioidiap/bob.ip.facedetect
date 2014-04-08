@@ -40,7 +40,6 @@ def lbp_variant(patch_size, multi_block, variants, overlap, scale, square, sizes
 ANNOTATION_TYPES = {
   'eyes' : ['reye', 'leye'],
   'multipie' : ['reye', 'leye', 'reyeo', 'reyei', 'leyei', 'leyeo', 'nose', 'mouthr', 'mouthl', 'lipt', 'lipb', 'chin', 'rbrowo', 'rbrowi', 'lbrowi', 'lbrowo'],
-
 }
 
 def command_line_options(command_line_arguments):

@@ -86,3 +86,40 @@ def localize(localizer, feature_extractor, image, bounding_box):
 
   return landmarks
 
+def predict(graphs, image, bounding_box):
+  # scale image such that bounding box is in the correct size
+  scale = float(graphs.patch_size[0]) / float(bounding_box.height_f)
+  assert abs(scale - float(graphs.patch_size[1]) / float(bounding_box.width_f)) < 1e-10
+  scaled_bb = bounding_box.scale(scale)
+
+  # extract features for given image patch
+  scaled_image = bob.ip.scale(image, scale)
+
+  # compute shifted versions of the bb and get the MEDIAN feature positions
+#  shifts = range(-3,4)
+  shifts = [0]
+  predictions = numpy.ndarray((len(shifts)**2, graphs.number_of_predictions()))
+
+  i = 0
+  for y in shifts:
+    for x in shifts:
+      shifted_bb = scaled_bb.shift(y,x)
+      if not shifted_bb.is_valid_for(scaled_image.shape):
+        continue
+
+      # compute the predicted location
+      predictions[i] = graphs.predict(scaled_image[shifted_bb.top:shifted_bb.bottom+1, shifted_bb.left:shifted_bb.right+1])
+      i += 1
+
+  prediction = numpy.median(predictions[:i], 0)
+
+  # compute landmarks in image coordinates
+  landmarks = []
+  scale = 1./scale
+  for i in range(0, graphs.number_of_predictions(), 2):
+    y = (prediction[i] * scale) + bounding_box.top
+    x = (prediction[i+1] * scale) + bounding_box.left
+    landmarks.append((y,x))
+
+  return landmarks
+

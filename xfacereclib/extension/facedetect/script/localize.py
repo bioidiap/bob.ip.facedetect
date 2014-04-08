@@ -10,13 +10,18 @@ import os
 import matplotlib.pyplot
 
 from .. import utils, detector
+from ..graph import FaceGraph
 from .._features import prune_detections, FeatureExtractor
+
+from .train_localizer import ANNOTATION_TYPES
+
 
 def command_line_options(command_line_arguments):
 
   parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('--database', '-d', default = 'banca', help = "Select the database to get the training images from.")
+  parser.add_argument('--annotation-types', '-a', default='eyes', choices=ANNOTATION_TYPES.keys(), help = "Select the types of annotations that you want to train.")
   parser.add_argument('--protocol', '-P', help = "If given, the test files from the given protocol are detected.")
   parser.add_argument('--limit-test-files', '-y', type=int, help = "Limit the test files to the given number (for debug purposes mainly)")
   parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
@@ -27,19 +32,24 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--output-directory', '-o', help = "If given, the extracted faces will be written to the given directory.")
   parser.add_argument('--preprocessor', '-O', default='face-crop', help = "The preprocessor to be used to crop the faces.")
   parser.add_argument('--display', '-x', action='store_true', help = "If enabled, the detected faces will be displayed. Please start the program with 'ipython -pylab' to see the window.")
+  parser.add_argument('--result-directory', '-D', help = "If given, output files will be placed into this directory")
   parser.add_argument('--ground-truth-file', '-g', default="ground_truth.txt", help = "File to write the ground truth eyes.")
   parser.add_argument('--detection-error-file', '-e', default="detections.txt", help = "File to write the eyes located based on the detected faces.")
   parser.add_argument('--landmark-error-file', '-E', default="landmarks.txt", help = "File to write the landmarks of flandmark.")
   parser.add_argument('--best-detection-overlap', '-b', type=float, help = "If given, the average of the overlapping detections with this minimum overlap will be considered.")
   parser.add_argument('--include-landmarks', '-L', action='store_true', help = "Detect the landmarks in the face using flandmark?")
   parser.add_argument('--localizer-file', '-l', help = "Use the given localizer instead of flandmark.")
+  parser.add_argument('--graphs-file', '-G', help = "Use the given localizer instead of flandmark.")
 
   facereclib.utils.add_logger_command_line_option(parser)
   args = parser.parse_args(command_line_arguments)
   facereclib.utils.set_verbosity_level(args.verbose)
 
-  if args.localizer_file is not None:
-    args.include_landmarks = True
+  args.include_landmarks = args.include_landmarks or args.localizer_file is not None or args.graphs_file is not None
+  if args.result_directory is not None:
+    args.ground_truth_file = os.path.join(args.result_directory, args.ground_truth_file)
+    args.detection_error_file = os.path.join(args.result_directory, args.detection_error_file)
+    args.landmark_error_file = os.path.join(args.result_directory, args.landmark_error_file)
 
   return args
 
@@ -69,8 +79,13 @@ def main(command_line_arguments = None):
   if args.include_landmarks:
     if args.localizer_file is not None:
       localizer, feature_extractor, _, _ = detector.load(args.localizer_file)
+    elif args.graphs_file is not None:
+      graphs = FaceGraph()
+      graphs.load(args.graphs_file)
+
     else:
       flandmark = xbob.flandmark.Localizer()
+
     l = open(args.landmark_error_file, 'w')
     l.write("# --cascade-file %s --distance %d --scale-base %f --lowest-scale %s --prediction-threshold %s\n" % (args.cascade_file, args.distance, args.scale_base, args.lowest_scale, "None" if args.prediction_threshold is None else "%f" % args.prediction_threshold))
     l.write("# file y x y x ...\n")
@@ -80,7 +95,7 @@ def main(command_line_arguments = None):
   with open(args.detection_error_file, 'w') as e, open(args.ground_truth_file, 'w') as g:
     # write configuration
     e.write("# --cascade-file %s --distance %d --scale-base %f --lowest-scale %s --prediction-threshold %s\n" % (args.cascade_file, args.distance, args.scale_base, args.lowest_scale, "None" if args.prediction_threshold is None else "%f" % args.prediction_threshold))
-    e.write("# file re-y re-x le-y le-x\n")
+    e.write("# file re-y re-x le-y le-x ...\n")
     g.write("# file re-y re-x le-y le-x\n")
     for filename, annotations, file in test_files:
       facereclib.utils.info("Loading image %d of %d from file '%s'" % (i, len(test_files), filename))
@@ -115,13 +130,16 @@ def main(command_line_arguments = None):
 
       if args.include_landmarks:
         if args.localizer_file is not None:
-          landmarks =  utils.localize(localizer, feature_extractor, image, bb)
+          landmarks = utils.localize(localizer, feature_extractor, image, bb)
+        elif args.graphs_file is not None:
+          landmarks = utils.predict(graphs, image, bb)
         else:
           landmarks = utils.detect_landmarks(flandmark, image.astype(numpy.uint8), bb)
         l.write(("%s" + " %f %f"*len(landmarks) + "\n") % tuple([file.path] + [landmarks[a][b] for a in range(len(landmarks)) for b in range(2)]))
 
 
-      g.write("%s %f %f %f %f\n" % (file.path, gt['reye'][0], gt['reye'][1], gt['leye'][0], gt['leye'][1]))
+      g.write(("%s" + " %f %f"*len(ANNOTATION_TYPES[args.annotation_types]) + "\n") % tuple([file.path] + [gt[a][b] for a in ANNOTATION_TYPES[args.annotation_types] for b in range(2)]))
+#      g.write("%s %f %f %f %f\n" % (file.path, gt['reye'][0], gt['reye'][1], gt['leye'][0], gt['leye'][1]))
       e.write("%s %f %f %f %f\n" % (file.path, annots['reye'][0], annots['reye'][1], annots['leye'][0], annots['leye'][1]))
 
       if args.output_directory:
@@ -142,7 +160,7 @@ def main(command_line_arguments = None):
 
         if args.include_landmarks:
           if len(landmarks):
-            if args.localizer_file is None:
+            if args.localizer_file is None and args.graphs_file is None:
               lm = {
                 'reye' : ((landmarks[1][0] + landmarks[5][0])/2., (landmarks[1][1] + landmarks[5][1])/2.),
                 'leye' : ((landmarks[2][0] + landmarks[6][0])/2., (landmarks[2][1] + landmarks[6][1])/2.)

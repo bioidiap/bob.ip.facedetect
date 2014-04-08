@@ -21,6 +21,12 @@ def _annotations(db, file):
     facereclib.utils.warn("Could not get annotations for file %s -- skipping (Error message is: %s)" % (file.path, e))
     return None
 
+def _original_filename(db, file):
+  if isinstance(db, facereclib.databases.DatabaseXBob):
+    return db.m_database.original_file_name(file)
+  else:
+    return db.original_file_name(file)
+
 
 def training_image_annot(databases, limit):
   facereclib.utils.info("Collecting training data")
@@ -34,7 +40,7 @@ def training_image_annot(databases, limit):
       training_files.extend([(db.m_database.original_file_name(f), _annotations(db,f), f) for f in db.training_files()])
     else:
       # collect image name and annotations
-      training_files.extend([(db.original_file_name(f), _annotations(db,f), f) for f in db.training_files()])
+      training_files.extend([(_original_filename(db,f), _annotations(db,f), f) for f in db.training_files()])
 
   training_files = [training_files[t] for t in facereclib.utils.quasi_random_indices(len(training_files), limit) if training_files[t][1] is not None]
 
@@ -51,12 +57,15 @@ def test_image_annot(databases, protocols, limit):
   for database, protocol in zip(databases, protocols):
     db = facereclib.utils.resources.load_resource(database, 'database')
     if isinstance(db, facereclib.databases.DatabaseXBob):
-      db = db.m_database
+      # collect image name and annotations
+      orig_files = db.test_files()
+    else:
+      # collect image name and annotations
+      orig_files = db.test_files(protocol=protocol)
 
-    orig_files = db.test_files(protocol=protocol)
     orig_files = [orig_files[t] for t in facereclib.utils.quasi_random_indices(len(orig_files), limit)]
     # collect image name and annotations
-    test_files.extend([(db.original_file_name(f), _annotations(db,f), f) for f in orig_files])
+    test_files.extend([(_original_filename(db, f), _annotations(db,f), f) for f in orig_files])
 
   test_files = [test_files[t] for t in facereclib.utils.quasi_random_indices(len(test_files), limit)]
 

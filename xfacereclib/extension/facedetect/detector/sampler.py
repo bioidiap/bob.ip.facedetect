@@ -202,6 +202,13 @@ class Sampler:
         self.m_targets[-1].append([targets[i] for i in facereclib.utils.quasi_random_indices(len(targets), number_of_samples_per_scale)])
 
 
+  def _get_all(self, pos_or_neg):
+    for image_count in range(len(pos_or_neg)):
+      for scale_count in range(len(pos_or_neg[image_count])):
+        for bb_count in range(len(pos_or_neg[image_count][scale_count])):
+          yield (image_count, scale_count, bb_count)
+
+
   def get(self, feature_extractor, model = None, maximum_number_of_positives = None, maximum_number_of_negatives = None, delete_samples = False, compute_means_and_variances = False, loss_function = None):
 
     def _get_parallel(pos, neg, first, last):
@@ -262,18 +269,12 @@ class Sampler:
           means[index+offset] = m
           variances[index+offset] = v
 
-    def _get_all(pos_or_neg):
-      for image_count in range(len(pos_or_neg)):
-        for scale_count in range(len(pos_or_neg[image_count])):
-          for bb_count in range(len(pos_or_neg[image_count][scale_count])):
-            yield (image_count, scale_count, bb_count)
-
     """Returns a pair of features and labels that can be used for training, after extracting the features using the given feature extractor.
     If number_of_positives and/or number_of_negatives are given, the number of examples is limited to these numbers."""
 
     # get the maximum number of examples
-    pos_count = len(list(_get_all(self.m_positives)))
-    neg_count = len(list(_get_all(self.m_negatives)))
+    pos_count = len(list(self._get_all(self.m_positives)))
+    neg_count = len(list(self._get_all(self.m_negatives)))
     if self.m_mirror_samples:
       pos_count *= 2
       neg_count *= 2
@@ -294,8 +295,8 @@ class Sampler:
     # get the positive and negative examples
     if model is None:
       # collect positive and negative examples
-      all_positive_examples = list(_get_all(self.m_positives))
-      all_negative_examples = list(_get_all(self.m_negatives))
+      all_positive_examples = list(self._get_all(self.m_positives))
+      all_negative_examples = list(self._get_all(self.m_negatives))
 
       # simply compute a random subset of both lists
       # (for testing purposes, this is quasi-random)
@@ -461,6 +462,43 @@ class Sampler:
       return (dataset, labels, means, variances)
     else:
       return (dataset, labels)
+
+
+  def get_images_and_annotations(self, maximum_number_of_images = None):
+    # compute elements that should be returned
+    all_examples = list(self._get_all(self.m_positives))
+    num_images = len(all_examples)
+    if self.m_mirror_samples:
+      raise NotImplementedError("Using mirrored regression data is not supported (yet).")
+      num_images *= 2
+    num_images = num_images if maximum_number_of_images is None else min(maximum_number_of_images, num_images)
+
+    # collect positive and negative examples
+    # simply compute a random subset of both lists
+    # (for now, this is quasi-random)
+    used_examples = [all_examples[i] for i in facereclib.utils.quasi_random_indices(len(all_examples), num_images/2 if self.m_mirror_samples else num_images)]
+
+    images = []
+    annotations = []
+    # return images and annotations for the sub-selection
+
+    last_image_index = -1
+    last_scale_index = -1
+    i = 0
+    # append positive examples
+    for image_index, scale_index, bb_index in used_examples:
+      # prepare for this image, if it has changed
+      if last_scale_index != scale_index or last_image_index != image_index:
+        last_scale_index = scale_index
+        last_image_index = image_index
+        scaled_image = bob.ip.scale(self.m_images[image_index], self.m_scales[image_index][scale_index])
+
+      # extract and append features
+      bb = self.m_positives[image_index][scale_index][bb_index]
+      images.append(scaled_image[bb.top:bb.bottom+1, bb.left:bb.right+1].copy())
+      annotations.append(self.m_targets[image_index][scale_index][bb_index])
+
+    return images, annotations
 
 
   def iterate(self, image, feature_extractor, feature_vector):

@@ -159,12 +159,14 @@ setup(
       'console_scripts': [
         'train_detector.py = xfacereclib.extension.facedetect.script.train:main',
         'train_localizer.py = xfacereclib.extension.facedetect.script.train_localizer:main',
+        'train_graph.py = xfacereclib.extension.facedetect.script.train_graph:main',
         'validate.py = xfacereclib.extension.facedetect.script.validate:main',
         'display.py = xfacereclib.extension.facedetect.script.display:main',
         'detect.py = xfacereclib.extension.facedetect.script.detect:main',
         'localize.py = xfacereclib.extension.facedetect.script.localize:main',
         'plots.py = xfacereclib.extension.facedetect.script.evaluate:main',
         'error.py = xfacereclib.extension.facedetect.script.errors:main',
+        'ptp.py = xfacereclib.extension.facedetect.script.plot_ptp:main',
       ],
 
       # registered database short cuts
