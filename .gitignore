@@ -1,4 +1,5 @@
 *~
+*.txt
 *.orig
 *.hdf5
 *.pdf
