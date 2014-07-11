@@ -158,8 +158,9 @@ setup(
       # scripts should be declared using this entry:
       'console_scripts': [
         'train_detector.py = xfacereclib.extension.facedetect.script.train:main',
-        'train_localizer.py = xfacereclib.extension.facedetect.script.train_localizer:main',
-        'train_graph.py = xfacereclib.extension.facedetect.script.train_graph:main',
+#        'train_localizer.py = xfacereclib.extension.facedetect.script.train_localizer:main',
+#        'train_graph.py = xfacereclib.extension.facedetect.script.train_graph:main',
+        'train_local_model.py = xfacereclib.extension.facedetect.script.train_local_model:main',
         'validate.py = xfacereclib.extension.facedetect.script.validate:main',
         'display.py = xfacereclib.extension.facedetect.script.display:main',
         'detect.py = xfacereclib.extension.facedetect.script.detect:main',

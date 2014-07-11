@@ -108,7 +108,7 @@ def predict(graphs, image, bounding_box):
         continue
 
       # compute the predicted location
-      predictions[i] = graphs.predict(scaled_image[shifted_bb.top:shifted_bb.bottom+1, shifted_bb.left:shifted_bb.right+1])
+      predictions[i] = graphs.predict(scaled_image, shifted_bb)
       i += 1
 
   prediction = numpy.median(predictions[:i], 0)
