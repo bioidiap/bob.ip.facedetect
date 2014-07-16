@@ -16,6 +16,28 @@ def irnd(x):
   return int(round(x))
 
 
+
+def display(image, annotations=None, color=(255,0,0), radius=5, clear=True):
+  from matplotlib import pyplot
+  if clear:
+    pyplot.clf()
+  if annotations is None:
+    pyplot.imshow(image, cmap='gray')
+  else:
+    if len(image.shape) == 2:
+      colored = bob.ip.gray_to_rgb(image)
+    else:
+      colored = image.copy()
+    if isinstance(annotations, dict):
+      annotations = [a for a in annotations.itervalues()]
+    else:
+      annotations = [(annotations[i], annotations[i+1]) for i in range(0, len(annotations), 2)]
+    for a in annotations:
+      bob.ip.draw_cross(colored, y=int(a[0]), x=int(a[1]), radius=radius, color=color)
+    pyplot.imshow(numpy.rollaxis(numpy.rollaxis(colored.astype(numpy.uint8), 2),2))
+  pyplot.draw()
+
+
 def detect_landmarks(localizer, image, bounding_box):
   scales = [1., 0.9, 0.8, 1.1, 1.2]
   shifts = [0, 0.1, 0.2, -0.1, -0.2]

@@ -60,7 +60,7 @@ def command_line_arguments(command_line_parameters):
   parser.add_argument('-a', '--all-landmarks', action = "store_true", help = "If given, Point-to-Point errors will be computes with all landmarks (not only with the eyes)")
 
 #  parser.add_argument('-l', '--legends', nargs='+', help = "A list of legend strings used for ROC, CMC and DET plots; if given, must be the same number than --files plus --baselines.")
-  parser.add_argument('-w', '--output', default = 'Errors.pdf', help = "If given, FROC curves will be plotted into the given pdf file.")
+  parser.add_argument('-w', '--output', help = "FROC curves will be plotted into the given pdf file (default: Errors.pdf).")
 
   parser.add_argument('-t', '--title', default='Eye detection errors', help = "The title of the plot")
 
@@ -74,12 +74,15 @@ def command_line_arguments(command_line_parameters):
   if args.directory is not None:
     args.detected_file = os.path.join(args.directory, args.detected_file)
     args.ground_truth_file = os.path.join(args.directory, args.ground_truth_file)
-    args.output = os.path.join(args.directory, args.output)
     if args.landmark_file is not None:
       args.landmark_file = os.path.join(args.directory, args.landmark_file)
     if args.flandmark_file is not None:
       args.flandmark_file = os.path.join(args.directory, args.flandmark_file)
+    if args.output is None:
+      args.output = os.path.join(args.directory, "Errors_%s.pdf" % os.path.split(args.directory)[-1])
 
+  if args.output is None:
+    args.output = "Errors.pdf"
   facereclib.utils.set_verbosity_level(args.verbose)
 
   return args

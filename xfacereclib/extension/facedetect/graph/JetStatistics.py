@@ -112,11 +112,12 @@ class JetStatistics (LocalModel):
   def init_prediction(self, image):
     # perform gwt on image patch
     self.gwt.compute_jets(image, self.jet_image, True)
+    self.round_count = 0
 
-  def disparity(self, landmark, jet):
+  def disparity(self, landmark, jet, highest_scale):
     # estimates the disparity for the given jet
     mean_abs, variance_abs, mean_phase, variance_phase = self.models[landmark]
-    jet_len = jet.shape[1]
+    jet_len = jet.shape[1] - (self.gwt.number_of_scales - highest_scale) * self.gwt.number_of_directions
 
     # shift phases towards mean
 #    phase_shifted_jet = self.similarity.shift_phase(jet, numpy.array([mean_abs, mean_phase]))
@@ -135,7 +136,7 @@ class JetStatistics (LocalModel):
     kernels = [self.gwt.kernel_frequency(j) for j in range(jet_len)]
 
     j = jet_len
-    for scale in reversed(range(self.gwt.number_of_scales)):
+    for scale in reversed(range(highest_scale)):
       for direction in reversed(range(self.gwt.number_of_directions)):
         j = j - 1
         kjy, kjx = kernels[j]
@@ -173,12 +174,13 @@ class JetStatistics (LocalModel):
       x = prediction[a+1]
 
       # compute the disparity for the given jet
-      disparity = self.disparity(a/2, self.jet_image[y,x])
+      disparity = self.disparity(a/2, self.jet_image[y,x], self.gwt.number_of_scales - self.round_count/2)
 
       # this disparity is the shift
       shift.append(disparity[0])
       shift.append(disparity[1])
 
+#    self.round_count += 1
     return shift
 
 

@@ -23,9 +23,8 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--patch-size', '-p', type=int, nargs=2, default=(96,80), help = "The size of the patch for the image in y and x.")
   parser.add_argument('--offset', '-o', type=int, nargs=2, default=(30,30), help = "The offset at both sides of the detected bounding box to consider")
   parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
-  parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./16.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
+  parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./8.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--lowest-scale', '-f', type=float, default = 0.25, help = "Faces which will be lower than the given scale times the image resolution will not be found.")
-  parser.add_argument('--limit-feature-size', '-F', type=int, nargs=2, default=(1,100), help = "Set the lower and upper limit of the feature size.")
   parser.add_argument('--similarity-threshold', '-t', type=float, default=0.8, help = "The bounding box overlap thresholds for which positive examples are accepted.")
 
   parser.add_argument('--cascade-file', '-r', help = "If given, faces detected with the given cascade are used for training the the local model.")
@@ -54,10 +53,10 @@ def main(command_line_arguments = None):
   args = command_line_options(command_line_arguments)
 
   # get training data
-  training_files = utils.training_image_annot(args.databases, args.limit_training_files)
+  training_files = utils.training_image_annot(args.databases, args.limit_training_files, ANNOTATION_TYPES[args.annotation_types])
 
   if args.cascade_file:
-    cascade = Cascade(classifier_file=args.cascade_file)
+    cascade = Cascade(classifier_file=bob.io.HDF5File(args.cascade_file))
     sampler = Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
     train_set = TrainingSet(sampler, cascade, args.patch_size, args.offset, args.extracted_training_directory)
 

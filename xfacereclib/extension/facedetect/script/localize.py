@@ -5,7 +5,7 @@ import bob
 import numpy
 import math
 import xbob.boosting
-import xbob.ip.flandmark
+import xbob.flandmark
 import os
 import matplotlib.pyplot
 
@@ -69,11 +69,11 @@ def main(command_line_arguments = None):
   args = command_line_options(command_line_arguments)
 
   # open database to collect test images
-  test_files = utils.test_image_annot([args.database], [args.protocol], args.limit_test_files)
+  test_files = utils.test_image_annot([args.database], [args.protocol], args.limit_test_files, ANNOTATION_TYPES[args.annotation_type])
 #  test_files = utils.training_image_annot([args.database], args.limit_test_files)
 
   facereclib.utils.info("Loading cascade from file %s" % args.cascade_file)
-  cascade = detector.Cascade(classifier_file=args.cascade_file)
+  cascade = detector.Cascade(classifier_file=bob.io.HDF5File(args.cascade_file))
 
   # create the test examples
   preprocessor = facereclib.utils.resources.load_resource(args.preprocessor, 'preprocessor')
@@ -95,7 +95,7 @@ def main(command_line_arguments = None):
       facereclib.utils.info("Loading local model of type %s from %s" % (args.local_model_type, args.local_model_file))
 
     else:
-      flandmark = xbob.ip.flandmark.Flandmark()
+      flandmark = xbob.flandmark.Localizer()
       facereclib.utils.info("Using Flandmark localizer")
 
     l = open(args.landmark_error_file, 'w')
@@ -103,16 +103,23 @@ def main(command_line_arguments = None):
     l.write("# file re-y re-x le-y le-x ...\n")
 
   # iterate over the test files and detect the faces
-  i = 1
+  i = 0
   with open(args.detection_error_file, 'w') as e, open(args.ground_truth_file, 'w') as g:
     # write configuration
     e.write("# --cascade-file %s --distance %d --scale-base %f --lowest-scale %s --prediction-threshold %s\n" % (args.cascade_file, args.distance, args.scale_base, args.lowest_scale, "None" if args.prediction_threshold is None else "%f" % args.prediction_threshold))
     e.write("# file re-y re-x le-y le-x ...\n")
     g.write("# file re-y re-x le-y le-x ...\n")
     for filename, annotations, file in test_files:
-      facereclib.utils.info("Loading image %d of %d from file '%s'" % (i, len(test_files), filename))
       i += 1
-      image = preprocessor(preprocessor.read_original_data(filename))
+      if not annotations:
+        facereclib.utils.warn("Skipping image '%s' since annotations are incomplete" % filename)
+        continue
+      facereclib.utils.info("Loading image %d of %d from file '%s'" % (i, len(test_files), filename))
+      try:
+        image = preprocessor(preprocessor.read_original_data(filename))
+      except Exception as exc:
+        facereclib.utils.warn("Could not load image file '%s': %s" % (filename, exc))
+        continue
 
       # get the detection scores for the image
       predictions = []
@@ -171,23 +178,27 @@ def main(command_line_arguments = None):
         facereclib.utils.info(".. wrote image %s" % output_filename)
 
       if args.display:
-        bob.ip.draw_cross(colored, y=int(annots['reye'][0]), x=int(annots['reye'][1]), radius=5, color=(255,0,0))
-        bob.ip.draw_cross(colored, y=int(annots['leye'][0]), x=int(annots['leye'][1]), radius=5, color=(255,0,0))
+        radius = max(colored.shape[-1], colored.shape[-2]) / 100
+        bob.ip.draw_cross(colored, y=int(annots['reye'][0]), x=int(annots['reye'][1]), radius=radius, color=(255,0,0))
+        bob.ip.draw_cross(colored, y=int(annots['leye'][0]), x=int(annots['leye'][1]), radius=radius, color=(255,0,0))
         bb = utils.bounding_box_from_annotation(**gt)
         draw_box(colored, bb, color=(0,255,0))
-        # draw nodes
-        for key in ANNOTATION_TYPES[args.annotation_type]:
-          bob.ip.draw_cross_plus(colored, y=int(gt[key][0]), x=int(gt[key][1]), radius=5, color=(0,255,0))
+        try:
+          # draw nodes
+          for key in ANNOTATION_TYPES[args.annotation_type]:
+            bob.ip.draw_cross_plus(colored, y=int(gt[key][0]), x=int(gt[key][1]), radius=radius, color=(0,255,0))
 
-        if args.include_landmarks:
-          if len(landmarks):
-            lm = {
-              key : landmarks[i] for i,key in enumerate(ANNOTATION_TYPES[args.annotation_type])
-            }
-            bb = utils.bounding_box_from_annotation(**lm)
-            draw_box(colored, bb, color=(0,0,255))
-            for key in ANNOTATION_TYPES[args.annotation_type]:
-              bob.ip.draw_box(colored, y=int(lm[key][0]) - 5, x=int(lm[key][1]) - 5, height = 10, width=10,  color=(0,0,255))
+          if args.include_landmarks:
+            if len(landmarks):
+              lm = {
+                key : landmarks[i] for i,key in enumerate(ANNOTATION_TYPES[args.annotation_type])
+              }
+              bb = utils.bounding_box_from_annotation(**lm)
+              draw_box(colored, bb, color=(0,0,255))
+              for key in ANNOTATION_TYPES[args.annotation_type]:
+                bob.ip.draw_box(colored, y=int(lm[key][0]) - radius, x=int(lm[key][1]) - radius, height = 2*radius, width=2*radius,  color=(0,0,255))
+        except Exception as exc:
+          facereclib.utils.error(exc)
 
         matplotlib.pyplot.clf()
         matplotlib.pyplot.imshow(numpy.rollaxis(numpy.rollaxis(colored, 2),2))

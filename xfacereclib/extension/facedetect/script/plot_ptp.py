@@ -55,7 +55,6 @@ def command_line_arguments(command_line_parameters):
   parser.add_argument('-D', '--directory', help = "If given, files will be read and written to this directory")
   parser.add_argument('-g', '--ground-truth-file', default = "ground_truth.txt", help = "The file containing the ground truth eye locations")
   parser.add_argument('-f', '--landmark-files', nargs='+', default=[], help = "The files containing the detected landmarks")
-  parser.add_argument('-a', '--all-landmarks', action = "store_true", help = "If given, Point-to-Point errors will be computes with all landmarks (not only with the eyes)")
 
   parser.add_argument('-l', '--legends', nargs='+', help = "A list of legend strings used for the plots; must be the same length as the --landmark-files.")
   parser.add_argument('-w', '--output', default = 'PTP.pdf', help = "The Point-To-Point error curves will be plotted into the given pdf file.")
@@ -128,10 +127,10 @@ def main(command_line_parameters=None):
 
   figure = plt.figure(figsize=(10,5))
   for i,p in enumerate(ptps):
-    p_hist, first, last, outliers = scipy.stats.cumfreq(p, 100, (0,1))
+    p_hist, first, last, outliers = scipy.stats.cumfreq(p, 100, (0,0.5))
     plt.plot(p_hist / len(p) * 100., label=args.legends[i] + " (+%d)" % outliers)
-  plt.xticks(numpy.arange(0, 101, 20), numpy.arange(0, 1.01, 0.2))
-  plt.xlabel("Point-To-Point error value")
+  plt.xticks(numpy.arange(0, 101, 20), numpy.arange(0, 51, 10))
+  plt.xlabel("Point-To-Point error value in \% inter-eye-distance")
   plt.legend(loc=4)
 
   plt.savefig(args.output)
