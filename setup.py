@@ -164,6 +164,7 @@ setup(
         'validate.py = xfacereclib.extension.facedetect.script.validate:main',
         'display.py = xfacereclib.extension.facedetect.script.display:main',
         'detect.py = xfacereclib.extension.facedetect.script.detect:main',
+        'extract_faces.py = xfacereclib.extension.facedetect.script.extract_faces:main',
         'localize.py = xfacereclib.extension.facedetect.script.localize:main',
         'plots.py = xfacereclib.extension.facedetect.script.evaluate:main',
         'error.py = xfacereclib.extension.facedetect.script.errors:main',
