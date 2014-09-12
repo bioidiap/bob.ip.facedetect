@@ -21,11 +21,13 @@
 import unittest
 import os
 import numpy
-import bob
 import facereclib
 from nose.plugins.skip import SkipTest
 
 import pkg_resources
+
+import bob.io.base
+import bob.io.base.test_utils
 
 regenerate_refs = False
 
@@ -36,34 +38,34 @@ class DetectionTest (unittest.TestCase):
     preprocessed = preprocessor(data, annotations)
     reference_file = pkg_resources.resource_filename('xfacereclib.extension.facedetect', os.path.join('tests', reference))
     if regenerate_refs:
-      bob.io.save(preprocessed, reference_file)
+      bob.io.base.save(preprocessed, reference_file)
 
-    self.assertTrue((numpy.abs(bob.io.load(reference_file) - preprocessed) < 1e-5).all())
+    self.assertTrue((numpy.abs(bob.io.base.load(reference_file) - preprocessed) < 1e-5).all())
 
   def test01_face_crop(self):
     # read input
-    test_image = bob.io.load(bob.test.utils.datafile("testimage.jpg", 'facereclib', 'tests'))
+    test_image = bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'facereclib', 'tests'))
     preprocessor = facereclib.utils.tests.load_resource('face-detect', 'preprocessor')
     # execute preprocessor
     self.execute(preprocessor, test_image, None, 'detected.hdf5')
 
   def test02_tan_triggs(self):
     # read input
-    test_image = bob.io.load(bob.test.utils.datafile("testimage.jpg", 'facereclib', 'tests'))
+    test_image = bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'facereclib', 'tests'))
     preprocessor = facereclib.utils.tests.load_resource('face-detect+tan-triggs', 'preprocessor')
     # execute preprocessor
     self.execute(preprocessor, test_image, None, 'detected+tt.hdf5')
 
   def test03_inorm_lbp(self):
     # read input
-    test_image = bob.io.load(bob.test.utils.datafile("testimage.jpg", 'facereclib', 'tests'))
+    test_image = bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'facereclib', 'tests'))
     preprocessor = facereclib.utils.tests.load_resource('face-detect+inorm-lbp', 'preprocessor')
     # execute preprocessor
     self.execute(preprocessor, test_image, None, 'detected+lbp.hdf5')
 
   def test04_flandmark(self):
     # read input
-    test_image = bob.io.load(bob.test.utils.datafile("testimage.jpg", 'facereclib', 'tests'))
+    test_image = bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'facereclib', 'tests'))
     preprocessor = facereclib.utils.tests.load_resource('face-detect-flandmark', 'preprocessor')
     # execute preprocessor
     self.execute(preprocessor, test_image, None, 'detected+flandmark.hdf5')

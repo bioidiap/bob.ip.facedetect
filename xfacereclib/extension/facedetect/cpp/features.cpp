@@ -13,7 +13,7 @@ FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize)
   m_featureStarts(0) = 0;
 }
 
-FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const bob::ip::LBP& templAte, bool overlap, bool square, int min_size, int max_size, int distance)
+FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const bob::ip::base::LBP& templAte, bool overlap, bool square, int min_size, int max_size, int distance)
 : m_patchSize(patchSize),
   m_lookUpTable(0,3),
   m_extractors(),
@@ -28,9 +28,9 @@ FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, co
       for (int dx = min_size; dx < max_x / 2; ++dx)
         if (!square || dy == dx){
           // copy setup from template LBP
-          bob::ip::LBP lbp(templAte);
+          boost::shared_ptr<bob::ip::base::LBP> lbp(new bob::ip::base::LBP(templAte));
           // adapt radius / block size
-          lbp.setRadii(blitz::TinyVector<double,2>(dy, dx));
+          lbp->setRadii(blitz::TinyVector<double,2>(dy, dx));
           // add LBP
           m_extractors.push_back(lbp);
     }
@@ -42,9 +42,9 @@ FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, co
         for (int dx = min_size; dx <= max_x; ++dx)
           if (!square || dy == dx){
             // copy setup from template LBP
-            bob::ip::LBP lbp(templAte);
+            boost::shared_ptr<bob::ip::base::LBP> lbp(new bob::ip::base::LBP(templAte));
             // adapt radius / block size
-            lbp.setBlockSizeAndOverlap(blitz::TinyVector<int,2>(dy, dx), blitz::TinyVector<int,2>(dy-1, dx-1));
+            lbp->setBlockSizeAndOverlap(blitz::TinyVector<int,2>(dy, dx), blitz::TinyVector<int,2>(dy-1, dx-1));
             // add LBP
             m_extractors.push_back(lbp);
       }
@@ -55,9 +55,9 @@ FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, co
         for (int dx = min_size; dx <= max_x; ++dx)
           if (!square || dy == dx){
             // copy setup from template LBP
-            bob::ip::LBP lbp(templAte);
+            boost::shared_ptr<bob::ip::base::LBP> lbp(new bob::ip::base::LBP(templAte));
             // adapt radius / block size
-            lbp.setBlockSize(blitz::TinyVector<int,2>(dy, dx));
+            lbp->setBlockSize(blitz::TinyVector<int,2>(dy, dx));
             // add LBP
             m_extractors.push_back(lbp);
       }
@@ -69,16 +69,16 @@ FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, co
 }
 
 
-FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const std::vector<bob::ip::LBP>& extractors)
+FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const std::vector<boost::shared_ptr<bob::ip::base::LBP>>& extractors)
 : m_patchSize(patchSize),
   m_lookUpTable(0,3),
   m_extractors(extractors),
   m_hasSingleOffsets(false)
 {
-  m_isMultiBlock = extractors[0].isMultiBlockLBP();
+  m_isMultiBlock = extractors[0]->isMultiBlockLBP();
   // check if all other lbp extractors have the same multi-block characteristics
-  for (std::vector<bob::ip::LBP>::const_iterator it = extractors.begin(); it != extractors.end(); ++it){
-    if (it->isMultiBlockLBP() != m_isMultiBlock){
+  for (auto it = extractors.begin(); it != extractors.end(); ++it){
+    if ((*it)->isMultiBlockLBP() != m_isMultiBlock){
       throw std::runtime_error("All LBP variants need to be multiblock or all are not -- a mix is not possible!");
     }
   }
@@ -99,19 +99,19 @@ FeatureExtractor::FeatureExtractor(const FeatureExtractor& other)
   m_featureImages.clear();
   if (! m_hasSingleOffsets){
     for (int e = 0; e < (int)m_extractors.size(); ++e){
-      blitz::TinyVector<int,2> shape = m_extractors[e].getLBPShape(m_patchSize, false);
+      blitz::TinyVector<int,2> shape = m_extractors[e]->getLBPShape(m_patchSize, false);
       m_featureImages.push_back(blitz::Array<uint16_t, 2>(shape));
     }
   }
 }
 
 
-FeatureExtractor::FeatureExtractor(bob::io::HDF5File& file){
+FeatureExtractor::FeatureExtractor(bob::io::base::HDF5File& file){
   // read information from file
   load(file);
 }
 
-void FeatureExtractor::append1(const FeatureExtractor& other){
+void FeatureExtractor::append(const FeatureExtractor& other){
   // read information from file
   if (other.m_isMultiBlock != m_isMultiBlock)
     throw std::runtime_error("Cannot append given extractor since multi-block types differ.");
@@ -137,11 +137,11 @@ void FeatureExtractor::append1(const FeatureExtractor& other){
 }
 
 
-void FeatureExtractor::append2(const bob::ip::LBP& lbp, const std::vector<blitz::TinyVector<int32_t, 2> >& offsets){
+void FeatureExtractor::append(const boost::shared_ptr<bob::ip::base::LBP>& lbp, const std::vector<blitz::TinyVector<int32_t, 2> >& offsets){
   // read information from file
-  if (lbp.isMultiBlockLBP() != m_isMultiBlock && ! m_extractors.empty())
+  if (lbp->isMultiBlockLBP() != m_isMultiBlock && ! m_extractors.empty())
     throw std::runtime_error("Cannot append given extractor since multi-block types differ.");
-  m_isMultiBlock = lbp.isMultiBlockLBP();
+  m_isMultiBlock = lbp->isMultiBlockLBP();
   m_hasSingleOffsets = true;
   // copy LBP classes
   int lbp_index = m_extractors.size();
@@ -172,7 +172,7 @@ void FeatureExtractor::init(){
   m_featureStarts(0) = 0;
   m_featureImages.clear();
   for (int e = 0; e < (int)m_extractors.size(); ++e){
-    blitz::TinyVector<int,2> shape = m_extractors[e].getLBPShape(m_patchSize, false);
+    blitz::TinyVector<int,2> shape = m_extractors[e]->getLBPShape(m_patchSize, false);
     m_featureStarts(e+1) = m_featureStarts(e) + shape[0] * shape[1];
     m_featureImages.push_back(blitz::Array<uint16_t, 2>(shape));
   }
@@ -187,9 +187,9 @@ void FeatureExtractor::init(){
         // index into the extractor
         m_lookUpTable(index,0) = e;
         // offset in y in this extractor
-        m_lookUpTable(index,1) = y + m_extractors[e].getOffset()[0];
+        m_lookUpTable(index,1) = y + m_extractors[e]->getOffset()[0];
         // offset in x in this extractor
-        m_lookUpTable(index,2) = x + m_extractors[e].getOffset()[1];
+        m_lookUpTable(index,2) = x + m_extractors[e]->getOffset()[1];
     }
   }
 }
@@ -252,18 +252,18 @@ void FeatureExtractor::extractAll(const BoundingBox& boundingBox, blitz::Array<u
     if (m_isMultiBlock){
       for (int i = m_lookUpTable.extent(0); i--;){
 //        std::cout << i << "\t" << m_lookUpTable(i,1) << "\t" << m_lookUpTable(i,2) << "\t -- \t" << boundingBox.top() << "\t" << boundingBox.left() << std::endl;
-        const bob::ip::LBP& lbp = m_extractors[m_lookUpTable(i,0)];
+        const auto& lbp = m_extractors[m_lookUpTable(i,0)];
         try {
-          dataset(datasetIndex,i) = lbp.operator()(m_integralImage, boundingBox.top() + m_lookUpTable(i,1), boundingBox.left() + m_lookUpTable(i,2), true);
+          dataset(datasetIndex,i) = lbp->extract(m_integralImage, boundingBox.top() + m_lookUpTable(i,1), boundingBox.left() + m_lookUpTable(i,2), true);
         } catch (std::runtime_error& e){
-          std::cerr << "Couldn't extract feature from bounding box " << boundingBox.top() << "," << boundingBox.left() << "," << boundingBox.bottom() << "," <<boundingBox.right() << " with extractor " << lbp.getBlockSize()[0] << "," << lbp.getBlockSize()[1] << " at position [" << m_lookUpTable(i,1) << "," << m_lookUpTable(i,2) << "]" << std::endl;
+          std::cerr << "Couldn't extract feature from bounding box " << boundingBox.top() << "," << boundingBox.left() << "," << boundingBox.bottom() << "," <<boundingBox.right() << " with extractor " << lbp->getBlockSize()[0] << "," << lbp->getBlockSize()[1] << " at position [" << m_lookUpTable(i,1) << "," << m_lookUpTable(i,2) << "]" << std::endl;
           throw;
         }
       }
     } else {
       for (int i = m_lookUpTable.extent(0); i--;){
-        const bob::ip::LBP& lbp = m_extractors[m_lookUpTable(i,0)];
-        dataset(datasetIndex,i) = lbp.operator()(m_image, boundingBox.top() + m_lookUpTable(i,1), boundingBox.left() + m_lookUpTable(i,2));
+        const auto& lbp = m_extractors[m_lookUpTable(i,0)];
+        dataset(datasetIndex,i) = lbp->extract(m_image, boundingBox.top() + m_lookUpTable(i,1), boundingBox.left() + m_lookUpTable(i,2));
       }
     }
   } else {
@@ -271,12 +271,12 @@ void FeatureExtractor::extractAll(const BoundingBox& boundingBox, blitz::Array<u
     if (m_isMultiBlock){
       blitz::Array<double,2> subwindow = m_integralImage(blitz::Range(boundingBox.top(), boundingBox.bottom()+1), blitz::Range(boundingBox.left(), boundingBox.right()+1));
       for (int e = 0; e < (int)m_extractors.size(); ++e){
-        m_extractors[e](subwindow, m_featureImages[e], true);
+        m_extractors[e]->extract(subwindow, m_featureImages[e], true);
       }
     } else {
       blitz::Array<double,2> subwindow = m_image(blitz::Range(boundingBox.top(), boundingBox.bottom()), blitz::Range(boundingBox.left(), boundingBox.right()));
       for (int e = 0; e < (int)m_extractors.size(); ++e){
-        m_extractors[e](subwindow, m_featureImages[e], false);
+        m_extractors[e]->extract(subwindow, m_featureImages[e], false);
       }
     }
     // copy data back to the dataset
@@ -304,19 +304,19 @@ void FeatureExtractor::extractIndexed(const BoundingBox& boundingBox, blitz::Arr
   if (m_isMultiBlock){
     for (int i = indices.extent(0); i--;){
       int index = indices(i);
-      const bob::ip::LBP& lbp = m_extractors[m_lookUpTable(index,0)];
-      featureVector(index) = lbp.operator()(m_integralImage, boundingBox.top() + m_lookUpTable(index,1), boundingBox.left() + m_lookUpTable(index,2), true);
+      const auto& lbp = m_extractors[m_lookUpTable(index,0)];
+      featureVector(index) = lbp->extract(m_integralImage, boundingBox.top() + m_lookUpTable(index,1), boundingBox.left() + m_lookUpTable(index,2), true);
     }
   } else {
     for (int i = indices.extent(0); i--;){
       int index = indices(i);
-      const bob::ip::LBP& lbp = m_extractors[m_lookUpTable(index,0)];
-      featureVector(index) = lbp.operator()(m_image, boundingBox.top() + m_lookUpTable(index,1), boundingBox.left() + m_lookUpTable(index,2));
+      const auto& lbp = m_extractors[m_lookUpTable(index,0)];
+      featureVector(index) = lbp->extract(m_image, boundingBox.top() + m_lookUpTable(index,1), boundingBox.left() + m_lookUpTable(index,2));
     }
   }
 }
 
-void FeatureExtractor::load(bob::io::HDF5File& hdf5file){
+void FeatureExtractor::load(bob::io::base::HDF5File& hdf5file){
   // get global information
   m_patchSize[0] = hdf5file.read<int32_t>("PatchSize", 0);
   m_patchSize[1] = hdf5file.read<int32_t>("PatchSize", 1);
@@ -328,10 +328,10 @@ void FeatureExtractor::load(bob::io::HDF5File& hdf5file){
     if (!hdf5file.hasGroup(dir))
       break;
     hdf5file.cd(dir);
-    m_extractors.push_back(bob::ip::LBP(hdf5file));
+    m_extractors.push_back(boost::shared_ptr<bob::ip::base::LBP>(new bob::ip::base::LBP(hdf5file)));
     hdf5file.cd("..");
   }
-  m_isMultiBlock = m_extractors[0].isMultiBlockLBP();
+  m_isMultiBlock = m_extractors[0]->isMultiBlockLBP();
 
   m_hasSingleOffsets = hdf5file.contains("SelectedOffsets");
   if (m_hasSingleOffsets){
@@ -354,7 +354,7 @@ void FeatureExtractor::load(bob::io::HDF5File& hdf5file){
   }
 }
 
-void FeatureExtractor::save(bob::io::HDF5File& hdf5file) const{
+void FeatureExtractor::save(bob::io::base::HDF5File& hdf5file) const{
   // set global information
   blitz::Array<int32_t,1> t(2);
   t(0) = m_patchSize[0];
@@ -366,7 +366,7 @@ void FeatureExtractor::save(bob::io::HDF5File& hdf5file) const{
     std::string dir = (boost::format("LBP_%d") % (i+1)).str();
     hdf5file.createGroup(dir);
     hdf5file.cd(dir);
-    m_extractors[i].save(hdf5file);
+    m_extractors[i]->save(hdf5file);
     hdf5file.cd("..");
   }
 

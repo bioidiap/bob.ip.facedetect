@@ -1,14 +1,15 @@
-import bob
 import facereclib
 import numpy
 import os
-import xbob.boosting
 from .._features import FeatureExtractor
 
+import bob.io.base
+import bob.learn.boosting
+
 def load(filename):
-  f = bob.io.HDF5File(filename)
+  f = bob.io.base.HDF5File(filename)
   f.cd("/Machine")
-  model = xbob.boosting.BoostedMachine(f)
+  model = bob.learn.boosting.BoostedMachine(f)
   f.cd("/Features")
   extractor = FeatureExtractor(f)
   extractor.model_indices = model.indices
@@ -27,7 +28,7 @@ def load(filename):
 
 def save(filename, model, extractor, mean=None, variance=None):
   facereclib.utils.ensure_dir(os.path.dirname(filename))
-  f = bob.io.HDF5File(filename, 'w')
+  f = bob.io.base.HDF5File(filename, 'w')
   f.create_group("Machine")
   f.create_group("Features")
   f.cd("/Machine")

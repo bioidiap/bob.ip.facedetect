@@ -8,17 +8,17 @@ def _all_in(annot, annot_types):
 
 def _annotations(db, file, annot_types=None):
   # returns the annotations for the given file object
-  import xbob.db.detection.utils
-  import xbob.db.verification.utils
+#  import xbob.db.detection.utils
+  import bob.db.verification.utils
   try:
-    if isinstance(db, xbob.db.detection.utils.Database):
+#    if isinstance(db, xbob.db.detection.utils.Database):
       # detection databases have multiple annotations per file
-      annots = db.annotations(file.id)
-    elif isinstance(db, xbob.db.verification.utils.Database):
+#      annots = db.annotations(file.id)
+    if isinstance(db, bob.db.verification.utils.Database):
       # verification databases have just one annotation per file
       annots = [db.annotations(file.id)]
-    elif isinstance(db, facereclib.databases.DatabaseXBob):
-      # verification databases have just one annotation per file
+    elif isinstance(db, facereclib.databases.DatabaseBob):
+      # facereclib databases have just one annotation per file
       annots = [db.annotations(file)]
     else:
       raise NotImplementedError("The given database is of no known type.")
@@ -28,7 +28,7 @@ def _annotations(db, file, annot_types=None):
   return [a for a in annots if _all_in(a, annot_types)]
 
 def _original_filename(db, file):
-  if isinstance(db, facereclib.databases.DatabaseXBob):
+  if isinstance(db, facereclib.databases.DatabaseBob):
     return db.m_database.original_file_name(file)
   else:
     return db.original_file_name(file)
@@ -41,7 +41,7 @@ def training_image_annot(databases, limit, annot_types=None):
   for database in databases:
     facereclib.utils.info("Processing database '%s'" % database)
     db = facereclib.utils.resources.load_resource(database, 'database')
-    if isinstance(db, facereclib.databases.DatabaseXBob):
+    if isinstance(db, facereclib.databases.DatabaseBob):
       # collect image name and annotations
       training_files.extend([(db.m_database.original_file_name(f), _annotations(db, f, annot_types), f) for f in db.training_files()])
     else:
@@ -63,7 +63,7 @@ def test_image_annot(databases, protocols, limit, annot_types=None):
   test_files = []
   for database, protocol in zip(databases, protocols):
     db = facereclib.utils.resources.load_resource(database, 'database')
-    if isinstance(db, facereclib.databases.DatabaseXBob):
+    if isinstance(db, facereclib.databases.DatabaseBob):
       # collect image name and annotations
       orig_files = db.test_files()
     else:

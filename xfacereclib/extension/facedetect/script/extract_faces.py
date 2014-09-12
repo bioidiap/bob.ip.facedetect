@@ -4,13 +4,15 @@ If wanted, the resulting faces can be split into several files and written to th
 
 import argparse
 import facereclib
-import bob
 import numpy
 import math
 import os
 import pkg_resources
 
 import xfacereclib.extension.facedetect
+
+import bob.io.base
+import bob.io.image
 
 from .. import utils, detector
 from .._features import prune_detections, FeatureExtractor
@@ -58,7 +60,7 @@ def main(command_line_arguments = None):
 
   # load cascade
   facereclib.utils.info("Loading cascade from file %s" % args.cascade_file)
-  cascade = detector.Cascade(classifier_file=bob.io.HDF5File(args.cascade_file))
+  cascade = detector.Cascade(classifier_file=bob.io.base.HDF5File(args.cascade_file))
 
   # create the test examples
   postprocessors = [facereclib.utils.resources.load_resource(args.output_processors[i], "preprocessor") for i in range(len(args.output_processors))]
@@ -92,7 +94,7 @@ def main(command_line_arguments = None):
       for i, bb in enumerate(thresholded):
         v = max((predictions[i] - args.prediction_threshold) / (predictions[0] - args.prediction_threshold) * 0.5 + 0.5, 0.5)
         color = (v,0,0)
-        r = patches.Rectangle((bb.left_f, bb.top_f), bb.width_f, bb.height_f, facecolor='none', edgecolor=color, linewidth=2.5)
+        r = patches.Rectangle((bb.topleft[1], bb.topleft[0]), bb.size_f[1], bb.size_f[0], facecolor='none', edgecolor=color, linewidth=2.5)
         pyplot.gca().add_patch(r)
       pyplot.draw()
 
@@ -105,7 +107,7 @@ def main(command_line_arguments = None):
           # estimate eye positions based on extracted image
           annot = utils.expected_eye_positions(thresholded[i])
           cropped_image = proc(image, annot).astype(numpy.uint8)
-          bob.io.save(cropped_image, cropped_filename, True)
+          bob.io.base.save(cropped_image, cropped_filename, True)
 
   raw_input("Press Enter to finish")
 

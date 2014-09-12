@@ -1,14 +1,15 @@
 import facereclib
 
 import math
-import bob
 import numpy
 
 try:
   import xfacereclib.extension.facedetect
-  import xbob.flandmark
+  import bob.ip.flandmark
 except ImportError as e:
   facereclib.utils.error("Import Error: %s" % e)
+
+import bob.io.base
 
 class FaceDetector (facereclib.preprocessing.Preprocessor):
 
@@ -41,7 +42,7 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
     )
 
     self.m_sampler = xfacereclib.extension.facedetect.Sampler(scale_factor=scale_base, lowest_scale=lowest_scale, distance=distance)
-    self.m_cascade = xfacereclib.extension.facedetect.Cascade(classifier_file=bob.io.HDF5File(cascade))
+    self.m_cascade = xfacereclib.extension.facedetect.Cascade(classifier_file=bob.io.base.HDF5File(cascade))
     self.m_detection_threshold = detection_threshold
     self.m_detection_overlap = detection_overlap
     self.m_color_channel = color_channel
@@ -50,7 +51,7 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
       self.m_post_processor = post_processor
     else:
       self.m_post_processor = facereclib.utils.resources.load_resource(post_processor, "preprocessor")
-    self.m_flandmark = xbob.flandmark.Localizer() if use_flandmark else None
+    self.m_flandmark = bob.ip.flandmark.Flandmark() if use_flandmark else None
 
     # overwrite the cropped positions of the post processor to use the top-left and bottom-right bounding box values
 #    self.m_post_processor.m_cropped_positions = {'topleft':(0,0), 'bottomright':(cropped_image_size[0]-1, cropped_image_size[1]-1)}

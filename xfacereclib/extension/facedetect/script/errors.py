@@ -32,7 +32,6 @@ import matplotlib.gridspec as gridspec
 import facereclib
 from .. import utils
 import argparse
-import bob
 import numpy, scipy.stats, math
 import os
 
@@ -56,7 +55,7 @@ def command_line_arguments(command_line_parameters):
   parser.add_argument('-d', '--detected-file', default = "detections.txt", help = "The file containing the expected eye locations based on the face detector")
   parser.add_argument('-g', '--ground-truth-file', default = "ground_truth.txt", help = "The file containing the ground truth eye locations")
   parser.add_argument('-l', '--landmark-file', default = "landmarks.txt", help = "The file containing the detected landmarks")
-  parser.add_argument('-f', '--flandmark-file', default = "flandmark.txt", help = "The file containing the landmarks from xbob.flandmark")
+  parser.add_argument('-f', '--flandmark-file', default = "flandmark.txt", help = "The file containing the landmarks from bob.ip.flandmark")
   parser.add_argument('-a', '--all-landmarks', action = "store_true", help = "If given, Point-to-Point errors will be computes with all landmarks (not only with the eyes)")
 
 #  parser.add_argument('-l', '--legends', nargs='+', help = "A list of legend strings used for ROC, CMC and DET plots; if given, must be the same number than --files plus --baselines.")

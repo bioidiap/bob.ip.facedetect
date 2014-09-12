@@ -4,7 +4,10 @@ from .._features import BoundingBox
 
 import numpy
 import facereclib
-import bob
+
+import bob.ip.color
+import bob.ip.draw
+import bob.ip.base
 
 def sqr(x):
   """This function computes the square of the given value.
@@ -25,7 +28,7 @@ def display(image, annotations=None, color=(255,0,0), radius=5, clear=True):
     pyplot.imshow(image, cmap='gray')
   else:
     if len(image.shape) == 2:
-      colored = bob.ip.gray_to_rgb(image)
+      colored = bob.ip.color.gray_to_rgb(image)
     else:
       colored = image.copy()
     if isinstance(annotations, dict):
@@ -33,7 +36,7 @@ def display(image, annotations=None, color=(255,0,0), radius=5, clear=True):
     else:
       annotations = [(annotations[i], annotations[i+1]) for i in range(0, len(annotations), 2)]
     for a in annotations:
-      bob.ip.draw_cross(colored, y=int(a[0]), x=int(a[1]), radius=radius, color=color)
+      bob.ip.draw.cross(colored, y=int(a[0]), x=int(a[1]), radius=radius, color=color)
     pyplot.imshow(numpy.rollaxis(numpy.rollaxis(colored.astype(numpy.uint8), 2),2))
   pyplot.draw()
 
@@ -44,20 +47,20 @@ def detect_landmarks(localizer, image, bounding_box):
 
   uint8_image = image.astype(numpy.uint8)
   # make the bounding box square shape by extending the horizontal position by 2 pixels times width/20
-  corrected_bounding_box = BoundingBox(top = bounding_box.top, left = bounding_box.left - bounding_box.width / 10., height = bounding_box.height, width = bounding_box.height)
+  corrected_bounding_box = BoundingBox(topleft = (bounding_box.topleft[0], bounding_box.topleft[1] - bounding_box.size[1] / 10.), size = bounding_box.size)
 
   for scale in scales:
-    bs = corrected_bounding_box.scale_centered(scale)
+    bs = corrected_bounding_box.scale(scale, centered=True)
     for y in shifts:
-      by = bs.shift(y * bs.height, 0)
+      by = bs.shift((y * bs.size[0], 0))
       for x in shifts:
-        bb = by.shift(0, x * bs.width)
+        bb = by.shift((0, x * bs.size[1]))
 
-        top = max(bb.top, 0)
-        left = int(max(bb.left, 0))
-        bottom = min(bb.bottom, image.shape[0]-1)
-        right = int(min(bb.right, image.shape[1]-1))
-        landmarks = localizer.localize(uint8_image, top, left, bottom-top+1, right-left+1)
+        top = max(bb.topleft[0], 0)
+        left = int(max(bb.topleft[1], 0))
+        bottom = min(bb.bottomright[0], image.shape[0]-1)
+        right = int(min(bb.bottomright[1], image.shape[1]-1))
+        landmarks = localizer.locate(uint8_image, top, left, bottom-top+1, right-left+1)
 
         if len(landmarks):
           facereclib.utils.debug("Found landmarks with scale %1.1f, and shift %1.1fx%1.1f" % (scale, y, x))
@@ -108,40 +111,4 @@ def localize(localizer, feature_extractor, image, bounding_box):
 
   return landmarks
 
-def predict(graphs, image, bounding_box):
-  # scale image such that bounding box is in the correct size
-  scale = float(graphs.patch_size[0]) / float(bounding_box.height_f)
-  assert abs(scale - float(graphs.patch_size[1]) / float(bounding_box.width_f)) < 1e-10
-  scaled_bb = bounding_box.scale(scale)
-
-  # extract features for given image patch
-  scaled_image = bob.ip.scale(image, scale)
-
-  # compute shifted versions of the bb and get the MEDIAN feature positions
-#  shifts = range(-3,4)
-  shifts = [0]
-  predictions = numpy.ndarray((len(shifts)**2, graphs.number_of_predictions()))
-
-  i = 0
-  for y in shifts:
-    for x in shifts:
-      shifted_bb = scaled_bb.shift(y,x)
-      if not shifted_bb.is_valid_for(scaled_image.shape):
-        continue
-
-      # compute the predicted location
-      predictions[i] = graphs.predict(scaled_image, shifted_bb)
-      i += 1
-
-  prediction = numpy.median(predictions[:i], 0)
-
-  # compute landmarks in image coordinates
-  landmarks = []
-  scale = 1./scale
-  for i in range(0, graphs.number_of_predictions(), 2):
-    y = (prediction[i] * scale) + bounding_box.top
-    x = (prediction[i+1] * scale) + bounding_box.left
-    landmarks.append((y,x))
-
-  return landmarks
 

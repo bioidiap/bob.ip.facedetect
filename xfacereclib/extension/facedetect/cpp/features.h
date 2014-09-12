@@ -1,8 +1,8 @@
-#include <bob/io/HDF5File.h>
-#include <bob/ip/LBP.h>
-#include <bob/ip/integral.h>
-#include <bob/ip/scale.h>
-#include <bob/core/array_convert.h>
+#include <bob.io.base/HDF5File.h>
+#include <bob.ip.base/LBP.h>
+#include <bob.ip.base/IntegralImage.h>
+#include <bob.ip.base/Affine.h>
+#include <bob.core/array_convert.h>
 #include <boost/shared_ptr.hpp>
 #include <limits.h>
 
@@ -14,15 +14,15 @@ class BoundingBox{
     BoundingBox(const BoundingBox& other) : m_top(other.m_top), m_left(other.m_left), m_height(other.m_height), m_width(other.m_width), m_area(m_width*m_height) {}
 
     // create boundingbox by shifting
-    BoundingBox shift(double y, double x) const {return BoundingBox(m_top + y, m_left + x, m_height, m_width);}
+    boost::shared_ptr<BoundingBox> shift(double y, double x) const {return boost::shared_ptr<BoundingBox>(new BoundingBox(m_top + y, m_left + x, m_height, m_width));}
     // create boundingbox by scaling
-    BoundingBox scale(double scale) const {return BoundingBox(m_top*scale, m_left*scale, m_height*scale, m_width*scale);}
+    boost::shared_ptr<BoundingBox> scale(double scale) const {return boost::shared_ptr<BoundingBox>(new BoundingBox(m_top*scale, m_left*scale, m_height*scale, m_width*scale));}
     // create boundingbox by scaling based on the center of the bounding box
-    BoundingBox scaleCentered(double scale) const {return BoundingBox(m_top - m_height/2.*(scale-1.), m_left - m_width/2.*(scale-1.), m_height*scale, m_width*scale);}
+    boost::shared_ptr<BoundingBox> scaleCentered(double scale) const {return boost::shared_ptr<BoundingBox>(new BoundingBox(m_top - m_height/2.*(scale-1.), m_left - m_width/2.*(scale-1.), m_height*scale, m_width*scale));}
     // create a bounding box that is mirrored horizontically, adapted to the image width
-    BoundingBox mirrorX(int width) const {return BoundingBox(m_top, width - m_width - m_left, m_height, m_width);}
+    boost::shared_ptr<BoundingBox> mirrorX(int width) const {return boost::shared_ptr<BoundingBox>(new BoundingBox(m_top, width - m_width - m_left, m_height, m_width));}
 
-    BoundingBox overlap(const BoundingBox& other) const;
+    boost::shared_ptr<BoundingBox> overlap(const BoundingBox& other) const;
 
     bool operator == (const BoundingBox& other){return top() == other.top() && left() == other.left() && height() == other.height() && width() == other.width();}
 
@@ -45,7 +45,7 @@ class BoundingBox{
 
     double area() const{return m_area;}
 
-    // Jesorsky distance between bounding boxes
+    // Jaccard similarity between bounding boxes
     double similarity(const BoundingBox& other) const;
 
     bool isValidFor(blitz::TinyVector<int,2> shape) const {return m_top >= 0 && m_top + m_height < shape[0] && m_left >= 0 && m_left + m_width < shape[1];}
@@ -57,34 +57,34 @@ class BoundingBox{
     double m_area;
 };
 
-void pruneDetections(const std::vector<BoundingBox>& detections, const blitz::Array<double, 1>& predictions, double threshold, std::vector<BoundingBox>& pruned_boxes, blitz::Array<double, 1>& pruned_weights, const int number_of_detections);
-void bestOverlap(const std::vector<BoundingBox>& detections, const blitz::Array<double, 1>& predictions, double threshold, std::vector<BoundingBox>& pruned_boxes, blitz::Array<double, 1>& pruned_weights);
+void pruneDetections(const std::vector<boost::shared_ptr<BoundingBox>>& detections, const blitz::Array<double, 1>& predictions, double threshold, std::vector<boost::shared_ptr<BoundingBox>>& pruned_boxes, blitz::Array<double, 1>& pruned_weights, const int number_of_detections);
+void bestOverlap(const std::vector<boost::shared_ptr<BoundingBox>>& detections, const blitz::Array<double, 1>& predictions, double threshold, std::vector<boost::shared_ptr<BoundingBox>>& pruned_boxes, blitz::Array<double, 1>& pruned_weights);
 
 class FeatureExtractor{
 
   public:
     FeatureExtractor(const blitz::TinyVector<int,2>& patchSize);
     // Creates all possible combinations of LBP extractors using the given template
-    FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const bob::ip::LBP& templAte, bool overlap = false, bool square = false, int min_size=1, int max_size=INT_MAX, int distance=1);
+    FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const bob::ip::base::LBP& templAte, bool overlap = false, bool square = false, int min_size=1, int max_size=INT_MAX, int distance=1);
 
     // Uses the given LBP extractors only; Please don't mix MB-LBP with regular LBP's
-    FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const std::vector<bob::ip::LBP>& extractors);
+    FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const std::vector<boost::shared_ptr<bob::ip::base::LBP>>& extractors);
 
     // copy constructor
     FeatureExtractor(const FeatureExtractor& other);
 
     // Reads the LBP extractor types from File
-    FeatureExtractor(bob::io::HDF5File& file);
+    FeatureExtractor(bob::io::base::HDF5File& file);
 
     // concatenates the given FeatureExtractor to this one
-    void append1(const FeatureExtractor& other);
+    void append(const FeatureExtractor& other);
 
     // append the given LBP extractor ONLY at the given offset positions
-    void append2(const bob::ip::LBP& lbp, const std::vector<blitz::TinyVector<int32_t,2> >& offsets);
+    void append(const boost::shared_ptr<bob::ip::base::LBP>& lbp, const std::vector<blitz::TinyVector<int32_t,2> >& offsets);
 
-    void load(bob::io::HDF5File& file);
-    void save(bob::io::HDF5File& file) const;
-    const std::vector<bob::ip::LBP>& getExtractors() const {return m_extractors;}
+    void load(bob::io::base::HDF5File& file);
+    void save(bob::io::base::HDF5File& file) const;
+    const std::vector<boost::shared_ptr<bob::ip::base::LBP>>& getExtractors() const {return m_extractors;}
 
     // Model indices
     void setModelIndices(const blitz::Array<int32_t,1>& indices) {m_modelIndices.resize(indices.shape()); m_modelIndices = indices;}
@@ -92,7 +92,7 @@ class FeatureExtractor{
 
     // feature information
     int numberOfFeatures() const {return m_featureStarts((int)m_extractors.size());}
-    uint16_t getMaxLabel() const {return m_extractors[0].getMaxLabel();}
+    uint16_t getMaxLabel() const {return m_extractors[0]->getMaxLabel();}
 
     template <typename T>
       void prepare(const blitz::Array<T,2>& image, double scale, bool computeIntegralSquareImage);
@@ -113,7 +113,7 @@ class FeatureExtractor{
 
     blitz::TinyVector<int,2> patchSize() const {return m_patchSize;}
 
-    const bob::ip::LBP extractor(int32_t index) const {return m_extractors[m_lookUpTable(index,0)];}
+    const boost::shared_ptr<bob::ip::base::LBP> extractor(int32_t index) const {return m_extractors[m_lookUpTable(index,0)];}
     blitz::TinyVector<int32_t,2> offset(int32_t index) const {return blitz::TinyVector<int,2>(m_lookUpTable(index,1), m_lookUpTable(index,2));}
 
   private:
@@ -124,7 +124,7 @@ class FeatureExtractor{
     blitz::TinyVector<int,2> m_patchSize;
     blitz::Array<int,2> m_lookUpTable;
 
-    std::vector<bob::ip::LBP> m_extractors;
+    std::vector<boost::shared_ptr<bob::ip::base::LBP>> m_extractors;
 
     blitz::Array<int32_t,1> m_featureStarts;
     blitz::Array<int32_t,1> m_modelIndices;
@@ -143,16 +143,16 @@ template <typename T>
     // TODO: implement different MB-LBP behaviour here (i.e., scaling the LBP's instead of scaling the image)
 
     // scale image
-    m_image.resize(bob::ip::getScaledShape<T>(image, scale));
-    bob::ip::scale(image, m_image);
+    m_image.resize(bob::ip::base::getScaledShape(image.shape(), scale));
+    bob::ip::base::scale(image, m_image);
     if (m_isMultiBlock or computeIntegralSquareImage){
       // compute integral image of scaled image
       m_integralImage.resize(m_image.extent(0)+1, m_image.extent(1)+1);
       if (computeIntegralSquareImage){
         m_integralSquareImage.resize(m_integralImage.extent(0), m_integralImage.extent(1));
-        bob::ip::integral<double>(m_image, m_integralImage, m_integralSquareImage, true);
+        bob::ip::base::integral<double>(m_image, m_integralImage, m_integralSquareImage, true);
       } else {
-        bob::ip::integral<double>(m_image, m_integralImage, true);
+        bob::ip::base::integral<double>(m_image, m_integralImage, true);
       }
     }
   }

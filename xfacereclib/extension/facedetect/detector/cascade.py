@@ -1,6 +1,7 @@
-import xbob.boosting
 import numpy
 from .._features import FeatureExtractor
+
+import bob.learn.boosting
 
 class Cascade:
 
@@ -16,7 +17,10 @@ class Cascade:
       self.cascade = []
       self.indices = []
       for i in range(len(indices)-1):
-        self.cascade.append(classifier.__class__(classifier.weak_machines[indices[i]:indices[i+1]], classifier.weights[indices[i]:indices[i+1], 0]))
+        machine = classifier.__class__()
+        for index in range(indices[i], indices[i+1]):
+          machine.add_weak_machine(classifier.weak_machines[index], classifier.weights[index, 0])
+        self.cascade.append(machine)
       if isinstance(classification_thresholds, (int, float)):
         self.thresholds = [classification_thresholds] * len(self.cascade)
       else:
@@ -80,7 +84,7 @@ class Cascade:
     self.cascade = []
     for i in range(len(self.thresholds)):
       hdf5.cd("Classifier_%d" % (i+1))
-      self.cascade.append(xbob.boosting.BoostedMachine(hdf5))
+      self.cascade.append(bob.learn.boosting.BoostedMachine(hdf5))
       hdf5.cd("..")
     hdf5.cd("FeatureExtractor")
     self.extractor = FeatureExtractor(hdf5)

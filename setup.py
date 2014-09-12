@@ -33,31 +33,14 @@
 # allows you to test your package with new python dependencies w/o requiring
 # administrative interventions.
 
+bob_packages = ['bob.core', 'bob.io.base', 'bob.sp', 'bob.ip.base']
+
 from setuptools import setup, find_packages, dist
-dist.Distribution(dict(setup_requires='xbob.extension'))
-from xbob.extension import Extension, build_ext
+dist.Distribution(dict(setup_requires=['bob.blitz'] + bob_packages))
+from bob.extension.utils import egrep, find_header, find_library
+from bob.blitz.extension import Extension, build_ext
 
-ext_debug = False
-
-if ext_debug:
-  ext_arguments = {
-    'extra_compile_args' : [
-      '-ggdb',
-       '-std=c++11',
-    ],
-    'define_macros' : [
-      ('BZ_DEBUG', 1)
-    ],
-   'undef_macros' : [
-     'NDEBUG'
-    ]
-  }
-else:
-  ext_arguments = {
-    'extra_compile_args' : [
-       '-std=c++11',
-    ],
-  }
+version = "0.2.0a0"
 
 # The only thing we do in this file is to call the setup() function with all
 # parameters that define our package.
@@ -66,14 +49,14 @@ setup(
     # This is the basic information about your project. Modify all this
     # information before releasing code publicly.
     name='xfacereclib.extension.facedetect',
-    version='0.1',
-    description='Example for using Bob inside a buildout project',
+    version=version,
+    description='Face detection utilities for the FaceRecLib',
 
     url='http://github.com/idiap/bob.project.example',
     license='GPLv3',
-    author='Andre Anjos',
-    author_email='andre.anjos@idiap.ch',
-    keywords='bob, xbob',
+    author='Manuel Guenther',
+    author_email='manuel.guenther@idiap.ch',
+    keywords='bob, facereclib, face detection',
 
     # If you have a better, long description of your package, place it on the
     # 'doc' directory and then hook it here
@@ -83,10 +66,6 @@ setup(
     packages=find_packages(),
     include_package_data=True,
 
-    setup_requires=[
-      'xbob.extension',
-    ],
-
     # This line defines which packages should be installed when you "install"
     # this package. All packages that are mentioned here, but are not installed
     # on the current system will be installed locally and only visible to the
@@ -94,10 +73,18 @@ setup(
     # privileges when using buildout.
     install_requires=[
       'setuptools',
-      'bob', # base signal proc./machine learning library
+      'bob.core',
+      'bob.io.base',
+      'bob.io.image',
+      'bob.ip.base',
+      'bob.ip.gabor',
+      'bob.ip.color',
+      'bob.ip.draw',
+      'bob.ip.flandmark',
+      'bob.learn.boosting',
+      'bob.db.banca',
+      'bob.db.multipie',
       'facereclib',
-      'xbob.boosting',
-      'xbob.flandmark'
     ],
 
     cmdclass={
@@ -110,17 +97,13 @@ setup(
         [
           "xfacereclib/extension/facedetect/cpp/features.cpp",
           "xfacereclib/extension/facedetect/cpp/boundingbox.cpp",
-          "xfacereclib/extension/facedetect/cpp/bindings.cpp",
+
+          "xfacereclib/extension/facedetect/bounding_box.cpp",
+          "xfacereclib/extension/facedetect/feature_extractor.cpp",
+          "xfacereclib/extension/facedetect/main.cpp",
         ],
-        pkgconfig = [
-          'bob-ip',
-        ],
-        include_dirs = [
-          "/idiap/user/mguenther/Bob/release/include",
-#          "xfacereclib/extension/facedetect/cpp"
-        ],
-# STUFF for DEBUGGING goes here (requires DEBUG bob version...):
-        **ext_arguments
+        version = version,
+        bob_packages = bob_packages,
       )
     ],
 
@@ -158,17 +141,12 @@ setup(
       # scripts should be declared using this entry:
       'console_scripts': [
         'train_detector.py = xfacereclib.extension.facedetect.script.train:main',
-#        'train_localizer.py = xfacereclib.extension.facedetect.script.train_localizer:main',
-#        'train_graph.py = xfacereclib.extension.facedetect.script.train_graph:main',
-        'train_local_model.py = xfacereclib.extension.facedetect.script.train_local_model:main',
         'validate.py = xfacereclib.extension.facedetect.script.validate:main',
         'display.py = xfacereclib.extension.facedetect.script.display:main',
         'detect.py = xfacereclib.extension.facedetect.script.detect:main',
         'extract_faces.py = xfacereclib.extension.facedetect.script.extract_faces:main',
-        'localize.py = xfacereclib.extension.facedetect.script.localize:main',
         'plots.py = xfacereclib.extension.facedetect.script.evaluate:main',
         'error.py = xfacereclib.extension.facedetect.script.errors:main',
-        'ptp.py = xfacereclib.extension.facedetect.script.plot_ptp:main',
       ],
 
       # registered database short cuts
@@ -195,12 +173,6 @@ setup(
         'face-detect+tan-triggs  = xfacereclib.extension.facedetect.configurations.tan_triggs:preprocessor',
         'face-detect+inorm-lbp   = xfacereclib.extension.facedetect.configurations.inorm_lbp:preprocessor',
         'face-detect-flandmark   = xfacereclib.extension.facedetect.configurations.flandmark:preprocessor',
-      ],
-
-      # tests that are _exported_ (that can be executed by other packages) can
-      # be signalized like this:
-      'bob.test': [
-         'facedetect = xfacereclib.extension.facedetect.tests.test_facereclib:DetectionTest'
       ],
 
       # finally, if you are writing a database package, you must declare the

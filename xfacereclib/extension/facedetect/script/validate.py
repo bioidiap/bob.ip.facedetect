@@ -1,11 +1,11 @@
 
 import argparse
 import facereclib
-import bob
 import numpy
 import math
-import xbob.boosting
 import os
+
+import bob.io.base
 
 from .. import utils, detector
 from .._features import prune_detections
@@ -118,7 +118,7 @@ def main(command_line_arguments = None):
         cascade.add(classifier, last_cascade_index, index+1, threshold)
         last_cascade_index = index + 1
         cascade_step += 1
-        cascade.save(bob.io.HDF5File("cascade_index_%d.hdf5" % cascade_step, 'w'))
+        cascade.save(bob.io.base.HDF5File("cascade_index_%d.hdf5" % cascade_step, 'w'))
 
         if cascade_step >= len(args.kept_negatives):
           # we have used all our acceptance rates, so we can stop here
@@ -132,6 +132,6 @@ def main(command_line_arguments = None):
 
   # write the cascade into the cascade file
   facereclib.utils.info("Writing cascade file %s" % args.cascade_file)
-  hdf5 = bob.io.HDF5File(args.cascade_file, 'w')
+  hdf5 = bob.io.base.HDF5File(args.cascade_file, 'w')
   cascade.save(hdf5)
 

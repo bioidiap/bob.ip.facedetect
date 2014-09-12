@@ -1,11 +1,13 @@
 
 import argparse
 import facereclib
-import bob
 import numpy
 import math
-import xbob.boosting
 import os, sys
+
+
+import bob.ip.base
+import bob.learn.boosting
 
 from ..detector import Sampler, Bootstrap, save
 from .. import BoundingBox, FeatureExtractor, utils
@@ -16,8 +18,8 @@ LBP_VARIANTS = {
   'u2'   : {'uniform' : True},
   'ri'   : {'rotation_invariant' : True},
   'mct'  : {'to_average' : True, 'add_average_bit' : True},
-  'tran' : {'elbp_type' : bob.ip.ELBPType.TRANSITIONAL},
-  'dir'  : {'elbp_type' : bob.ip.ELBPType.DIRECTION_CODED}
+  'tran' : {'elbp_type' : 'transitional'},
+  'dir'  : {'elbp_type' : 'direction-coded'}
 }
 
 def lbp_variant(patch_size, multi_block, variants, overlap, scale, square):
@@ -27,14 +29,14 @@ def lbp_variant(patch_size, multi_block, variants, overlap, scale, square):
     res.update(LBP_VARIANTS[t])
   if scale:
     if multi_block:
-      return FeatureExtractor(patch_size = patch_size, extractors = [bob.ip.LBP(8, block_size=(scale,scale), block_overlap=(scale-1, scale-1) if overlap else (0,0), **res)])
+      return FeatureExtractor(patch_size = patch_size, extractors = [bob.ip.base.LBP(8, block_size=(scale,scale), block_overlap=(scale-1, scale-1) if overlap else (0,0), **res)])
     else:
-      return FeatureExtractor(patch_size = patch_size, extractors = [bob.ip.LBP(8, radius=scale, **res)])
+      return FeatureExtractor(patch_size = patch_size, extractors = [bob.ip.base.LBP(8, radius=scale, **res)])
   else:
     if multi_block:
-      return FeatureExtractor(patch_size = patch_size, template = bob.ip.LBP(8, block_size=(1,1), **res), overlap=overlap, square=square)
+      return FeatureExtractor(patch_size = patch_size, template = bob.ip.base.LBP(8, block_size=(1,1), **res), overlap=overlap, square=square)
     else:
-      return FeatureExtractor(patch_size = patch_size, template = bob.ip.LBP(8, radius=1, **res), square=square)
+      return FeatureExtractor(patch_size = patch_size, template = bob.ip.base.LBP(8, radius=1, **res), square=square)
 
 
 def command_line_options(command_line_arguments):
@@ -108,8 +110,8 @@ def main(command_line_arguments = None):
   feature_extractor = lbp_variant(args.patch_size, args.lbp_multi_block, args.lbp_variant, args.lbp_overlap, args.lbp_scale, args.lbp_square)
   # create trainer (number of rounds will be set during bootstrapping)
 
-  weak_trainer = xbob.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, feature_extractor.number_of_features, 1)
-  trainer = xbob.boosting.trainer.Boosting(weak_trainer, xbob.boosting.loss.LogitLoss(), 0)
+  weak_trainer = bob.learn.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, feature_extractor.number_of_features, 1)
+  trainer = bob.learn.boosting.trainer.Boosting(weak_trainer, bob.learn.boosting.loss.LogitLoss(), 0)
   bootstrapping = Bootstrap(number_of_rounds=args.bootstrapping_rounds, number_of_weak_learners_in_first_round=args.features_in_first_round, number_of_positive_examples_per_round=args.training_examples[0], number_of_negative_examples_per_round=args.training_examples[1])
 
   # perform the bootstrapping

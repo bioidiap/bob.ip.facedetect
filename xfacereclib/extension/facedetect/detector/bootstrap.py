@@ -4,8 +4,9 @@ from .io import load, save
 from .sampler import Sampler
 from .. import FeatureExtractor
 import os
-import bob
-import xbob.boosting
+
+import bob.ip.base
+import bob.learn.boosting
 
 class Bootstrap:
   """This class deals with selecting new training examples for each boosting round."""
@@ -29,12 +30,12 @@ class Bootstrap:
       if self.m_init_with_average and model is None and b == 0:
         facereclib.utils.info("Initializing first weak machine with the average of the training labels.")
         # compute average of labels and initialize the first weak machine with it
-        model = xbob.boosting.BoostedMachine()
+        model = bob.learn.boosting.BoostedMachine()
         average = numpy.mean(new_labels, axis=0)
         lut = numpy.ones((feature_extractor.number_of_labels, average.shape[0]))
         lut[:,average>0] = -1
         average = -numpy.abs(average)
-        weak_machine = xbob.boosting.LUTMachine(lut, numpy.zeros(average.shape[0], numpy.int32))
+        weak_machine = bob.learn.boosting.LUTMachine(lut, numpy.zeros(average.shape[0], numpy.int32))
         model.add_weak_machine(weak_machine, average)
         save("%s_round_%d.hdf5" % (os.path.splitext(filename)[0], 0), model, feature_extractor, mean, variance)
 
@@ -117,7 +118,7 @@ class Bootstrap:
         # scale up the lbp and the positions, and add features with slightly modified extends
         for y in (-1,0,1):
           for x in (-1,0,1):
-            new_lbp = bob.ip.LBP(lbp)
+            new_lbp = bob.ip.base.LBP(lbp)
 #            new_lbp.offset = [o * patch_scale_factor for o in lbp.offset]
             new_shape = (patch_scale_factor * lbp.block_size[0] + y, patch_scale_factor * lbp.block_size[1] + x)
             if new_lbp.is_multi_block_lbp:
@@ -147,6 +148,6 @@ class Bootstrap:
       for k in sorted(lbps.keys()):
         feature_extractor.append(lbps[k], positions[k])
 
-#      trainer.m_trainer = xbob.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, feature_extractor.number_of_features, trainer.m_trainer.m_number_of_outputs, trainer.m_trainer.m_selection_type)
-      trainer.m_trainer = xbob.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, trainer.m_trainer.number_of_outputs, trainer.m_trainer.selection_type)
+#      trainer.m_trainer = bob.learn.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, feature_extractor.number_of_features, trainer.m_trainer.m_number_of_outputs, trainer.m_trainer.m_selection_type)
+      trainer.m_trainer = bob.learn.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, trainer.m_trainer.number_of_outputs, trainer.m_trainer.selection_type)
 

@@ -1,12 +1,12 @@
 
 import math
 import numpy
-import bob
 import facereclib
 import itertools
 
 from .._features import BoundingBox
 
+import bob.ip.base
 
 import threading
 
@@ -44,7 +44,7 @@ class Sampler:
     self.m_targets = []
 
     self.m_patch_size = patch_size
-    self.m_patch_box = BoundingBox(0, 0, patch_size[0], patch_size[1])
+    self.m_patch_box = BoundingBox((0, 0), patch_size)
     self.m_scale_factor = scale_factor
     self.m_lowest_scale = lowest_scale
     self.m_distance = distance
@@ -55,7 +55,7 @@ class Sampler:
 
 
   def scale_self(self, scale):
-    patch_size = (int(round(self.m_patch_box.height*scale)), int(round(self.m_patch_box.width * scale)))
+    patch_size = (int(round(self.m_patch_box.size[0]*scale)), int(round(self.m_patch_box.height[1] * scale)))
     sampler = Sampler(patch_size, scale_factor=self.m_scale_factor, lowest_scale=self.m_lowest_scale, distance=int(math.ceil(self.m_distance * scale)), similarity_thresholds=self.m_similarity_thresholds, mirror_samples=self.m_mirror_samples, number_of_parallel_threads=self.m_number_of_parallel_threads)
 
     sampler.m_scales = [[s * scale for s in scales] for scales in self.m_scales]
@@ -70,7 +70,7 @@ class Sampler:
 
 
   def _scales(self, image):
-    minimum_scale = max(self.m_patch_box.height_f / image.shape[0], self.m_patch_box.width_f / image.shape[1])
+    minimum_scale = max(self.m_patch_box.size_f[0] / image.shape[0], self.m_patch_box.size_f[1] / image.shape[1])
     if self.m_lowest_scale:
       maximum_scale = min(minimum_scale / self.m_lowest_scale, 1.)
     else:
@@ -84,17 +84,17 @@ class Sampler:
         # image is smaller than the requested minimum size
         break
       current_scale_power -= 1.
-      scaled_image_shape = bob.ip.get_scaled_output_shape(image, scale)
+      scaled_image_shape = bob.ip.base.scaled_output_shape(image, scale)
 
       yield scale, scaled_image_shape
 
 
   def _sample(self, scaled_image_shape):
     """Returns an iterator that iterates over the sampled positions in the image."""
-    for y in range(0, scaled_image_shape[0]-self.m_patch_box.bottom-1, self.m_distance):
-      for x in range(0, scaled_image_shape[1]-self.m_patch_box.right-1, self.m_distance):
+    for y in range(0, scaled_image_shape[0]-self.m_patch_box.bottomright[0]-1, self.m_distance):
+      for x in range(0, scaled_image_shape[1]-self.m_patch_box.bottomright[1]-1, self.m_distance):
         # create bounding box for the image
-        yield self.m_patch_box.shift(y,x)
+        yield self.m_patch_box.shift((y,x))
 
 
 
@@ -223,7 +223,7 @@ class Sampler:
           # extract features
           for bb_index, bb in enumerate(self.m_positives[image_index][scale_index]):
             # extract the features for the current bounding box
-            fex.extract_single_p(bb, feature_vector)
+            fex.extract_indexed(bb, feature_vector)
             # compute the current prediction of the model
             if self.m_target_length != 0:
               scores = numpy.ndarray(self.m_target_length)
@@ -234,7 +234,7 @@ class Sampler:
           if self.m_target_length == 0:
             for bb_index, bb in enumerate(self.m_negatives[image_index][scale_index]):
               # extract the features for the current bounding box
-              fex.extract_single_p(bb, feature_vector)
+              fex.extract_indexed(bb, feature_vector)
               # compute the current prediction of the model
               neg.append((model.forward_p(feature_vector), image_index, scale_index, bb_index))
 
@@ -256,11 +256,11 @@ class Sampler:
             mex.prepare(self.m_images[image_index][:,::-1].copy(), self.m_scales[image_index][scale_index])
         # extract and append features
         bb = bounding_boxes[image_index][scale_index][bb_index]
-        fex.extract_p(bb, dataset, index + offset)
+        fex.extract_all(bb, dataset, index + offset)
         if self.m_target_length != 0:
           labels[index+offset] = self.m_targets[image_index][scale_index][bb_index]
         if mirror_offset:
-          mex.extract_p(bb.mirror_x(mex.image.shape[1]), dataset, index + offset + mirror_offset)
+          mex.extract_all(bb.mirror_x(mex.image.shape[1]), dataset, index + offset + mirror_offset)
           if self.m_target_length != 0:
             raise NotImplementedError("Using mirrored regression data is not supported (yet).")
             labels[index+offset+mirror_offset] = [b if a % 2 == 0 else -b for (a,b) in enumerate(self.m_targets[image_index][scale_index][bb_index])]
@@ -317,7 +317,7 @@ class Sampler:
             feature_extractor.prepare(image, scale)
             for bb_index, bb in enumerate(self.m_positives[image_index][scale_index]):
               # extract the features for the current bounding box
-              feature_extractor.extract_single(bb, feature_vector)
+              feature_extractor.extract_indexed(bb, feature_vector)
               if self.m_target_length != 0:
                 scores = numpy.ndarray(self.m_target_length)
                 model.forward_p(feature_vector, scores)
@@ -328,7 +328,7 @@ class Sampler:
             if self.m_target_length == 0:
               for bb_index, bb in enumerate(self.m_negatives[image_index][scale_index]):
                 # extract the features for the current bounding box
-                feature_extractor.extract_single(bb, feature_vector)
+                feature_extractor.extract_indexed(bb, feature_vector)
                 # compute the current prediction of the model
                 negative_values.append((model(feature_vector), image_index, scale_index, bb_index))
 
@@ -389,10 +389,10 @@ class Sampler:
         bb = self.m_positives[image_index][scale_index][bb_index]
 #        print "extracted features", i, bb, self.m_images[image_index].shape, self.m_scales[image_index][scale_index]
         try:
-          feature_extractor.extract(bb, dataset, i)
+          feature_extractor.extract_all(bb, dataset, i)
         except Exception as e:
           print bb, self.m_scales[image_index][scale_index], [s*self.m_scales[image_index][scale_index] for s in self.m_images[image_index].shape]
-          raise e
+          raise
         if self.m_target_length != 0:
           labels[i] = self.m_targets[image_index][scale_index][bb_index]
         if self.m_mirror_samples:
@@ -424,7 +424,7 @@ class Sampler:
             mirror_extractor.prepare(self.m_images[image_index][:,::-1].copy(), self.m_scales[image_index][scale_index])
         # extract and append features
         bb = self.m_negatives[image_index][scale_index][bb_index]
-        feature_extractor.extract(bb, dataset, i)
+        feature_extractor.extract_all(bb, dataset, i)
         labels[i] = -1.
         if self.m_mirror_samples:
           mirror_extractor.extract(bb.mirror_x(mirror_extractor.image.shape[1]), dataset, i + mirror_offset)
@@ -491,11 +491,11 @@ class Sampler:
       if last_scale_index != scale_index or last_image_index != image_index:
         last_scale_index = scale_index
         last_image_index = image_index
-        scaled_image = bob.ip.scale(self.m_images[image_index], self.m_scales[image_index][scale_index])
+        scaled_image = bob.ip.base.scale(self.m_images[image_index], self.m_scales[image_index][scale_index])
 
       # extract and append features
       bb = self.m_positives[image_index][scale_index][bb_index]
-      images.append(scaled_image[bb.top:bb.bottom+1, bb.left:bb.right+1].copy())
+      images.append(scaled_image[bb.topleft[0]:bb.bottomright[0]+1, bb.topleft[1]:bb.bottomright[1]+1].copy())
       annotations.append(self.m_targets[image_index][scale_index][bb_index])
 
     return images, annotations
@@ -509,7 +509,7 @@ class Sampler:
       feature_extractor.prepare(image, scale)
       for bb in self._sample(scaled_image_shape):
         # extract features for
-        feature_extractor.extract_single(bb, feature_vector)
+        feature_extractor.extract_indexed(bb, feature_vector)
         yield bb.scale(1./scale)
 
 

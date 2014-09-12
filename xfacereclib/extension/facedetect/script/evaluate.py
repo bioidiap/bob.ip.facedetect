@@ -31,7 +31,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 import facereclib
 from .. import utils
 import argparse
-import bob
 import numpy, math
 import os
 

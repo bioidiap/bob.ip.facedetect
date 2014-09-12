@@ -1,4 +1,3 @@
-import bob
 import numpy
 import facereclib
 import math
@@ -93,16 +92,16 @@ def bounding_box_from_annotation(source=None, padding=None, **kwargs):
     left   = lr_center + padding['left'] * distance
     right  = lr_center + padding['right'] * distance - 1
 
-  return BoundingBox(top, left, bottom - top + 1, right - left + 1)
+  return BoundingBox((top, left), (bottom - top + 1, right - left + 1))
 
 
 def expected_eye_positions(bounding_box):
   """Computes the expected eye positions based on the relative coordinates of the bounding box."""
   top, left, right = default_paddings['eyes']['top'], default_paddings['eyes']['left'], default_paddings['eyes']['right']
-  inter_eye_distance = (bounding_box.width) / (right - left)
+  inter_eye_distance = (bounding_box.size[1]) / (right - left)
   return {
-    'reye':(bounding_box.top - top*inter_eye_distance, bounding_box.left - left/2.*inter_eye_distance),
-    'leye':(bounding_box.top - top*inter_eye_distance, bounding_box.right - right/2.*inter_eye_distance)
+    'reye':(bounding_box.topleft[0] - top*inter_eye_distance, bounding_box.topleft[1] - left/2.*inter_eye_distance),
+    'leye':(bounding_box.topleft[0] - top*inter_eye_distance, bounding_box.bottomright[1] - right/2.*inter_eye_distance)
   }
 
 
@@ -118,14 +117,14 @@ def best_detection(detections, predictions, minimum_overlap = 0.2):
   # compute the mean of the detected bounding boxes
   s = sum(predictions)
   weights = [p/s for p in predictions]
-  top = sum(w * b.top_f for w, b in zip(weights, detections))
-  left = sum(w * b.left_f for w, b in zip(weights, detections))
-  bottom = sum(w * b.bottom_f for w, b in zip(weights, detections))
-  right = sum(w * b.right_f for w, b in zip(weights, detections))
+  top = sum(w * b.topleft_f[0] for w, b in zip(weights, detections))
+  left = sum(w * b.topleft_f[1] for w, b in zip(weights, detections))
+  bottom = sum(w * b.bottomright_f[0] for w, b in zip(weights, detections))
+  right = sum(w * b.bottomright_f[1] for w, b in zip(weights, detections))
 
 #  value = sum(w*p for w,p in zip(weights, predictions))
   # as the detection value, we use the *BEST* value of all detections.
   value = predictions[0]
 
-  return BoundingBox(top, left, bottom-top+1, right-left+1), value
+  return BoundingBox((top, left), (bottom-top+1, right-left+1)), value
 
