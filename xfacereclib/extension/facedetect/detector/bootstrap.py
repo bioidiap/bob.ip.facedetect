@@ -54,8 +54,7 @@ class Bootstrap:
         training_labels = numpy.append(training_labels, new_labels, axis=0)
 
       facereclib.utils.info("Starting training with %d examples" % (training_data.shape[0]))
-      trainer.m_number_of_rounds = self.m_number_of_weak_learners_per_round[b]
-      model = trainer.train(training_data, training_labels, model)
+      model = trainer.train(training_data, training_labels, self.m_number_of_weak_learners_per_round[b], model)
 
       # write model and extractor to temporary file to be able to catch up later
       save("%s_round_%d.hdf5" % (os.path.splitext(filename)[0], b+1), model, feature_extractor, mean, variance)

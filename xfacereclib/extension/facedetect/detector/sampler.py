@@ -427,7 +427,7 @@ class Sampler:
         feature_extractor.extract_all(bb, dataset, i)
         labels[i] = -1.
         if self.m_mirror_samples:
-          mirror_extractor.extract(bb.mirror_x(mirror_extractor.image.shape[1]), dataset, i + mirror_offset)
+          mirror_extractor.extract_all(bb.mirror_x(mirror_extractor.image.shape[1]), dataset, i + mirror_offset)
           labels[i + mirror_offset] = -1.
         i += 1
     else: # parallel implementation
