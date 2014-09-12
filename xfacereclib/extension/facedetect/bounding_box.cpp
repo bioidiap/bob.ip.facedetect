@@ -60,6 +60,7 @@ static int BoundingBox_init(BoundingBoxObject* self, PyObject* args, PyObject* k
 }
 
 static void BoundingBox_delete(BoundingBoxObject* self) {
+  self->cxx.reset();
   Py_TYPE(self)->tp_free((PyObject*)self);
 }
 

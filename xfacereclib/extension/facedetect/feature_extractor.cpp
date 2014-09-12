@@ -487,12 +487,12 @@ static auto mean_variance = bob::extension::FunctionDoc(
 ;
 static PyObject* FeatureExtractor_mean_variance(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
   TRY
-  static char* kwlist[] = {c("bounding_box"), c("compute_variance"), c("indices"), 0};
+  static char* kwlist[] = {c("bounding_box"), c("compute_variance"), 0};
 
   BoundingBoxObject* bb;
   PyObject* cv = 0;
   // by shape
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!", kwlist, &BoundingBox_Type, &bb, &PyBool_Type, &cv)){
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!", kwlist, &BoundingBox_Type, &bb, &PyBool_Type, &cv)){
     return 0;
   }
 

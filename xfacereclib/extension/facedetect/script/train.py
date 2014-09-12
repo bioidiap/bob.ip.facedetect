@@ -110,8 +110,8 @@ def main(command_line_arguments = None):
   feature_extractor = lbp_variant(args.patch_size, args.lbp_multi_block, args.lbp_variant, args.lbp_overlap, args.lbp_scale, args.lbp_square)
   # create trainer (number of rounds will be set during bootstrapping)
 
-  weak_trainer = bob.learn.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, feature_extractor.number_of_features, 1)
-  trainer = bob.learn.boosting.trainer.Boosting(weak_trainer, bob.learn.boosting.loss.LogitLoss(), 0)
+  weak_trainer = bob.learn.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, 1)
+  trainer = bob.learn.boosting.trainer.Boosting(weak_trainer, bob.learn.boosting.loss.LogitLoss())
   bootstrapping = Bootstrap(number_of_rounds=args.bootstrapping_rounds, number_of_weak_learners_in_first_round=args.features_in_first_round, number_of_positive_examples_per_round=args.training_examples[0], number_of_negative_examples_per_round=args.training_examples[1])
 
   # perform the bootstrapping

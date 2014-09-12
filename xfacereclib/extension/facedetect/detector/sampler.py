@@ -396,12 +396,12 @@ class Sampler:
         if self.m_target_length != 0:
           labels[i] = self.m_targets[image_index][scale_index][bb_index]
         if self.m_mirror_samples:
-          mirror_extractor.extract(bb.mirror_x(mirror_extractor.image.shape[1]), dataset, i + mirror_offset)
+          mirror_extractor.extract_all(bb.mirror_x(mirror_extractor.image.shape[1]), dataset, i + mirror_offset)
           if self.m_target_length != 0:
             raise NotImplementedError("Using mirrored regression data is not supported (yet).")
             labels[i + mirror_offset] = [b if a % 2 == 0 else -b for (a,b) in enumerate(self.m_targets[image_index][scale_index][bb_index])]
         if compute_means_and_variances:
-          m,v = feature_extractor.mean_and_variance(bb)
+          m,v = feature_extractor.mean_variance(bb, True)
           if m == 0 or v == 0:
             facereclib.utils.warn("In image number %d of %d there was a positive bounding box containing mean %f and variance %f" % (image_index, len(self.m_images), m, v))
           means[i] = m

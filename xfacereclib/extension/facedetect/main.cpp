@@ -62,7 +62,7 @@ PyObject* prune_detections(PyObject*, PyObject* args, PyObject* kwargs) {
   }
 
   // return tuple: detections, predictions
-  return Py_BuildValue("OO", pruned, PyBlitzArrayCxx_AsNumpy(pruned_predictions));
+  return Py_BuildValue("NN", pruned, PyBlitzArrayCxx_AsNumpy(pruned_predictions));
 
   CATCH_("in prune_detections", 0)
 }
@@ -118,7 +118,7 @@ PyObject* overlapping_detections(PyObject*, PyObject* args, PyObject* kwargs) {
   }
 
   // return tuple: detections, predictions
-  return Py_BuildValue("OO", overlapped, PyBlitzArrayCxx_AsNumpy(overlapped_predictions));
+  return Py_BuildValue("NN", overlapped, PyBlitzArrayCxx_AsNumpy(overlapped_predictions));
 
   CATCH_("in overlapping_detections", 0)
 }
