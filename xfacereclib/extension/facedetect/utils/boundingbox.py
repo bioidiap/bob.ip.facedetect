@@ -122,9 +122,9 @@ def best_detection(detections, predictions, minimum_overlap = 0.2):
   bottom = sum(w * b.bottomright_f[0] for w, b in zip(weights, detections))
   right = sum(w * b.bottomright_f[1] for w, b in zip(weights, detections))
 
-#  value = sum(w*p for w,p in zip(weights, predictions))
+  value = sum(w*p for w,p in zip(weights, predictions))
   # as the detection value, we use the *BEST* value of all detections.
-  value = predictions[0]
+#  value = predictions[0]
 
   return BoundingBox((top, left), (bottom-top+1, right-left+1)), value
 
