@@ -36,9 +36,12 @@
 bob_packages = ['bob.core', 'bob.io.base', 'bob.sp', 'bob.ip.base']
 
 from setuptools import setup, find_packages, dist
-dist.Distribution(dict(setup_requires=['bob.blitz'] + bob_packages))
+dist.Distribution(dict(setup_requires=['bob.extension', 'bob.blitz'] + bob_packages))
 from bob.extension.utils import egrep, find_header, find_library
 from bob.blitz.extension import Extension, build_ext
+
+from bob.extension.utils import load_requirements
+build_requires = load_requirements()
 
 version = "0.2.0a0"
 
@@ -71,21 +74,8 @@ setup(
     # on the current system will be installed locally and only visible to the
     # scripts of this package. Don't worry - You won't need adminstrative
     # privileges when using buildout.
-    install_requires=[
-      'setuptools',
-      'bob.core',
-      'bob.io.base',
-      'bob.io.image',
-      'bob.ip.base',
-      'bob.ip.gabor',
-      'bob.ip.color',
-      'bob.ip.draw',
-      'bob.ip.flandmark',
-      'bob.learn.boosting',
-      'bob.db.banca',
-      'bob.db.multipie',
-      'facereclib',
-    ],
+    setup_requires = build_requires,
+    install_requires = build_requires,
 
     cmdclass={
       'build_ext': build_ext,
