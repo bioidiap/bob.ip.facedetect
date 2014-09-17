@@ -43,6 +43,8 @@ from bob.blitz.extension import Extension, build_ext
 from bob.extension.utils import load_requirements
 build_requires = load_requirements()
 
+packages = ['xfacereclib.' + p for p in find_packages('xfacereclib')]
+
 version = "0.2.0a0"
 
 # The only thing we do in this file is to call the setup() function with all
@@ -66,7 +68,7 @@ setup(
     long_description=open('README.rst').read(),
 
     # This line is required for any distutils based packaging.
-    packages=find_packages(),
+    packages=packages,
     include_package_data=True,
 
     # This line defines which packages should be installed when you "install"
