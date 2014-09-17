@@ -28,9 +28,9 @@ class BoundingBox{
 
     // query functions
     double top() const {return m_top;}
-    double bottom() const {return m_top + m_height - 1;}
+    double bottom() const {return m_top + m_height;}
     double left() const {return m_left;}
-    double right() const {return m_left + m_width - 1;}
+    double right() const {return m_left + m_width;}
     double height() const {return m_height;}
     double width() const {return m_width;}
 

@@ -28,15 +28,16 @@ def display(image, annotations=None, color=(255,0,0), radius=5, clear=True):
     pyplot.imshow(image, cmap='gray')
   else:
     if len(image.shape) == 2:
-      colored = bob.ip.color.gray_to_rgb(image)
+      colored = bob.ip.color.gray_to_rgb(image.astype(numpy.uint8))
     else:
       colored = image.copy()
+
     if isinstance(annotations, dict):
       annotations = [a for a in annotations.itervalues()]
     else:
       annotations = [(annotations[i], annotations[i+1]) for i in range(0, len(annotations), 2)]
     for a in annotations:
-      bob.ip.draw.cross(colored, y=int(a[0]), x=int(a[1]), radius=radius, color=color)
+      bob.ip.draw.cross(colored, (int(a[0]), int(a[1])), radius=radius, color=color)
     pyplot.imshow(numpy.rollaxis(numpy.rollaxis(colored.astype(numpy.uint8), 2),2))
   pyplot.draw()
 
@@ -58,9 +59,9 @@ def detect_landmarks(localizer, image, bounding_box):
 
         top = max(bb.topleft[0], 0)
         left = int(max(bb.topleft[1], 0))
-        bottom = min(bb.bottomright[0], image.shape[0]-1)
-        right = int(min(bb.bottomright[1], image.shape[1]-1))
-        landmarks = localizer.locate(uint8_image, top, left, bottom-top+1, right-left+1)
+        bottom = min(bb.bottomright[0], image.shape[0])
+        right = int(min(bb.bottomright[1], image.shape[1]))
+        landmarks = localizer.locate(uint8_image, top, left, bottom-top, right-left)
 
         if len(landmarks):
           facereclib.utils.debug("Found landmarks with scale %1.1f, and shift %1.1fx%1.1f" % (scale, y, x))

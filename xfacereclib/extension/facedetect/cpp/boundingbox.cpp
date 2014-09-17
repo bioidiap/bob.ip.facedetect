@@ -7,7 +7,7 @@ boost::shared_ptr<BoundingBox> BoundingBox::overlap(const BoundingBox& other) co
          b = std::min(bottom(), other.bottom()),
          l = std::max(left(), other.left()),
          r = std::min(right(), other.right());
-  return boost::shared_ptr<BoundingBox>(new BoundingBox(t, l, b-t+1, r-l+1));
+  return boost::shared_ptr<BoundingBox>(new BoundingBox(t, l, b-t, r-l));
 }
 
 double BoundingBox::similarity(const BoundingBox& other) const{
@@ -18,10 +18,10 @@ double BoundingBox::similarity(const BoundingBox& other) const{
          r = std::min(right(), other.right());
 
   // no overlap?
-  if (l > r || t > b) return 0.;
+  if (l >= r || t >= b) return 0.;
 
   // compute overlap
-  double intersection = (b-t+1) * (r-l+1);
+  double intersection = (b-t) * (r-l);
   return intersection / (area() + other.area() - intersection);
 }
 

@@ -55,7 +55,7 @@ class Sampler:
 
 
   def scale_self(self, scale):
-    patch_size = (int(round(self.m_patch_box.size[0]*scale)), int(round(self.m_patch_box.height[1] * scale)))
+    patch_size = (int(round(self.m_patch_box.size[0]*scale)), int(round(self.m_patch_box.size[1] * scale)))
     sampler = Sampler(patch_size, scale_factor=self.m_scale_factor, lowest_scale=self.m_lowest_scale, distance=int(math.ceil(self.m_distance * scale)), similarity_thresholds=self.m_similarity_thresholds, mirror_samples=self.m_mirror_samples, number_of_parallel_threads=self.m_number_of_parallel_threads)
 
     sampler.m_scales = [[s * scale for s in scales] for scales in self.m_scales]
@@ -91,8 +91,8 @@ class Sampler:
 
   def _sample(self, scaled_image_shape):
     """Returns an iterator that iterates over the sampled positions in the image."""
-    for y in range(0, scaled_image_shape[0]-self.m_patch_box.bottomright[0]-1, self.m_distance):
-      for x in range(0, scaled_image_shape[1]-self.m_patch_box.bottomright[1]-1, self.m_distance):
+    for y in range(0, scaled_image_shape[0]-self.m_patch_box.bottomright[0], self.m_distance):
+      for x in range(0, scaled_image_shape[1]-self.m_patch_box.bottomright[1], self.m_distance):
         # create bounding box for the image
         yield self.m_patch_box.shift((y,x))
 
@@ -495,7 +495,7 @@ class Sampler:
 
       # extract and append features
       bb = self.m_positives[image_index][scale_index][bb_index]
-      images.append(scaled_image[bb.topleft[0]:bb.bottomright[0]+1, bb.topleft[1]:bb.bottomright[1]+1].copy())
+      images.append(scaled_image[bb.topleft[0]:bb.bottomright[0], bb.topleft[1]:bb.bottomright[1]].copy())
       annotations.append(self.m_targets[image_index][scale_index][bb_index])
 
     return images, annotations

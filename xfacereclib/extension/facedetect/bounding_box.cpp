@@ -112,7 +112,7 @@ PyObject* BoundingBox_topleft(BoundingBoxObject* self, void*){
 static auto bottomright = bob::extension::VariableDoc(
   "bottomright",
   "(int, int)",
-  "The bottom-right position of the bounding box as integral values, read access only"
+  "The bottom-right position of the bounding box (which is just outside the bounding box) as integral values, read access only"
 );
 PyObject* BoundingBox_bottomright(BoundingBoxObject* self, void*){
   TRY
@@ -146,7 +146,7 @@ PyObject* BoundingBox_topleft_f(BoundingBoxObject* self, void*){
 static auto bottomright_f = bob::extension::VariableDoc(
   "bottomright_f",
   "(float, float)",
-  "The bottom-right position of the bounding box as float values, read access only"
+  "The bottom-right position of the bounding box (which is just outside the bounding box) as float values, read access only"
 );
 PyObject* BoundingBox_bottomright_f(BoundingBoxObject* self, void*){
   TRY

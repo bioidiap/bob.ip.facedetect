@@ -69,9 +69,9 @@ def bounding_box_from_annotation(source=None, padding=None, **kwargs):
     dx = abs(math.cos(angle) * axis[0]) + abs(math.sin(angle) * axis[1])
     dy = abs(math.sin(angle) * axis[0]) + abs(math.cos(angle) * axis[1])
     top = center[0] - dy
-    bottom = center[0] + dy - 1
+    bottom = center[0] + dy
     left = center[1] - dx
-    right = center[1] + dx - 1
+    right = center[1] + dx
   elif padding is None:
     # There is no padding to be applied -> take nodes as they are
     top    = kwargs[keys[0]][0]
@@ -88,11 +88,11 @@ def bounding_box_from_annotation(source=None, padding=None, **kwargs):
     distance = math.sqrt(sqr(pos_0[0] - pos_1[0]) + sqr(pos_0[1] - pos_1[1]))
 
     top    = tb_center + padding['top'] * distance
-    bottom = tb_center + padding['bottom'] * distance - 1
+    bottom = tb_center + padding['bottom'] * distance
     left   = lr_center + padding['left'] * distance
-    right  = lr_center + padding['right'] * distance - 1
+    right  = lr_center + padding['right'] * distance
 
-  return BoundingBox((top, left), (bottom - top + 1, right - left + 1))
+  return BoundingBox((top, left), (bottom - top, right - left))
 
 
 def expected_eye_positions(bounding_box):
@@ -126,5 +126,5 @@ def best_detection(detections, predictions, minimum_overlap = 0.2):
   # as the detection value, we use the *BEST* value of all detections.
 #  value = predictions[0]
 
-  return BoundingBox((top, left), (bottom-top+1, right-left+1)), value
+  return BoundingBox((top, left), (bottom-top, right-left)), value
 

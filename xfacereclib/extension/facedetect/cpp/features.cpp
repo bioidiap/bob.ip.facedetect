@@ -195,7 +195,7 @@ void FeatureExtractor::init(){
 }
 
 double FeatureExtractor::mean(const BoundingBox& boundingBox) const{
-  int t = boundingBox.top(), b = boundingBox.bottom(), l = boundingBox.left(), r = boundingBox.right();
+  int t = boundingBox.itop(), b = boundingBox.ibottom()-1, l = boundingBox.ileft(), r = boundingBox.iright()-1;
   // compute the mean using the integral image
   double sum = m_integralImage(t, l)
              + m_integralImage(b, r)
@@ -209,7 +209,7 @@ double FeatureExtractor::mean(const BoundingBox& boundingBox) const{
 
 
 double FeatureExtractor::variance(const BoundingBox& boundingBox) const{
-  int t = boundingBox.top(), b = boundingBox.bottom(), l = boundingBox.left(), r = boundingBox.right();
+  int t = boundingBox.itop(), b = boundingBox.ibottom()-1, l = boundingBox.ileft(), r = boundingBox.iright()-1;
   // compute the variance using the integral image and the integral square image
   double square = m_integralSquareImage(t, l)
                 + m_integralSquareImage(b, r)
@@ -228,7 +228,7 @@ double FeatureExtractor::variance(const BoundingBox& boundingBox) const{
 
 
 blitz::TinyVector<double,2> FeatureExtractor::meanAndVariance(const BoundingBox& boundingBox) const{
-  int t = boundingBox.top(), b = boundingBox.bottom(), l = boundingBox.left(), r = boundingBox.right();
+  int t = boundingBox.itop(), b = boundingBox.ibottom()-1, l = boundingBox.ileft(), r = boundingBox.iright()-1;
   // compute the variance using the integral image and the integral square image
   double square = m_integralSquareImage(t, l)
                 + m_integralSquareImage(b, r)
@@ -254,27 +254,27 @@ void FeatureExtractor::extractAll(const BoundingBox& boundingBox, blitz::Array<u
 //        std::cout << i << "\t" << m_lookUpTable(i,1) << "\t" << m_lookUpTable(i,2) << "\t -- \t" << boundingBox.top() << "\t" << boundingBox.left() << std::endl;
         const auto& lbp = m_extractors[m_lookUpTable(i,0)];
         try {
-          dataset(datasetIndex,i) = lbp->extract(m_integralImage, boundingBox.top() + m_lookUpTable(i,1), boundingBox.left() + m_lookUpTable(i,2), true);
+          dataset(datasetIndex,i) = lbp->extract(m_integralImage, boundingBox.itop() + m_lookUpTable(i,1), boundingBox.ileft() + m_lookUpTable(i,2), true);
         } catch (std::runtime_error& e){
-          std::cerr << "Couldn't extract feature from bounding box " << boundingBox.top() << "," << boundingBox.left() << "," << boundingBox.bottom() << "," <<boundingBox.right() << " with extractor " << lbp->getBlockSize()[0] << "," << lbp->getBlockSize()[1] << " at position [" << m_lookUpTable(i,1) << "," << m_lookUpTable(i,2) << "]" << std::endl;
+          std::cerr << "Couldn't extract feature from bounding box " << boundingBox.itop() << "," << boundingBox.ileft() << "," << boundingBox.ibottom() << "," <<boundingBox.iright() << " with extractor " << lbp->getBlockSize()[0] << "," << lbp->getBlockSize()[1] << " at position [" << m_lookUpTable(i,1) << "," << m_lookUpTable(i,2) << "]" << std::endl;
           throw;
         }
       }
     } else {
       for (int i = m_lookUpTable.extent(0); i--;){
         const auto& lbp = m_extractors[m_lookUpTable(i,0)];
-        dataset(datasetIndex,i) = lbp->extract(m_image, boundingBox.top() + m_lookUpTable(i,1), boundingBox.left() + m_lookUpTable(i,2));
+        dataset(datasetIndex,i) = lbp->extract(m_image, boundingBox.itop() + m_lookUpTable(i,1), boundingBox.ileft() + m_lookUpTable(i,2));
       }
     }
   } else {
     // extract full feature set
     if (m_isMultiBlock){
-      blitz::Array<double,2> subwindow = m_integralImage(blitz::Range(boundingBox.top(), boundingBox.bottom()+1), blitz::Range(boundingBox.left(), boundingBox.right()+1));
+      blitz::Array<double,2> subwindow = m_integralImage(blitz::Range(boundingBox.itop(), boundingBox.ibottom()), blitz::Range(boundingBox.ileft(), boundingBox.iright()));
       for (int e = 0; e < (int)m_extractors.size(); ++e){
         m_extractors[e]->extract(subwindow, m_featureImages[e], true);
       }
     } else {
-      blitz::Array<double,2> subwindow = m_image(blitz::Range(boundingBox.top(), boundingBox.bottom()), blitz::Range(boundingBox.left(), boundingBox.right()));
+      blitz::Array<double,2> subwindow = m_image(blitz::Range(boundingBox.itop(), boundingBox.ibottom()-1), blitz::Range(boundingBox.ileft(), boundingBox.iright()-1));
       for (int e = 0; e < (int)m_extractors.size(); ++e){
         m_extractors[e]->extract(subwindow, m_featureImages[e], false);
       }

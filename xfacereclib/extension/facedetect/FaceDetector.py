@@ -54,7 +54,7 @@ class FaceDetector (facereclib.preprocessing.Preprocessor):
     self.m_flandmark = bob.ip.flandmark.Flandmark() if use_flandmark else None
 
     # overwrite the cropped positions of the post processor to use the top-left and bottom-right bounding box values
-#    self.m_post_processor.m_cropped_positions = {'topleft':(0,0), 'bottomright':(cropped_image_size[0]-1, cropped_image_size[1]-1)}
+#    self.m_post_processor.m_cropped_positions = {'topleft':(0,0), 'bottomright':(cropped_image_size[0], cropped_image_size[1])}
 
   def _landmarks(self, image, bounding_box):
     # get the landmarks in the face
