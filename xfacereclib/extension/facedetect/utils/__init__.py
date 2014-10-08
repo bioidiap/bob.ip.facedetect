@@ -8,6 +8,7 @@ import facereclib
 import bob.ip.color
 import bob.ip.draw
 import bob.ip.base
+import bob.core
 
 def sqr(x):
   """This function computes the square of the given value.
@@ -28,7 +29,7 @@ def display(image, annotations=None, color=(255,0,0), radius=5, clear=True):
     pyplot.imshow(image, cmap='gray')
   else:
     if len(image.shape) == 2:
-      colored = bob.ip.color.gray_to_rgb(image.astype(numpy.uint8))
+      colored = bob.ip.color.gray_to_rgb(bob.core.convert(image, numpy.uint8, dest_range=(0,255), source_range=(min(0, numpy.min(image)), max(255, numpy.max(image)))))
     else:
       colored = image.copy()
 

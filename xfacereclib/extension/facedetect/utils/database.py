@@ -6,7 +6,9 @@ def _all_in(annot, annot_types):
     if t not in annot: return False
   return True
 
-def _annotations(db, file, annot_types=None):
+def _annotations(db, file, annot_types=None, skip_annots=False):
+  if skip_annots:
+    return []
   # returns the annotations for the given file object
 #  import xbob.db.detection.utils
   import bob.db.verification.utils
@@ -34,7 +36,7 @@ def _original_filename(db, file):
     return db.original_file_name(file)
 
 
-def training_image_annot(databases, limit, annot_types=None):
+def training_image_annot(databases, limit, annot_types=None, skip_annots=False, parallel=None):
   facereclib.utils.info("Collecting training data")
   # open database to collect training images
   training_files = []
@@ -43,13 +45,24 @@ def training_image_annot(databases, limit, annot_types=None):
     db = facereclib.utils.resources.load_resource(database, 'database')
     if isinstance(db, facereclib.databases.DatabaseBob):
       # collect image name and annotations
-      training_files.extend([(db.m_database.original_file_name(f), _annotations(db, f, annot_types), f) for f in db.training_files()])
+      training_files.extend([(db.m_database.original_file_name(f), _annotations(db, f, annot_types, skip_annots), f) for f in db.training_files()])
     else:
       # collect image name and annotations
       all_files = db.training_files()
-      training_files.extend([(_original_filename(db,all_files[i]), _annotations(db, all_files[i], annot_types), all_files[i]) for i in facereclib.utils.quasi_random_indices(len(all_files), limit)])
+      training_files.extend([(_original_filename(db,all_files[i]), _annotations(db, all_files[i], annot_types, skip_annots), all_files[i]) for i in facereclib.utils.quasi_random_indices(len(all_files), limit)])
 
   training_files = [training_files[t] for t in facereclib.utils.quasi_random_indices(len(training_files), limit) if training_files[t][1] is not None]
+
+  if parallel is not None:
+    import os, math
+    assert "SGE_TASK_ID" in os.environ
+    files_per_job = int(math.ceil(float(len(training_files)) / float(parallel)))
+    task_id = int(os.environ['SGE_TASK_ID'])
+    first = (task_id-1) * files_per_job
+    last = min(len(training_files), task_id * files_per_job)
+    facereclib.utils.info("Splitting off range %d - %d of %d images" % (first, last, len(training_files)))
+    training_files = training_files[first:last]
+
 
 #  for file, annot in training_files:
   for file, annot, _ in training_files:

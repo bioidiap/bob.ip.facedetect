@@ -1,9 +1,11 @@
 import pkg_resources
 import math
 
-from .detector import Sampler, io
+from .detector import Sampler, Cascade
 from ._features import prune_detections
 from .utils import best_detection
+
+import bob.io.base
 
 default_cascade = pkg_resources.resource_filename("xfacereclib.extension.facedetect", "MCT_cascade.hdf5")
 
@@ -14,7 +16,7 @@ def detect_single_face(image, cascade = None, distance=2, scale_factor=math.pow(
     cascade = default_cascade
 
   if isinstance(cascade, str):
-    cascade = load(cascade)
+    cascade = Cascade(classifier_file=bob.io.base.HDF5File(cascade))
 
   detections = []
   predictions = []
