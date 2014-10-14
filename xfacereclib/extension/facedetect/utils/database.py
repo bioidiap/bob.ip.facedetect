@@ -36,6 +36,20 @@ def _original_filename(db, file):
     return db.original_file_name(file)
 
 
+def parallel_part(files, parallel):
+  import os, math
+  if parallel is None or "SGE_TASK_ID" not in os.environ:
+    return files
+
+  files_per_job = int(math.ceil(float(len(files)) / float(parallel)))
+  task_id = int(os.environ['SGE_TASK_ID'])
+  first = (task_id-1) * files_per_job
+  last = min(len(files), task_id * files_per_job)
+  facereclib.utils.info("Splitting off range %d - %d of %d images" % (first, last, len(files)))
+  return files[first:last]
+
+
+
 def training_image_annot(databases, limit, annot_types=None, skip_annots=False, parallel=None):
   facereclib.utils.info("Collecting training data")
   # open database to collect training images
@@ -53,16 +67,7 @@ def training_image_annot(databases, limit, annot_types=None, skip_annots=False, 
 
   training_files = [training_files[t] for t in facereclib.utils.quasi_random_indices(len(training_files), limit) if training_files[t][1] is not None]
 
-  if parallel is not None:
-    import os, math
-    assert "SGE_TASK_ID" in os.environ
-    files_per_job = int(math.ceil(float(len(training_files)) / float(parallel)))
-    task_id = int(os.environ['SGE_TASK_ID'])
-    first = (task_id-1) * files_per_job
-    last = min(len(training_files), task_id * files_per_job)
-    facereclib.utils.info("Splitting off range %d - %d of %d images" % (first, last, len(training_files)))
-    training_files = training_files[first:last]
-
+  training_files = parallel_part(training_files, parallel)
 
 #  for file, annot in training_files:
   for file, annot, _ in training_files:
@@ -71,7 +76,7 @@ def training_image_annot(databases, limit, annot_types=None, skip_annots=False, 
   return training_files
 
 
-def test_image_annot(databases, protocols, limit, annot_types=None):
+def test_image_annot(databases, protocols, limit, annot_types=None, parallel=None):
   # open database to collect training images
   test_files = []
   for database, protocol in zip(databases, protocols):
@@ -88,6 +93,8 @@ def test_image_annot(databases, protocols, limit, annot_types=None):
     test_files.extend([(_original_filename(db, f), _annotations(db, f, annot_types), f) for f in orig_files])
 
   test_files = [test_files[t] for t in facereclib.utils.quasi_random_indices(len(test_files), limit)]
+
+  test_files = parallel_part(test_files, parallel)
 
   for _, annot, file in test_files:
     facereclib.utils.debug("For test file '%s' loaded annotations '%s'" % (file.path, str(annot)))
