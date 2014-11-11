@@ -18,7 +18,7 @@ def _annotations(db, file, annot_types=None, skip_annots=False):
 #      annots = db.annotations(file.id)
     if isinstance(db, bob.db.verification.utils.Database):
       # verification databases have just one annotation per file
-      annots = [db.annotations(file.id)]
+      annots = [db.annotations(file)]
     elif isinstance(db, facereclib.databases.DatabaseBob):
       # facereclib databases have just one annotation per file
       annots = [db.annotations(file)]
