@@ -20,6 +20,7 @@ lib
 *.egg-info
 .mr.developer.cfg
 src
+build
 sphinx
 .project
 .pydevproject
