@@ -27,37 +27,44 @@ class Bootstrap:
       facereclib.utils.info("Getting new data for bootstrapping round %d" % (b+1))
       new_data, new_labels, new_means, new_variances = sampler.get(feature_extractor, model, self.m_number_of_positive_examples_per_round, self.m_number_of_negative_examples_per_round, delete_samples=True, compute_means_and_variances=True, loss_function=trainer.get_loss_function())
 
-      if self.m_init_with_average and model is None and b == 0:
-        facereclib.utils.info("Initializing first weak machine with the average of the training labels.")
-        # compute average of labels and initialize the first weak machine with it
-        model = bob.learn.boosting.BoostedMachine()
-        average = numpy.mean(new_labels, axis=0)
-        lut = numpy.ones((feature_extractor.number_of_labels, average.shape[0]))
-        lut[:,average>0] = -1
-        average = -numpy.abs(average)
-        weak_machine = bob.learn.boosting.LUTMachine(lut, numpy.zeros(average.shape[0], numpy.int32))
-        model.add_weak_machine(weak_machine, average)
-        save("%s_round_%d.hdf5" % (os.path.splitext(filename)[0], 0), model, feature_extractor, mean, variance)
-
-
-      if mean is None:
-        mean = (min(new_means), max(new_means))
-        variance = (min(new_variances), max(new_variances))
-      elif new_means.size:
-        mean = (min(min(new_means), mean[0]), max(max(new_means), mean[1]))
-        variance = (min(min(new_variances), variance[0]), max(max(new_variances), variance[1]))
-      print training_data.shape, new_data.shape
       training_data = numpy.append(training_data, new_data, axis=0)
       if training_labels is None:
         training_labels = new_labels
       else:
         training_labels = numpy.append(training_labels, new_labels, axis=0)
 
-      facereclib.utils.info("Starting training with %d examples" % (training_data.shape[0]))
-      model = trainer.train(training_data, training_labels, self.m_number_of_weak_learners_per_round[b], model)
+      temp_file = "%s_round_%d.hdf5" % (os.path.splitext(filename)[0], b+1)
+      if os.path.exists(temp_file):
+        facereclib.utils.info("Loading already computed stage from %s." % temp_file)
+        model, feature_extractor, mean, variance = load(temp_file)
 
-      # write model and extractor to temporary file to be able to catch up later
-      save("%s_round_%d.hdf5" % (os.path.splitext(filename)[0], b+1), model, feature_extractor, mean, variance)
+      else:
+        if self.m_init_with_average and model is None and b == 0:
+          facereclib.utils.info("Initializing first weak machine with the average of the training labels.")
+          # compute average of labels and initialize the first weak machine with it
+          model = bob.learn.boosting.BoostedMachine()
+          average = numpy.mean(new_labels, axis=0)
+          lut = numpy.ones((feature_extractor.number_of_labels, average.shape[0]))
+          lut[:,average>0] = -1
+          average = -numpy.abs(average)
+          weak_machine = bob.learn.boosting.LUTMachine(lut, numpy.zeros(average.shape[0], numpy.int32))
+          model.add_weak_machine(weak_machine, average)
+          save("%s_round_%d.hdf5" % (os.path.splitext(filename)[0], 0), model, feature_extractor, mean, variance)
+
+
+        if mean is None:
+          mean = (min(new_means), max(new_means))
+          variance = (min(new_variances), max(new_variances))
+        elif new_means.size:
+          mean = (min(min(new_means), mean[0]), max(max(new_means), mean[1]))
+          variance = (min(min(new_variances), variance[0]), max(max(new_variances), variance[1]))
+
+        facereclib.utils.info("Starting training with %d examples" % (training_data.shape[0]))
+        model = trainer.train(training_data, training_labels, self.m_number_of_weak_learners_per_round[b], model)
+
+        # write model and extractor to temporary file to be able to catch up later
+        save(temp_file, model, feature_extractor, mean, variance)
+
       feature_extractor.model_indices = model.indices
 
     # finally, return the trained model
@@ -88,7 +95,7 @@ class Bootstrap:
       scale *= patch_scale_factor
       if r == number_of_rounds - 1:
         # we are done.
-        return model, mean, variance, feature_extractor
+        return model, feature_extractor
       elif r == number_of_rounds - 2:
         # we can use the default sampler
         assert abs(1. - scale) < 1e-8
@@ -118,7 +125,6 @@ class Bootstrap:
         for y in (-1,0,1):
           for x in (-1,0,1):
             new_lbp = bob.ip.base.LBP(lbp)
-#            new_lbp.offset = [o * patch_scale_factor for o in lbp.offset]
             new_shape = (patch_scale_factor * lbp.block_size[0] + y, patch_scale_factor * lbp.block_size[1] + x)
             if new_lbp.is_multi_block_lbp:
               if lbp.block_overlap[0] != 0:
@@ -146,6 +152,8 @@ class Bootstrap:
       feature_extractor = FeatureExtractor(scaled_sampler.m_patch_size)
       for k in sorted(lbps.keys()):
         feature_extractor.append(lbps[k], positions[k])
+
+      facereclib.utils.info("Generated new feature extractor with %d features" % feature_extractor.number_of_features)
 
 #      trainer.m_trainer = bob.learn.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, feature_extractor.number_of_features, trainer.m_trainer.m_number_of_outputs, trainer.m_trainer.m_selection_type)
       trainer.m_trainer = bob.learn.boosting.trainer.LUTTrainer(feature_extractor.number_of_labels, trainer.m_trainer.number_of_outputs, trainer.m_trainer.selection_type)
