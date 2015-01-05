@@ -38,9 +38,13 @@ def display(image, annotations=None, color=(255,0,0), radius=5, clear=True):
     else:
       annotations = [(annotations[i], annotations[i+1]) for i in range(0, len(annotations), 2)]
     for a in annotations:
-      bob.ip.draw.cross(colored, (int(a[0]), int(a[1])), radius=radius, color=color)
+      try:
+        bob.ip.draw.cross(colored, (int(a[0]), int(a[1])), radius=radius, color=color)
+      except Exception as e:
+        facereclib.utils.warn("Could not plot annotation %s" % str(a))
     pyplot.imshow(numpy.rollaxis(numpy.rollaxis(colored.astype(numpy.uint8), 2),2))
   pyplot.draw()
+  return colored
 
 
 def detect_landmarks(localizer, image, bounding_box):
