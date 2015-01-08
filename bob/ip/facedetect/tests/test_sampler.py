@@ -13,7 +13,7 @@ import bob.ip.base
 import bob.ip.color
 
 
-import xfacereclib.extension.facedetect as fd
+import bob.ip.facedetect as fd
 import bob.db.verification.utils as vu
 
 regenerate_refs = False
@@ -47,7 +47,7 @@ class SamplerTest (unittest.TestCase):
     # test that the detection works as expected
     test_image = bob.ip.color.rgb_to_gray(bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'facereclib', 'tests')))
 
-    classifier, extractor, mean, variance = fd.detector.load(bob.io.base.test_utils.datafile("extractor.hdf5", 'xfacereclib.extension.facedetect', 'tests'))
+    classifier, extractor, mean, variance = fd.detector.load(bob.io.base.test_utils.datafile("extractor.hdf5", 'bob.ip.facedetect', 'tests'))
     sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), lowest_scale=0.125)
 
     # get predictions
@@ -56,7 +56,7 @@ class SamplerTest (unittest.TestCase):
     self.assertEqual(len(detections), 14493)
 
     predictions = numpy.array([d[0] for d in detections])
-    reference_file = bob.io.base.test_utils.datafile("detections.hdf5", 'xfacereclib.extension.facedetect', 'tests')
+    reference_file = bob.io.base.test_utils.datafile("detections.hdf5", 'bob.ip.facedetect', 'tests')
 
     if regenerate_refs:
       bob.io.base.save(predictions, reference_file)
@@ -65,7 +65,7 @@ class SamplerTest (unittest.TestCase):
       self.assertAlmostEqual(p, r)
 
     boxes = self._make_boxes(detections)
-    reference_file = bob.io.base.test_utils.datafile("boxes.hdf5", 'xfacereclib.extension.facedetect', 'tests')
+    reference_file = bob.io.base.test_utils.datafile("boxes.hdf5", 'bob.ip.facedetect', 'tests')
     if regenerate_refs:
       bob.io.base.save(boxes, reference_file)
     reference = bob.io.base.load(reference_file)
@@ -77,7 +77,7 @@ class SamplerTest (unittest.TestCase):
     test_image = bob.ip.color.rgb_to_gray(bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'facereclib', 'tests')))
 
     # sample the image
-    classifier, extractor, mean, variance = fd.detector.load(bob.io.base.test_utils.datafile("extractor.hdf5", 'xfacereclib.extension.facedetect', 'tests'))
+    classifier, extractor, mean, variance = fd.detector.load(bob.io.base.test_utils.datafile("extractor.hdf5", 'bob.ip.facedetect', 'tests'))
     sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), lowest_scale=0.125)
 
     # get predictions
@@ -87,7 +87,7 @@ class SamplerTest (unittest.TestCase):
 
     # check value of a single prediction
     predictions = numpy.array([d[0] for d in detections])
-    reference_file = bob.io.base.test_utils.datafile("detections.hdf5", 'xfacereclib.extension.facedetect', 'tests')
+    reference_file = bob.io.base.test_utils.datafile("detections.hdf5", 'bob.ip.facedetect', 'tests')
 
     if regenerate_refs:
       bob.io.base.save(predictions, reference_file)
@@ -96,7 +96,7 @@ class SamplerTest (unittest.TestCase):
       self.assertAlmostEqual(p, r)
 
     boxes = self._make_boxes(detections)
-    reference_file = bob.io.base.test_utils.datafile("boxes.hdf5", 'xfacereclib.extension.facedetect', 'tests')
+    reference_file = bob.io.base.test_utils.datafile("boxes.hdf5", 'bob.ip.facedetect', 'tests')
     reference = bob.io.base.load(reference_file)
     self.assertEqual(numpy.count_nonzero(boxes != reference), 0)
 

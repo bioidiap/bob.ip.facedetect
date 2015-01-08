@@ -9,7 +9,7 @@ import pkg_resources
 import bob.io.base
 import bob.io.base.test_utils
 
-import xfacereclib.extension.facedetect as fd
+import bob.ip.facedetect as fd
 
 class UtilsTests(unittest.TestCase):
 
@@ -129,8 +129,8 @@ class UtilsTests(unittest.TestCase):
     # tests that the pruning functionality from C++ and python works similarly
 
     # read boxes and according detection values from files
-    predictions = bob.io.base.load(bob.io.base.test_utils.datafile("detections.hdf5", 'xfacereclib.extension.facedetect', 'tests'))
-    boxes = bob.io.base.load(bob.io.base.test_utils.datafile("boxes.hdf5", 'xfacereclib.extension.facedetect', 'tests'))
+    predictions = bob.io.base.load(bob.io.base.test_utils.datafile("detections.hdf5", 'bob.ip.facedetect', 'tests'))
+    boxes = bob.io.base.load(bob.io.base.test_utils.datafile("boxes.hdf5", 'bob.ip.facedetect', 'tests'))
     detections = [fd.BoundingBox(boxes[i,0:2], boxes[i,2:4]) for i in range(boxes.shape[0])]
 
     # prune detections in the same way with C++ and python

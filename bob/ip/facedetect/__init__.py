@@ -1,13 +1,33 @@
+# import Libraries of other lib packages
 import bob.ip.base
 import bob.io.base
 import bob.learn.boosting
 
-from _features import FeatureExtractor, BoundingBox, prune_detections, overlapping_detections
-from detector import Sampler, Cascade
-import utils
-import script
-import io
+from ._library import FeatureExtractor, BoundingBox, prune_detections, overlapping_detections
+from .detector import Sampler, Cascade
+from . import utils
+from . import script
 
 from .detect import default_cascade, detect_single_face
 
-from FaceDetector import FaceDetector
+def get_config():
+  """Returns a string containing the configuration information.
+  """
+
+  import pkg_resources
+#  from .version import externals
+
+  packages = pkg_resources.require(__name__)
+  this = packages[0]
+  deps = packages[1:]
+
+  retval =  "%s: %s (%s)\n" % (this.key, this.version, this.location)
+#  retval += "  - c/c++ dependencies:\n"
+#  for k in sorted(externals): retval += "    - %s: %s\n" % (k, externals[k])
+  retval += "  - python dependencies:\n"
+  for d in deps: retval += "    - %s: %s (%s)\n" % (d.key, d.version, d.location)
+
+  return retval.strip()
+
+# gets sphinx autodoc done right - don't remove it
+__all__ = [_ for _ in dir() if not _.startswith('_')]

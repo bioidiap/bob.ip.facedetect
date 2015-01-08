@@ -19,37 +19,6 @@
 
 #include "cpp/features.h"
 
-#if PY_VERSION_HEX >= 0x03000000
-#define PyInt_Check PyLong_Check
-#define PyInt_AS_LONG PyLong_AS_LONG
-#define PyString_Check PyUnicode_Check
-#define PyString_AS_STRING(x) PyBytes_AS_STRING(make_safe(PyUnicode_AsUTF8String(x)).get())
-#define PyString_FromString PyUnicode_FromString)
-#endif
-
-#define TRY try{
-
-#define CATCH(message,ret) }\
-  catch (std::exception& e) {\
-    PyErr_SetString(PyExc_RuntimeError, e.what());\
-    return ret;\
-  } \
-  catch (...) {\
-    PyErr_Format(PyExc_RuntimeError, "%s " message ": unknown exception caught", Py_TYPE(self)->tp_name);\
-    return ret;\
-  }
-
-#define CATCH_(message, ret) }\
-  catch (std::exception& e) {\
-    PyErr_SetString(PyExc_RuntimeError, e.what());\
-    return ret;\
-  } \
-  catch (...) {\
-    PyErr_Format(PyExc_RuntimeError, message ": unknown exception caught");\
-    return ret;\
-  }
-
-static inline char* c(const char* o){return const_cast<char*>(o);}  /* converts const char* to char* */
 static inline bool f(PyObject* o){return o != 0 && PyObject_IsTrue(o) > 0;}  /* converts PyObject to bool and returns false if object is NULL */
 
 // BoundingBox

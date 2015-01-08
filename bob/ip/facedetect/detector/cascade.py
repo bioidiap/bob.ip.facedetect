@@ -1,5 +1,5 @@
 import numpy
-from .._features import FeatureExtractor
+from .._library import FeatureExtractor
 
 import bob.learn.boosting
 

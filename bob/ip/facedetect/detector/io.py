@@ -1,7 +1,7 @@
 import facereclib
 import numpy
 import os
-from .._features import FeatureExtractor
+from .._library import FeatureExtractor
 
 import bob.io.base
 import bob.learn.boosting

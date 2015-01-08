@@ -2,12 +2,12 @@ import pkg_resources
 import math
 
 from .detector import Sampler, Cascade
-from ._features import prune_detections
+from ._library import prune_detections
 from .utils import best_detection
 
 import bob.io.base
 
-default_cascade = pkg_resources.resource_filename("xfacereclib.extension.facedetect", "MCT_cascade.hdf5")
+default_cascade = pkg_resources.resource_filename("bob.ip.facedetect", "MCT_cascade.hdf5")
 
 def detect_single_face(image, cascade = None, distance=2, scale_factor=math.pow(2.,-1./16.), lowest_scale=0.125, prediction_threshold=None, pruning_threshold=1, best_detection_overlap=0.2):
 

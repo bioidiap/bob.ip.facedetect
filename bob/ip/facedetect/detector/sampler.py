@@ -4,7 +4,7 @@ import numpy
 import facereclib
 import itertools
 
-from .._features import BoundingBox
+from .._library import BoundingBox
 
 import bob.ip.base
 

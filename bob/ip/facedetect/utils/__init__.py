@@ -1,6 +1,6 @@
 from boundingbox import bounding_box_from_annotation, expected_eye_positions, best_detection
 from database import training_image_annot, test_image_annot
-from .._features import BoundingBox
+from .._library import BoundingBox
 
 import numpy
 import facereclib

@@ -24,8 +24,8 @@ bob::extension::FunctionDoc prune_detections_doc = bob::extension::FunctionDoc(
 .add_return("pruned_predictions", "array_like <float, 1D>", "The according predictions (qualities, weights, ...)")
 ;
 PyObject* prune_detections(PyObject*, PyObject* args, PyObject* kwargs) {
-  TRY
-  static char* kwlist[] = {c("detections"), c("predictions"), c("threshold"), c("number_of_detections"), NULL};
+  BOB_TRY
+  char** kwlist = prune_detections_doc.kwlist();
 
   PyObject* list;
   PyBlitzArrayObject* predictions;
@@ -64,7 +64,7 @@ PyObject* prune_detections(PyObject*, PyObject* args, PyObject* kwargs) {
   // return tuple: detections, predictions
   return Py_BuildValue("NN", pruned, PyBlitzArrayCxx_AsNumpy(pruned_predictions));
 
-  CATCH_("in prune_detections", 0)
+  BOB_CATCH_FUNCTION("in prune_detections", 0)
 }
 
 
@@ -81,8 +81,8 @@ bob::extension::FunctionDoc overlapping_detections_doc = bob::extension::Functio
 .add_return("overlapped_predictions", "array_like <float, 1D>", "The according predictions (qualities, weights, ...)")
 ;
 PyObject* overlapping_detections(PyObject*, PyObject* args, PyObject* kwargs) {
-  TRY
-  static char* kwlist[] = {c("detections"), c("predictions"), c("threshold"), NULL};
+  BOB_TRY
+  char** kwlist = overlapping_detections_doc.kwlist();
 
   PyObject* list;
   PyBlitzArrayObject* predictions;
@@ -120,7 +120,7 @@ PyObject* overlapping_detections(PyObject*, PyObject* args, PyObject* kwargs) {
   // return tuple: detections, predictions
   return Py_BuildValue("NN", overlapped, PyBlitzArrayCxx_AsNumpy(overlapped_predictions));
 
-  CATCH_("in overlapping_detections", 0)
+  BOB_CATCH_FUNCTION("in overlapping_detections", 0)
 }
 
 

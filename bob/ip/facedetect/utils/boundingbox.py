@@ -2,7 +2,7 @@ import numpy
 import facereclib
 import math
 
-from .._features import BoundingBox, overlapping_detections
+from .._library import BoundingBox, overlapping_detections
 
 
 available_sources = {

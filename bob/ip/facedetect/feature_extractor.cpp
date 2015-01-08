@@ -43,13 +43,13 @@ static auto FeatureExtractor_doc = bob::extension::ClassDoc(
 
 
 static int FeatureExtractor_init(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
-  TRY
+  BOB_TRY
 
-  char* kwlist1[] = {c("patch_size"), NULL};
-  char* kwlist2[] = {c("patch_size"), c("extractors"), NULL};
-  char* kwlist3[] = {c("patch_size"), c("template"), c("overlap"), c("square"), c("min_size"), c("max_size"), NULL};
-//  char* kwlist4[] = {c("other"), NULL};
-//  char* kwlist5[] = {c("hdf5"), NULL};
+  char** kwlist1 = FeatureExtractor_doc.kwlist(0);
+  char** kwlist2 = FeatureExtractor_doc.kwlist(1);
+  char** kwlist3 = FeatureExtractor_doc.kwlist(2);
+//  char* kwlist4[] = FeatureExtractor_doc.kwlist(3);
+//  char* kwlist5[] = FeatureExtractor_doc.kwlist(4);
 
   // get the number of command line arguments
   Py_ssize_t nargs = (args?PyTuple_Size(args):0) + (kwargs?PyDict_Size(kwargs):0);
@@ -99,7 +99,7 @@ static int FeatureExtractor_init(FeatureExtractorObject* self, PyObject* args, P
   }
   self->cxx.reset(new FeatureExtractor(patch_size, lbps));
   return 0;
-  CATCH("cannot create FeatureExtractor", -1)
+  BOB_CATCH_MEMBER("cannot create FeatureExtractor", -1)
 }
 
 static void FeatureExtractor_delete(FeatureExtractorObject* self) {
@@ -112,7 +112,7 @@ int FeatureExtractor_Check(PyObject* o) {
 
 #if 0 // TODO:
 static PyObject* FeatureExtractor_RichCompare(FeatureExtractorObject* self, PyObject* other, int op) {
-  TRY
+  BOB_TRY
   if (!FeatureExtractor_Check(other)) {
     PyErr_Format(PyExc_TypeError, "cannot compare `%s' with `%s'", Py_TYPE(self)->tp_name, Py_TYPE(other)->tp_name);
     return 0;
@@ -127,13 +127,13 @@ static PyObject* FeatureExtractor_RichCompare(FeatureExtractorObject* self, PyOb
       Py_INCREF(Py_NotImplemented);
       return Py_NotImplemented;
   }
-  CATCH("cannot compare FeatureExtractor objects", 0)
+  BOB_CATCH_MEMBER("cannot compare FeatureExtractor objects", 0)
 }
 
 PyObject* FeatureExtractor_Str(FeatureExtractorObject* self) {
-  TRY
+  BOB_TRY
   return PyString_FromString((boost::format("<BB topleft=(%3.2d,%3.2d), bottomright=(%3.2d,%3.2d)>") % self->cxx->top() % self->cxx->left() % self->cxx->bottom() % self->cxx->right()).str().c_str());
-  CATCH("cannot create __repr__ string", 0)
+  BOB_CATCH_MEMBER("cannot create __repr__ string", 0)
 }
 #endif
 
@@ -148,9 +148,9 @@ static auto image = bob::extension::VariableDoc(
   "The (prepared) image the next features will be extracted from, read access only"
 );
 PyObject* FeatureExtractor_image(FeatureExtractorObject* self, void*){
-  TRY
+  BOB_TRY
   return PyBlitzArrayCxx_AsConstNumpy(self->cxx->getImage());
-  CATCH("image could not be read", 0)
+  BOB_CATCH_MEMBER("image could not be read", 0)
 }
 
 static auto model_indices = bob::extension::VariableDoc(
@@ -159,12 +159,12 @@ static auto model_indices = bob::extension::VariableDoc(
   "The indices at which the features are extracted, read and write access"
 );
 PyObject* FeatureExtractor_get_model_indices(FeatureExtractorObject* self, void*){
-  TRY
+  BOB_TRY
   return PyBlitzArrayCxx_AsConstNumpy(self->cxx->getModelIndices());
-  CATCH("model_indices could not be read", 0)
+  BOB_CATCH_MEMBER("model_indices could not be read", 0)
 }
 int FeatureExtractor_set_model_indices(FeatureExtractorObject* self, PyObject* value, void*){
-  TRY
+  BOB_TRY
   PyBlitzArrayObject* data;
   if (!PyBlitzArray_Converter(value, &data)) return 0;
   if (data->type_num != NPY_INT32 || data->ndim != 1){
@@ -173,7 +173,7 @@ int FeatureExtractor_set_model_indices(FeatureExtractorObject* self, PyObject* v
   }
   self->cxx->setModelIndices(*PyBlitzArrayCxx_AsBlitz<int32_t, 1>(data));
   return 0;
-  CATCH("model_indices could not be set", -1)
+  BOB_CATCH_MEMBER("model_indices could not be set", -1)
 }
 
 static auto number_of_features = bob::extension::VariableDoc(
@@ -182,9 +182,9 @@ static auto number_of_features = bob::extension::VariableDoc(
   "The length of the feature vector that will be extracted by this class, read access only"
 );
 PyObject* FeatureExtractor_number_of_features(FeatureExtractorObject* self, void*){
-  TRY
+  BOB_TRY
   return Py_BuildValue("i", self->cxx->numberOfFeatures());
-  CATCH("number_of_features could not be read", 0)
+  BOB_CATCH_MEMBER("number_of_features could not be read", 0)
 }
 
 static auto number_of_labels = bob::extension::VariableDoc(
@@ -193,9 +193,9 @@ static auto number_of_labels = bob::extension::VariableDoc(
   "The maximum label for the features in this class, read access only"
 );
 PyObject* FeatureExtractor_number_of_labels(FeatureExtractorObject* self, void*){
-  TRY
+  BOB_TRY
   return Py_BuildValue("i", self->cxx->getMaxLabel());
-  CATCH("number_of_labels could not be read", 0)
+  BOB_CATCH_MEMBER("number_of_labels could not be read", 0)
 }
 
 static auto extractors = bob::extension::VariableDoc(
@@ -204,7 +204,7 @@ static auto extractors = bob::extension::VariableDoc(
   "The LBP extractors, read access only"
 );
 PyObject* FeatureExtractor_extractors(FeatureExtractorObject* self, void*){
-  TRY
+  BOB_TRY
   auto lbps = self->cxx->getExtractors();
   PyObject* list = PyList_New(lbps.size());
   auto list_ = make_safe(list);
@@ -215,7 +215,7 @@ PyObject* FeatureExtractor_extractors(FeatureExtractorObject* self, void*){
   }
   Py_INCREF(list);
   return list;
-  CATCH("extractors could not be read", 0)
+  BOB_CATCH_MEMBER("extractors could not be read", 0)
 }
 
 static auto patch_size = bob::extension::VariableDoc(
@@ -224,9 +224,9 @@ static auto patch_size = bob::extension::VariableDoc(
   "The expected size of the patch that this extractor can handle, read access only"
 );
 PyObject* FeatureExtractor_patch_size(FeatureExtractorObject* self, void*){
-  TRY
+  BOB_TRY
   return Py_BuildValue("ii", self->cxx->patchSize()[0], self->cxx->patchSize()[1]);
-  CATCH("patch_size could not be read", 0)
+  BOB_CATCH_MEMBER("patch_size could not be read", 0)
 }
 
 
@@ -294,9 +294,9 @@ static auto append = bob::extension::FunctionDoc(
 ;
 
 static PyObject* FeatureExtractor_append(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
-  TRY
-  static char* kwlist1[] = {c("other"), 0};
-  static char* kwlist2[] = {c("lbp"), c("offsets"), 0};
+  BOB_TRY
+  char** kwlist1 = append.kwlist(0);
+  char** kwlist2 = append.kwlist(1);
 
   // get the number of command line arguments
   Py_ssize_t nargs = (args?PyTuple_Size(args):0) + (kwargs?PyDict_Size(kwargs):0);
@@ -321,7 +321,7 @@ static PyObject* FeatureExtractor_append(FeatureExtractorObject* self, PyObject*
     self->cxx->append(lbp->cxx, offsets);
   }
   Py_RETURN_NONE;
-  CATCH("cannot append", 0)
+  BOB_CATCH_MEMBER("cannot append", 0)
 }
 
 static auto extractor = bob::extension::FunctionDoc(
@@ -335,8 +335,8 @@ static auto extractor = bob::extension::FunctionDoc(
 .add_return("lbp", ":py:class:`bob.ip.base.LBP`", "The feature extractor for the given feature index")
 ;
 static PyObject* FeatureExtractor_extractor(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
-  TRY
-  static char* kwlist[] = {c("index"), 0};
+  BOB_TRY
+  char** kwlist = extractor.kwlist();
 
   int index;
   // by shape
@@ -344,7 +344,7 @@ static PyObject* FeatureExtractor_extractor(FeatureExtractorObject* self, PyObje
   PyBobIpBaseLBPObject* lbp = reinterpret_cast<PyBobIpBaseLBPObject*>(PyBobIpBaseLBP_Type.tp_alloc(&PyBobIpBaseLBP_Type, 0));
   lbp->cxx = self->cxx->extractor(index);
   return Py_BuildValue("N", lbp);
-  CATCH("cannot get extractor", 0)
+  BOB_CATCH_MEMBER("cannot get extractor", 0)
 }
 
 static auto offset = bob::extension::FunctionDoc(
@@ -358,15 +358,15 @@ static auto offset = bob::extension::FunctionDoc(
 .add_return("offset", "(int,int)", "The offset position for the given feature index")
 ;
 static PyObject* FeatureExtractor_offset(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
-  TRY
-  static char* kwlist[] = {c("index"), 0};
+  BOB_TRY
+  char** kwlist = offset.kwlist();
 
   int index;
   // by shape
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i", kwlist, &index)) return 0;
   auto offset = self->cxx->offset(index);
   return Py_BuildValue("ii", offset[0], offset[1]);
-  CATCH("cannot get offset", 0)
+  BOB_CATCH_MEMBER("cannot get offset", 0)
 }
 
 static auto prepare = bob::extension::FunctionDoc(
@@ -382,8 +382,8 @@ static auto prepare = bob::extension::FunctionDoc(
 .add_parameter("compute_integral_square_image", "bool", "[Default: ``False``] : Enable the computation of the integral square image")
 ;
 static PyObject* FeatureExtractor_prepare(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
-  TRY
-  static char* kwlist[] = {c("image"), c("scale"), c("compute_integral_square_image"), 0};
+  BOB_TRY
+  char** kwlist = prepare.kwlist();
 
   PyBlitzArrayObject* image;
   double scale;
@@ -403,7 +403,7 @@ static PyObject* FeatureExtractor_prepare(FeatureExtractorObject* self, PyObject
       PyErr_Format(PyExc_TypeError, "%s : The input image must be of type uint8 or float", Py_TYPE(self)->tp_name);
       return 0;
   }
-  CATCH("cannot prepare image", 0)
+  BOB_CATCH_MEMBER("cannot prepare image", 0)
 }
 
 static auto extract_all = bob::extension::FunctionDoc(
@@ -419,8 +419,8 @@ static auto extract_all = bob::extension::FunctionDoc(
 .add_parameter("dataset_index", "int", "The index of the current training patch")
 ;
 static PyObject* FeatureExtractor_extract_all(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
-  TRY
-  static char* kwlist[] = {c("bounding_box"), c("dataset"), c("dataset_index"), 0};
+  BOB_TRY
+  char** kwlist = extract_all.kwlist();
 
   BoundingBoxObject* bb;
   PyBlitzArrayObject* dataset;
@@ -434,7 +434,7 @@ static PyObject* FeatureExtractor_extract_all(FeatureExtractorObject* self, PyOb
   if (!ds) return 0;
   self->cxx->extractAll(*bb->cxx, *ds, index);
   Py_RETURN_NONE;
-  CATCH("cannot extract all features", 0)
+  BOB_CATCH_MEMBER("cannot extract all features", 0)
 }
 
 static auto extract_indexed = bob::extension::FunctionDoc(
@@ -449,8 +449,8 @@ static auto extract_indexed = bob::extension::FunctionDoc(
 .add_parameter("indices", "array_like<1D,int32>", "The indices, for which the features should be extracted; if not given, :py:attr:`model_indices` is used (must be set beforehands)")
 ;
 static PyObject* FeatureExtractor_extract_indexed(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
-  TRY
-  static char* kwlist[] = {c("bounding_box"), c("feature_vector"), c("indices"), 0};
+  BOB_TRY
+  char** kwlist = extract_indexed.kwlist();
 
   BoundingBoxObject* bb;
   PyBlitzArrayObject* fv, *indices = 0;
@@ -471,7 +471,7 @@ static PyObject* FeatureExtractor_extract_indexed(FeatureExtractorObject* self, 
     self->cxx->extractSome(*bb->cxx, *f);
   }
   Py_RETURN_NONE;
-  CATCH("cannot extract indexed features", 0)
+  BOB_CATCH_MEMBER("cannot extract indexed features", 0)
 }
 
 static auto mean_variance = bob::extension::FunctionDoc(
@@ -486,8 +486,8 @@ static auto mean_variance = bob::extension::FunctionDoc(
 .add_return("mv", "float or (float, float)", "The mean (or the mean and the variance) of the pixel gray values for the given bounding box")
 ;
 static PyObject* FeatureExtractor_mean_variance(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
-  TRY
-  static char* kwlist[] = {c("bounding_box"), c("compute_variance"), 0};
+  BOB_TRY
+  char** kwlist = mean_variance.kwlist();
 
   BoundingBoxObject* bb;
   PyObject* cv = 0;
@@ -503,7 +503,7 @@ static PyObject* FeatureExtractor_mean_variance(FeatureExtractorObject* self, Py
     double res = self->cxx->mean(*bb->cxx);
     return Py_BuildValue("d", res);
   }
-  CATCH("cannot compute mean (and variance)", 0)
+  BOB_CATCH_MEMBER("cannot compute mean (and variance)", 0)
 }
 
 static auto load = bob::extension::FunctionDoc(
@@ -516,8 +516,8 @@ static auto load = bob::extension::FunctionDoc(
 .add_parameter("hdf5", ":py:class:`bob.ip.base.HDF5File`", "The file to read from")
 ;
 static PyObject* FeatureExtractor_load(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
-  TRY
-  static char* kwlist[] = {c("hdf5"), 0};
+  BOB_TRY
+  char** kwlist = load.kwlist();
 
   PyBobIoHDF5FileObject* hdf5;
   // by shape
@@ -525,7 +525,7 @@ static PyObject* FeatureExtractor_load(FeatureExtractorObject* self, PyObject* a
 
   self->cxx->load(*hdf5->f);
   Py_RETURN_NONE;
-  CATCH("cannot load", 0)
+  BOB_CATCH_MEMBER("cannot load", 0)
 }
 
 static auto save = bob::extension::FunctionDoc(
@@ -538,8 +538,8 @@ static auto save = bob::extension::FunctionDoc(
 .add_parameter("hdf5", ":py:class:`bob.ip.base.HDF5File`", "The file to write to")
 ;
 static PyObject* FeatureExtractor_save(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
-  TRY
-  static char* kwlist[] = {c("hdf5"), 0};
+  BOB_TRY
+  char** kwlist = save.kwlist();
 
   PyBobIoHDF5FileObject* hdf5;
   // by shape
@@ -547,7 +547,7 @@ static PyObject* FeatureExtractor_save(FeatureExtractorObject* self, PyObject* a
 
   self->cxx->save(*hdf5->f);
   Py_RETURN_NONE;
-  CATCH("cannot save", 0)
+  BOB_CATCH_MEMBER("cannot save", 0)
 }
 
 
