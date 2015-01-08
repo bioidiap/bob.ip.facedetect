@@ -9,5 +9,4 @@ bob.ip.color
 bob.ip.draw
 bob.ip.flandmark
 bob.learn.boosting
-facereclib
 

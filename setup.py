@@ -43,9 +43,8 @@ from bob.blitz.extension import Extension, build_ext
 from bob.extension.utils import load_requirements
 build_requires = load_requirements()
 
-packages = ['xfacereclib.' + p for p in find_packages('xfacereclib')]
-
-version = "0.2.0a0"
+# Define package version
+version = open("version.txt").read().rstrip()
 
 # The only thing we do in this file is to call the setup() function with all
 # parameters that define our package.
@@ -53,11 +52,11 @@ setup(
 
     # This is the basic information about your project. Modify all this
     # information before releasing code publicly.
-    name='xfacereclib.extension.facedetect',
+    name='bob.ip.facedetect',
     version=version,
-    description='Face detection utilities for the FaceRecLib',
+    description='Face detection using boosted LBP features',
 
-    url='http://github.com/idiap/bob.project.example',
+    url='http://github.com/idiap/bob.ip.facedetect',
     license='GPLv3',
     author='Manuel Guenther',
     author_email='manuel.guenther@idiap.ch',
@@ -68,7 +67,7 @@ setup(
     long_description=open('README.rst').read(),
 
     # This line is required for any distutils based packaging.
-    packages=packages,
+    packages=find_packages(),
     include_package_data=True,
 
     # This line defines which packages should be installed when you "install"
@@ -85,14 +84,14 @@ setup(
 
     ext_modules = [
       Extension(
-        'xfacereclib.extension.facedetect._features',
+        'bob.ip.facedetect._library',
         [
-          "xfacereclib/extension/facedetect/cpp/features.cpp",
-          "xfacereclib/extension/facedetect/cpp/boundingbox.cpp",
+          "bob/ip/facedetect/cpp/features.cpp",
+          "bob/ip/facedetect/cpp/boundingbox.cpp",
 
-          "xfacereclib/extension/facedetect/bounding_box.cpp",
-          "xfacereclib/extension/facedetect/feature_extractor.cpp",
-          "xfacereclib/extension/facedetect/main.cpp",
+          "bob/ip/facedetect/bounding_box.cpp",
+          "bob/ip/facedetect/feature_extractor.cpp",
+          "bob/ip/facedetect/main.cpp",
         ],
         version = version,
         bob_packages = bob_packages,
@@ -110,8 +109,8 @@ setup(
     # using several layers. You can check them out here:
     # https://github.com/idiap/bob/wiki/Satellite-Packages
     namespace_packages = [
-      'xfacereclib',
-      'xfacereclib.extension',
+      'bob',
+      'bob.ip',
     ],
 
     # This entry defines which scripts you will have inside the 'bin' directory
@@ -129,61 +128,29 @@ setup(
     # In this simple example we will create a single program that will print
     # the version of bob.
     entry_points={
-
       # scripts should be declared using this entry:
       'console_scripts': [
-        'train_detector.py = xfacereclib.extension.facedetect.script.train:main',
-        'validate.py = xfacereclib.extension.facedetect.script.validate:main',
-        'display.py = xfacereclib.extension.facedetect.script.display:main',
-        'detect.py = xfacereclib.extension.facedetect.script.detect:main',
-        'extract_faces.py = xfacereclib.extension.facedetect.script.extract_faces:main',
-        'plots.py = xfacereclib.extension.facedetect.script.evaluate:main',
-        'error.py = xfacereclib.extension.facedetect.script.errors:main',
+        'train_detector.py = bob.ip.facedetect.script.train:main',
+        'display.py = bob.ip.facedetect.script.display:main',
+        'detect.py = bob.ip.facedetect.script.detect:main',
+        'extract_faces.py = bob.ip.facedetect.script.extract_faces:main',
+        'plots.py = bob.ip.facedetect.script.evaluate:main',
+        'error.py = bob.ip.facedetect.script.errors:main',
       ],
-
-      # registered database short cuts
-      'facereclib.database': [
-        'banca-french      = xfacereclib.extension.facedetect.databases.banca_french:database',
-        'banca-spanish     = xfacereclib.extension.facedetect.databases.banca_spanish:database',
-        'bioid             = xfacereclib.extension.facedetect.databases.bioid:database',
-        'caltech           = xfacereclib.extension.facedetect.databases.caltech:database',
-        'cinema            = xfacereclib.extension.facedetect.databases.cinema:database',
-        'mit-cmu           = xfacereclib.extension.facedetect.databases.cmu:database',
-        'fddb              = xfacereclib.extension.facedetect.databases.fddb:database',
-        'fdhd              = xfacereclib.extension.facedetect.databases.fdhd:database',
-        'mash              = xfacereclib.extension.facedetect.databases.mash:database',
-        'ofd               = xfacereclib.extension.facedetect.databases.ofd:database',
-        'cmu-pie           = xfacereclib.extension.facedetect.databases.pie:database',
-        'yale-b            = xfacereclib.extension.facedetect.databases.yale_b:database',
-        'web               = xfacereclib.extension.facedetect.databases.web:database',
-        'multipie          = xfacereclib.extension.facedetect.databases.multipie:database',
-      ],
-
-      # registered preprocessors
-      'facereclib.preprocessor': [
-        'face-detect             = xfacereclib.extension.facedetect.configurations.face_crop:preprocessor',
-        'face-detect+tan-triggs  = xfacereclib.extension.facedetect.configurations.tan_triggs:preprocessor',
-        'face-detect+inorm-lbp   = xfacereclib.extension.facedetect.configurations.inorm_lbp:preprocessor',
-        'face-detect-flandmark   = xfacereclib.extension.facedetect.configurations.flandmark:preprocessor',
-      ],
-
-      # finally, if you are writing a database package, you must declare the
-      # relevant entries like this:
-      #'bob.db': [
-      #  'example = xbob.example.driver:Interface',
-      #  ]
-      # Note: this is just an example, this package does not declare databases
-      },
+    },
 
     # Classifiers are important if you plan to distribute this package through
     # PyPI. You can find the complete list of classifiers that are valid and
     # useful here (http://pypi.python.org/pypi?%3Aaction=list_classifiers).
     classifiers = [
-      'Development Status :: 4 - Beta',
+      'Framework :: Bob',
+      'Development Status :: 3 - Alpha',
       'Intended Audience :: Developers',
-      'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+      'License :: OSI Approved :: BSD License',
       'Natural Language :: English',
       'Programming Language :: Python',
-      'Topic :: Scientific/Engineering :: Artificial Intelligence',
-      ],
+      'Programming Language :: Python :: 3',
+      'Topic :: Software Development :: Libraries :: Python Modules',
+      'Environment :: Plugins',
+    ],
 )
