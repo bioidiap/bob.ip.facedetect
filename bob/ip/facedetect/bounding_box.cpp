@@ -89,7 +89,7 @@ static PyObject* BoundingBox_RichCompare(BoundingBoxObject* self, PyObject* othe
 
 PyObject* BoundingBox_Str(BoundingBoxObject* self) {
   BOB_TRY
-  return PyString_FromString((boost::format("<BB topleft=(%3.2d,%3.2d), bottomright=(%3.2d,%3.2d)>") % self->cxx->top() % self->cxx->left() % self->cxx->bottom() % self->cxx->right()).str().c_str());
+  return PyString_FromString((boost::format("<BB topleft=(%3.2f, %3.2f), bottomright=(%3.2f, %3.2f)>") % self->cxx->top() % self->cxx->left() % self->cxx->bottom() % self->cxx->right()).str().c_str());
   BOB_CATCH_MEMBER("cannot create __repr__ string", 0)
 }
 
@@ -630,4 +630,3 @@ bool init_BoundingBox(PyObject* module)
   Py_INCREF(&BoundingBox_Type);
   return PyModule_AddObject(module, "BoundingBox", (PyObject*)&BoundingBox_Type) >= 0;
 }
-

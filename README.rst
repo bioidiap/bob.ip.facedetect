@@ -1,28 +1,39 @@
-Example buildout environment
-============================
+.. vim: set fileencoding=utf-8 :
+.. Manuel Guenther <manuel.guenther@idiap.ch>
+.. Fri Oct 31 14:18:57 CET 2014
 
-This simple example demonstrates how to wrap Bob-based scripts on buildout
-environments. This may be useful for homework assignments, tests or as a way to
-distribute code to reproduce your publication. In summary, if you need to give
-out code to others, we recommend you do it following this template so your code
-can be tested, documented and run in an orderly fashion.
+.. image:: http://img.shields.io/badge/docs-stable-yellow.png
+   :target: http://pythonhosted.org/bob.ip.facedetect/index.html
+.. image:: http://img.shields.io/badge/docs-latest-orange.png
+   :target: https://www.idiap.ch/software/bob/docs/latest/bioidiap/bob.ip.facedetect/master/index.html
+.. image:: https://travis-ci.org/bioidiap/bob.ip.facedetect.svg?branch=master
+   :target: https://travis-ci.org/bioidiap/bob.ip.facedetect
+.. image:: https://coveralls.io/repos/bioidiap/bob.ip.facedetect/badge.png
+   :target: https://coveralls.io/r/bioidiap/bob.ip.facedetect
+.. image:: https://img.shields.io/badge/github-master-0000c0.png
+   :target: https://github.com/bioidiap/bob.ip.facedetect/tree/master
+.. image:: http://img.shields.io/pypi/v/bob.ip.facedetect.png
+   :target: https://pypi.python.org/pypi/bob.ip.facedetect
+.. image:: http://img.shields.io/pypi/dm/bob.ip.facedetect.png
+   :target: https://pypi.python.org/pypi/bob.ip.facedetect
+
+========================================================
+ Face Detection using a Cascade of Boosted LBP Features
+========================================================
+
+This package contains a face detector utility that provides source code for detecting faces using a cascade of boosted LBP features.
+It is a re-implementation of the *Visioner* that was part of Bob version 1.
+A pre-trained cascade is included into this package, but also source code to re-train the cascade based on your training images is provided.
 
 Installation
 ------------
+To install this package -- alone or together with other `Packages of Bob <https://github.com/idiap/bob/wiki/Packages>`_ -- please read the `Installation Instructions <https://github.com/idiap/bob/wiki/Installation>`_.
+For Bob_ to be able to work properly, some dependent packages are required to be installed.
+Please make sure that you have read the `Dependencies <https://github.com/idiap/bob/wiki/Dependencies>`_ for your operating system.
 
-.. note::
+Documentation
+-------------
+For further documentation on this package, please read the `Stable Version <http://pythonhosted.org/bob.ip.facedetect/index.html>`_ or the `Latest Version <https://www.idiap.ch/software/bob/docs/latest/bioidiap/bob.ip.facedetect/master/index.html>`_ of the documentation.
+For a list of tutorials on this or the other packages ob Bob_, or information on submitting issues, asking questions and starting discussions, please visit its website.
 
-  To follow these instructions locally you will need a local copy of this
-  package. For that, you can use the github tarball API to download the package::
-
-    $ wget --no-check-certificate https://github.com/idiap/bob.project.example/tarball/master -O- | tar xz 
-    $ mv idiap-bob.project* bob.project.example
-
-Documentation and Further Information
--------------------------------------
-
-Please refer to the latest Bob user guide, accessing from the `Bob website
-<http://idiap.github.com/bob/>`_ for how to create your own packages based on
-this example. In particular, the Section entitled `Organize Your Work in
-Satellite Packages <http://www.idiap.ch/software/bob/docs/releases/last/sphinx/html/OrganizeYourCode.html>`_ 
-contains details on how to setup, build and roll out your code.
+.. _bob: https://www.idiap.ch/software/bob

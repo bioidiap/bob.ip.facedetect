@@ -16,11 +16,11 @@ bob::extension::FunctionDoc prune_detections_doc = bob::extension::FunctionDoc(
   "For threshold >= 1., all detections will be returned (i.e., no pruning is performed), but the list will be sorted with descendingly predictions."
 )
 .add_prototype("detections, predictions, threshold, [number_of_detections]", "pruned_detections, pruned_predictions")
-.add_parameter("detections", "[:py_class:`BoundingBox`]", "A list of detected bouding boxes")
+.add_parameter("detections", "[:py:class:`BoundingBox`]", "A list of detected bouding boxes")
 .add_parameter("predictions", "array_like <1D, float>", "The prediction (quality, weight, ...) values for the detections")
 .add_parameter("threshold", "float", "The overlap threshold (Jaccard similarity), for which detections should be pruned")
 .add_parameter("number_of_detections", "int", "[default: MAX_INT] The number of detections that should be returned")
-.add_return("pruned_detections", "[:py_class:`BoundingBox`]", "The list of pruned bounding boxes")
+.add_return("pruned_detections", "[:py:class:`BoundingBox`]", "The list of pruned bounding boxes")
 .add_return("pruned_predictions", "array_like <float, 1D>", "The according predictions (qualities, weights, ...)")
 ;
 PyObject* prune_detections(PyObject*, PyObject* args, PyObject* kwargs) {
@@ -74,10 +74,10 @@ bob::extension::FunctionDoc overlapping_detections_doc = bob::extension::Functio
   "For threshold >= 1., all detections will be returned (i.e., no pruning is performed), but the list will be sorted with descendingly predictions."
 )
 .add_prototype("detections, predictions, threshold", "overlapped_detections, overlapped_predictions")
-.add_parameter("detections", "[:py_class:`BoundingBox`]", "A list of detected bouding boxes")
+.add_parameter("detections", "[:py:class:`BoundingBox`]", "A list of detected bouding boxes")
 .add_parameter("predictions", "array_like <1D, float>", "The prediction (quality, weight, ...) values for the detections")
 .add_parameter("threshold", "float", "The overlap threshold (Jaccard similarity) which should be considered")
-.add_return("overlapped_detections", "[:py_class:`BoundingBox`]", "The list of overlapping bounding boxes")
+.add_return("overlapped_detections", "[:py:class:`BoundingBox`]", "The list of overlapping bounding boxes")
 .add_return("overlapped_predictions", "array_like <float, 1D>", "The according predictions (qualities, weights, ...)")
 ;
 PyObject* overlapping_detections(PyObject*, PyObject* args, PyObject* kwargs) {

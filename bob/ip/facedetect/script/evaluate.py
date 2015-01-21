@@ -27,13 +27,6 @@ import matplotlib; matplotlib.use('pdf') #avoids TkInter threaded start
 import matplotlib.pyplot as mpl
 from matplotlib.backends.backend_pdf import PdfPages
 
-
-import facereclib
-from .. import utils
-import argparse
-import numpy, math
-import os
-
 # enable LaTeX interpreter
 matplotlib.rc('text', usetex=True)
 matplotlib.rc('font', family='serif')
@@ -41,9 +34,16 @@ matplotlib.rc('lines', linewidth = 4)
 # increase the default font size
 matplotlib.rc('font', size=18)
 
+import argparse
+import numpy, math
+import os
+
+import bob.ip.facedetect
+import bob.core
+logger = bob.core.log.setup('bob.ip.facedetect')
 
 
-def command_line_arguments(command_line_parameters):
+def command_line_options(command_line_arguments):
   """Parse the program options"""
 
   # set up command line parser
@@ -66,17 +66,15 @@ def command_line_arguments(command_line_parameters):
 
   parser.add_argument('--self-test', action='store_true', help=argparse.SUPPRESS)
 
-  facereclib.utils.add_logger_command_line_option(parser)
-
-  # parse arguments
-  args = parser.parse_args(command_line_parameters)
-
-  facereclib.utils.set_verbosity_level(args.verbose)
+  # add verbosity option
+  bob.core.log.add_command_line_option(parser)
+  args = parser.parse_args(command_line_arguments)
+  bob.core.log.set_verbosity_level(logger, args.verbose)
 
   if args.legends is not None:
     count = len(args.files) + (len(args.baselines) if args.baselines is not None else 0)
     if len(args.legends) != count:
-      facereclib.utils.error("The number of --files (%d) plus --baselines (%d) must be the same as --legends (%d)" % (len(args.files), len(args.baselines) if args.baselines else 0, len(args.legends)))
+      logger.error("The number of --files (%d) plus --baselines (%d) must be the same as --legends (%d)", len(args.files), len(args.baselines) if args.baselines else 0, len(args.legends))
       args.legends = None
 
   # update legends when they are not specified on command line
@@ -168,10 +166,10 @@ def read_score_file(filename):
   return (ground_truth, positives, negatives)
 
 
-def main(command_line_parameters=None):
+def main(command_line_arguments=None):
   """Reads score files, computes error measures and plots curves."""
 
-  args = command_line_arguments(command_line_parameters)
+  args = command_line_options(command_line_arguments)
 
   # get some colors for plotting
   cmap = mpl.cm.get_cmap(name='hsv')
@@ -179,13 +177,13 @@ def main(command_line_parameters=None):
   colors = [cmap(i) for i in numpy.linspace(0, 1.0, count+1)]
 
   # First, read the score files
-  facereclib.utils.info("Loading %d score files" % len(args.files))
+  logger.info("Loading %d score files" % len(args.files))
 
   scores = [read_score_file(os.path.join(args.directory, f)) for f in args.files]
 
   false_alarms = []
   detection_rate = []
-  facereclib.utils.info("Computing FROC curves")
+  logger.info("Computing FROC curves")
   for score in scores:
     # compute some thresholds
     tmin = min(score[2])
@@ -213,7 +211,7 @@ def main(command_line_parameters=None):
       false_alarms.append(fa)
       detection_rate.append(dr)
 
-  facereclib.utils.info("Plotting FROC curves to file '%s'" % args.output)
+  logger.info("Plotting FROC curves to file '%s'", args.output)
   # create a multi-page PDF for the ROC curve
   pdf = PdfPages(args.output)
   figure = _plot_froc(false_alarms, detection_rate, colors, args.legends, args.title, args.max)
@@ -226,4 +224,3 @@ def main(command_line_parameters=None):
     for i, f in enumerate(args.files):
       det, all = count_detections(f)
       print("The number of detected faces for %s is %d out of %d" % (args.legends[i], det, all))
-

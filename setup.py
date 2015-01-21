@@ -130,12 +130,12 @@ setup(
     entry_points={
       # scripts should be declared using this entry:
       'console_scripts': [
-        'train_detector.py = bob.ip.facedetect.script.train:main',
+        'collect_training_data.py = bob.ip.facedetect.script.collect_training_data:main',
+        'extract_training_features.py = bob.ip.facedetect.script.extract_training_features:main',
+        'train_detector.py = bob.ip.facedetect.script.train_detector:main',
+        'validate_detector.py = bob.ip.facedetect.script.validate_detector:main',
         'display.py = bob.ip.facedetect.script.display:main',
-        'detect.py = bob.ip.facedetect.script.detect:main',
-        'extract_faces.py = bob.ip.facedetect.script.extract_faces:main',
-        'plots.py = bob.ip.facedetect.script.evaluate:main',
-        'error.py = bob.ip.facedetect.script.errors:main',
+        'evaluate.py = bob.ip.facedetect.script.evaluate:main',
       ],
     },
 

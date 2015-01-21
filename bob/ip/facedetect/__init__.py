@@ -5,10 +5,9 @@ import bob.learn.boosting
 
 from ._library import FeatureExtractor, BoundingBox, prune_detections, overlapping_detections
 from .detector import Sampler, Cascade
-from . import utils
-from . import script
+from .train import TrainingSet
 
-from .detect import default_cascade, detect_single_face
+from .detect import default_cascade, best_detection, detect_single_face
 
 def get_config():
   """Returns a string containing the configuration information.

@@ -1,2 +1,3 @@
-include README.rst bootstrap.py buildout.cfg COPYING
-recursive-include docs *.py *.rst
+include README.rst bootstrap-buildout.py buildout.cfg COPYING
+recursive-include doc *.py *.rst
+include bob/ip/facedetect/MCT_cascade.hdf5

@@ -16,13 +16,20 @@
 
 static auto FeatureExtractor_doc = bob::extension::ClassDoc(
   BOB_EXT_MODULE_PREFIX ".FeatureExtractor",
-  "A bounding box class storing top, left, height and width of an rectangle",
-  0
+  "This class extracts LBP features of several types from a given image patch of a certain size",
+  "LBP features are extracted using different variants of :py:class:`bob.ip.base.LBP` feature extractors. "
+  "All LBP features of one patch are stored in a single long feature vector of type :py:class:`numpy.uint16`."
 ).add_constructor(
   bob::extension::FunctionDoc(
     "__init__",
-    "Constructs a new Bounding box from the given top-left position and the size of the rectangle",
-    0,
+    "Generates a new feature extractor for the given ``patch_size`` using one or several feature extractors",
+    "The constructor can be called in different ways:\n\n"
+    "* The first constructor initializes a feature extractor with no LBP extractor. "
+    "Please use the :py:meth:`append` function to add LBP extractors.\n"
+    "* In the second constructor, a given list of LBP extractors is specified.\n"
+    "* The third constructor initializes a tight set of LBP extractors for different :py:attr:`bob.ip.base.LBP.radii`, by adding all possible combinations of x- and y- radii, until the ``patch_size`` is too small, or ``min_size`` (start) or ``max_size`` (end) is reached.\n"
+    "* The fourth constructor copies all LBP extractors from the given :py:class:`FeatureExtractor`\n"
+    "* The last constructor read the configuration from the given :py:class:`bob.io.base.HDF5File`.",
     true
   )
   .add_prototype("patch_size", "")
@@ -38,7 +45,7 @@ static auto FeatureExtractor_doc = bob::extension::ClassDoc(
   .add_parameter("min_size", "int", "[default: 1] The minimum radius of LBP")
   .add_parameter("max_size", "int", "[default: MAX_INT] The maximum radius of LBP (limited by patch size)")
   .add_parameter("other", ":py:class:`FeatureExtractor`", "The feature extractor to use for copy-construction")
-  .add_parameter("hdf5", ":py:class:`bob.ip.base.HDF5File`", "The HDF5 file to read the extractors from")
+  .add_parameter("hdf5", ":py:class:`bob.io.base.HDF5File`", "The HDF5 file to read the extractors from")
 );
 
 
@@ -443,7 +450,7 @@ static auto extract_indexed = bob::extension::FunctionDoc(
   0,
   true
 )
-.add_prototype("bounding_box, feature_vector, [indices]", "sim")
+.add_prototype("bounding_box, feature_vector, [indices]")
 .add_parameter("bounding_box", ":py:class:`BoundingBox`", "The bounding box for which the features should be extracted")
 .add_parameter("feature_vector", "array_like <1D, uint16>", "The feature vector, into which the features should be extracted; must be of size :py:attr:`number_of_features`")
 .add_parameter("indices", "array_like<1D,int32>", "The indices, for which the features should be extracted; if not given, :py:attr:`model_indices` is used (must be set beforehands)")
@@ -645,4 +652,3 @@ bool init_FeatureExtractor(PyObject* module)
   Py_INCREF(&FeatureExtractor_Type);
   return PyModule_AddObject(module, "FeatureExtractor", (PyObject*)&FeatureExtractor_Type) >= 0;
 }
-

@@ -2,20 +2,16 @@
 
 
 import argparse
-import facereclib
 import numpy
 import math
 import os
-import pkg_resources
 
 import bob.io.base
-import bob.io.image
-import bob.ip.color
 import bob.ip.draw
-#import bob.ip.flandmark
 
-from .. import utils, detector, overlapping_detections
-from .._features import BoundingBox, prune_detections
+import bob.ip.facedetect
+import bob.core
+logger = bob.core.log.setup("bob.ip.facedetect")
 
 def command_line_options(command_line_arguments):
 
@@ -27,32 +23,28 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--lowest-scale', '-f', type=float, default = 0.125, help = "Faces which will be lower than the given scale times the image resolution will not be found.")
   parser.add_argument('--cascade-file', '-r', help = "The file to read the resulting cascade from; If left empty, the default cascade will be loaded")
   parser.add_argument('--prediction-threshold', '-t', type = float, help = "If given, all detection above this threshold will be displayed.")
-  parser.add_argument('--prune-detections', '-p', type=float, help = "If given, detections that overlap with the given threshold are pruned")
+  parser.add_argument('--prune-detections', '-p', type=float, default=1., help = "If given, detections that overlap with the given threshold are pruned")
   parser.add_argument('--best-detection-overlap', '-b', type=float, help = "If given, the average of the overlapping detections with this minimum overlap will be considered.")
   parser.add_argument('--write-detection', '-w', help = "If given, the resulting image will be written to the given file.")
 
-  facereclib.utils.add_logger_command_line_option(parser)
+  bob.core.log.add_command_line_option(parser)
   args = parser.parse_args(command_line_arguments)
-  facereclib.utils.set_verbosity_level(args.verbose)
+  bob.core.log.set_verbosity_level(logger, args.verbose)
 
   if args.cascade_file is None:
-    args.cascade_file = pkg_resources.resource_filename('xfacereclib.extension.facedetect', 'MCT_cascade.hdf5')
+    args.cascade_file = pkg_resources.resource_filename('bob.ip.facedetect', 'MCT_cascade.hdf5')
 
   return args
-
-
-def draw_bb(image, bb, color):
-  bob.ip.draw.box(image, bb.topleft, bb.size, color)
 
 
 def main(command_line_arguments = None):
   args = command_line_options(command_line_arguments)
 
-  facereclib.utils.debug("Loading cascade from file %s" % args.cascade_file)
+  logger.debug("Loading cascade from file %s", args.cascade_file)
   # load classifier and feature extractor
-  cascade = detector.Cascade(classifier_file=bob.io.base.HDF5File(args.cascade_file))
+  cascade = bob.ip.facedetect.detector.Cascade(bob.io.base.HDF5File(args.cascade_file))
 
-  sampler = detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
+  sampler = bob.ip.facedetect.detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
 
   # load test file
   test_image = bob.io.base.load(args.test_image)
@@ -62,41 +54,37 @@ def main(command_line_arguments = None):
   detections = []
   predictions = []
   # get the detection scores for the image
-  for prediction, bounding_box in sampler.iterate_cascade(cascade, test_image):
-    if args.prediction_threshold is None or prediction > args.prediction_threshold:
-      detections.append(bounding_box)
-      predictions.append(prediction)
-      facereclib.utils.debug("Found bounding box %s with value %f" % (str(bounding_box), prediction))
+  for prediction, bounding_box in sampler.iterate_cascade(cascade, test_image, args.prediction_threshold):
+    detections.append(bounding_box)
+    predictions.append(prediction)
+    logger.debug("Found bounding box %s with value %f", str(bounding_box), prediction)
 
   # prune detections
-  if args.prune_detections is None:
-    detections, predictions = prune_detections(detections, numpy.array(predictions), 1)
-  else:
-    detections, predictions = prune_detections(detections, numpy.array(predictions), args.prune_detections)
+  detections, predictions = bob.ip.facedetect.prune_detections(detections, numpy.array(predictions), args.prune_detections)
 
 
-  facereclib.utils.info("Number of (pruned) detections: %d" % len(detections))
+  logger.info("Number of (pruned) detections: %d", len(detections))
   highest_detection = predictions[0]
-  facereclib.utils.info("Best detection with value %f at %s: " % (highest_detection, str(detections[0])))
+  logger.info("Best detection with value %f at %s: ", highest_detection, str(detections[0]))
 
   if args.best_detection_overlap is not None:
     # compute average over the best locations
-    bb, value = utils.best_detection(detections, predictions, args.best_detection_overlap)
+    bb, value = bob.ip.facedetect.utils.best_detection(detections, predictions, args.best_detection_overlap)
     detections = [bb]
-    facereclib.utils.info("Limiting to a single BoundingBox %s with value %f" % (str(detections[0]), value))
+    logger.info("Limiting to a single BoundingBox %s with value %f", str(detections[0]), value)
 
   # compute best location
   elif args.prediction_threshold is None:
     # get the detection with the highest value
     detections = detections[:1]
-    facereclib.utils.info("Limiting to the best BoundingBox")
+    logger.info("Limiting to the best BoundingBox")
 
   color_image = bob.io.base.load(args.test_image)
   if color_image.ndim == 2:
     color_image = bob.ip.color.gray_to_rgb(color_image)
   for detection, prediction in zip(detections, predictions):
     color = (255,0,0) if args.prediction_threshold is None else (int(255. * (prediction - args.prediction_threshold) / (highest_detection-args.prediction_threshold)),0,0)
-    draw_bb(color_image, detection, color)
+    bob.ip.draw.box(color_image, detection.topleft, detection.size, color)
 
   import matplotlib.pyplot as mpl
 
@@ -107,4 +95,3 @@ def main(command_line_arguments = None):
 
   if args.write_detection:
     bob.io.base.save(color_image, args.write_detection)
-
