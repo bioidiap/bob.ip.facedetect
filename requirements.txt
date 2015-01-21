@@ -3,7 +3,6 @@ bob.blitz
 bob.core
 bob.io.base
 bob.io.image
-bob.sp
 bob.ip.base
 bob.ip.color
 bob.ip.draw
