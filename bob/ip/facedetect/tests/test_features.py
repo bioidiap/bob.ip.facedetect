@@ -3,7 +3,6 @@ import math
 from nose.plugins.skip import SkipTest
 
 import numpy
-import facereclib
 import pkg_resources
 
 import bob.io.base
@@ -29,7 +28,7 @@ class ExtractorTests(unittest.TestCase):
       feature_length = extractor.number_of_features
 
       # check that both feature extractors extract the same features
-      test_image = bob.ip.color.rgb_to_gray(bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'facereclib', 'tests')))
+      test_image = bob.ip.color.rgb_to_gray(bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'bob.ip.facedetect')))
 
       feature = numpy.ndarray((1,feature_length), dtype=numpy.uint16)
 
@@ -67,7 +66,7 @@ class ExtractorTests(unittest.TestCase):
           feature_length = extractor.number_of_features
 
           # check that both feature extractors extract the same features
-          test_image = bob.ip.color.rgb_to_gray(bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'facereclib', 'tests')))
+          test_image = bob.ip.color.rgb_to_gray(bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'bob.ip.facedetect')))
 
           feature = numpy.ndarray((1,feature_length), dtype=numpy.uint16)
 
@@ -87,4 +86,3 @@ class ExtractorTests(unittest.TestCase):
           extractor.extract_indexed(bb, some, numpy.array(indices, numpy.int32))
           for i in indices:
             self.assertEqual(some[i], feature[0,i])
-

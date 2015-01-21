@@ -1,5 +1,10 @@
 #!ipython
 
+"""Displays the detected face(s) in a given image.
+
+By default, only a single face (the one with the highest detection score) is displayed.
+However, when the --prediction-threshold is specified, all detections with scores > --prediction-threshold are shown (with color intensity relative to the score).
+"""
 
 import argparse
 import numpy

@@ -136,6 +136,7 @@ setup(
         'validate_detector.py = bob.ip.facedetect.script.validate_detector:main',
         'display.py = bob.ip.facedetect.script.display:main',
         'evaluate.py = bob.ip.facedetect.script.evaluate:main',
+        'plot_froc.py = bob.ip.facedetect.script.plot_froc:main'
       ],
     },
 

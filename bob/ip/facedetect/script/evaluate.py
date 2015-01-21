@@ -1,226 +1,94 @@
-#!/usr/bin/env python
-# vim: set fileencoding=utf-8 :
-# Manuel Guenther <manuel.guenther@idiap.ch>
-# Tue Jul 2 14:52:49 CEST 2013
-#
-# Copyright (C) 2011-2013 Idiap Research Institute, Martigny, Switzerland
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, version 3 of the License.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
-
-"""This script evaluates the given score files and computes EER, HTER.
-It also is able to plot CMC and ROC curves."""
-
-# matplotlib stuff
-import matplotlib; matplotlib.use('pdf') #avoids TkInter threaded start
-import matplotlib.pyplot as mpl
-from matplotlib.backends.backend_pdf import PdfPages
-
-# enable LaTeX interpreter
-matplotlib.rc('text', usetex=True)
-matplotlib.rc('font', family='serif')
-matplotlib.rc('lines', linewidth = 4)
-# increase the default font size
-matplotlib.rc('font', size=18)
 
 import argparse
-import numpy, math
+import numpy
+import math
 import os
 
+import bob.io.base
+import bob.io.image
+import bob.ip.color
 import bob.ip.facedetect
 import bob.core
-logger = bob.core.log.setup('bob.ip.facedetect')
+logger = bob.core.log.setup("bob.ip.facedetect")
 
 
 def command_line_options(command_line_arguments):
-  """Parse the program options"""
 
-  # set up command line parser
-  parser = argparse.ArgumentParser(description=__doc__,
-      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-  parser.add_argument('-d', '--files', required=True, nargs='+', help = "A list of score files to evaluate.")
-  parser.add_argument('-b', '--baselines', default=[], nargs='+', help = "A list of baseline results to add to the plot")
+  parser.add_argument('--file-lists', '-i', nargs='+', default = [], help = "Select the file lists including to ground truth bounding boxes to evaluate.")
+  parser.add_argument('--limit-test-files', '-y', type=int, help = "Limit the test files to the given number (for debug purposes mainly)")
+  parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
+  parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./8.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
+  parser.add_argument('--lowest-scale', '-f', type=float, default = 0.0625, help = "Faces which will be lower than the given scale times the image resolution will not be found.")
+  parser.add_argument('--cascade-file', '-r', help = "The file to read the cascade from (has a proper default).")
+  parser.add_argument('--prediction-threshold', '-T', type=float, help = "Detections with values below this threshold will be rejected by the detector.")
+  parser.add_argument('--score-file', '-w', default='cascaded_scores.txt', help = "The score file to be written.")
+  parser.add_argument('--prune-detections', '-p', type=float, default = 0.2, help = "If given, detections that overlap with the given threshold are pruned")
+  parser.add_argument('--detection-threshold', '-j', type=float, default=0.5, help = "The overlap from Ground Truth for which a detection should be considered as successful")
 
-  parser.add_argument('-D', '--directory', default = '.', help = "A directory, where to find the --files")
-  parser.add_argument('-B', '--baseline-directory', default = '.', help = "A directory, where to find the --baselines")
-
-  parser.add_argument('-R', '--auto-baselines', choices = ('bioid', 'mit-cmu'), help = "Automatically add the baselines for the given database")
-
-  parser.add_argument('-l', '--legends', nargs='+', help = "A list of legend strings used for ROC, CMC and DET plots; if given, must be the same number than --files plus --baselines.")
-  parser.add_argument('-w', '--output', default = 'FROC.pdf', help = "If given, FROC curves will be plotted into the given pdf file.")
-  parser.add_argument('-c', '--count-detections', action='store_true', help = "Counts the number of detections (positive is higher than negative, per file).")
-  parser.add_argument('-n', '--max', type=int, nargs=2, default=(160,70), help = "The highest false alarms and the lowest detection rate to plot")
-  parser.add_argument('-t', '--title', default='FROC', help = "The title of the plot")
-
-  parser.add_argument('--self-test', action='store_true', help=argparse.SUPPRESS)
-
-  # add verbosity option
   bob.core.log.add_command_line_option(parser)
   args = parser.parse_args(command_line_arguments)
   bob.core.log.set_verbosity_level(logger, args.verbose)
 
-  if args.legends is not None:
-    count = len(args.files) + (len(args.baselines) if args.baselines is not None else 0)
-    if len(args.legends) != count:
-      logger.error("The number of --files (%d) plus --baselines (%d) must be the same as --legends (%d)", len(args.files), len(args.baselines) if args.baselines else 0, len(args.legends))
-      args.legends = None
-
-  # update legends when they are not specified on command line
-  if args.legends is None:
-    args.legends = args.files if not args.baselines else args.files + args.baselines
-    args.legends = [l.replace("_","-") for l in args.legends]
-
-  if args.auto_baselines == 'bioid':
-    args.baselines.extend(["baselines/baseline_detection_froba_mct_BIOID", "cosmin/BIOID/face.elbp.proj0.var.levels10.roc"])
-    args.legends.extend(["Froba", "Cosmin"])
-  elif args.auto_baselines == 'mit-cmu':
-    args.baselines.extend(["baselines/baseline_detection_fcboost_MIT+CMU", "baselines/baseline_detection_viola_rapid1_MIT+CMU", "cosmin/MIT+CMU/face.elbp.proj0.var.levels10.roc"])
-    args.legends.extend(["FcBoost", "Viola", "Cosmin"])
+  if args.cascade_file is None:
+    import pkg_resources
+    args.cascade_file = bob.ip.facedetect.default_cascade
 
   return args
 
 
-def _plot_froc(fa, dr, colors, labels, title, max_r):
-  figure = mpl.figure()
-  # plot FAR and FRR for each algorithm
-  for i in range(len(fa)):
-    mpl.plot(fa[i], [100.0*f for f in  dr[i]], color=colors[i], lw=2, ms=10, mew=1.5, label=labels[i])
-
-  # finalize plot
-#  mpl.xticks((1, 10, 100, 1000, 10000), ('1', '10', '100', '1000', '10000'))
-#  mpl.xticks([100*i for i in range(11)])
-#  mpl.xlim((0.1, 100000))
-  mpl.xlim((0, max_r[0]))
-  mpl.ylim((max_r[1], 100))
-  mpl.grid(True, color=(0.6,0.6,0.6))
-  mpl.legend(loc=4,prop={'size': 16})
-  mpl.title(title)
-
-  return figure
-
-
-def count_detections(filename):
-  detections = 0
-  faces = 0
-  with open(filename) as f:
-    while f:
-      line = f.readline().rstrip()
-      if not len(line): break
-      if line[0] == '#': continue
-      face_count = int(line.split()[-1])
-      faces += face_count
-      # for each face in the image, get the detection scores
-      positives = []
-      for c in range(face_count):
-        splits = f.readline().rstrip().split()
-        # here, we only take the first value as detection score
-        if len(splits):
-          positives.append(float(splits[0]))
-      # now, read negative scores
-      splits = f.readline().rstrip().split()
-      if len(splits):
-        negative = float(splits[0])
-        for positive in positives:
-          if positive > negative:
-            detections += 1
-      else:
-        detections += face_count
-
-  return (detections, faces)
-
-
-
-def read_score_file(filename):
-  positives = []
-  negatives = []
-  ground_truth = 0
-  with open(filename) as f:
-    while f:
-      line = f.readline().rstrip()
-      if not len(line): break
-      if line[0] == '#': continue
-      face_count = int(line.split()[-1])
-      ground_truth += face_count
-      # for each face in the image, get the detection scores
-      for c in range(face_count):
-        splits = f.readline().rstrip().split()
-        # here, we only take the first value as detection score
-        if len(splits):
-          positives.append(float(splits[0]))
-      # now, read negative scores
-      splits = f.readline().rstrip().split()
-      negatives.extend([float(v) for v in splits])
-
-  return (ground_truth, positives, negatives)
-
-
-def main(command_line_arguments=None):
-  """Reads score files, computes error measures and plots curves."""
-
+def main(command_line_arguments = None):
   args = command_line_options(command_line_arguments)
 
-  # get some colors for plotting
-  cmap = mpl.cm.get_cmap(name='hsv')
-  count = len(args.files) + (len(args.baselines) if args.baselines else 0)
-  colors = [cmap(i) for i in numpy.linspace(0, 1.0, count+1)]
+  # load cascade
+  logger.info("Loading cascade from file %s", args.cascade_file)
+  cascade = bob.ip.facedetect.detector.Cascade(bob.io.base.HDF5File(args.cascade_file))
 
-  # First, read the score files
-  logger.info("Loading %d score files" % len(args.files))
+  # collect test images
+  train_set = bob.ip.facedetect.train.TrainingSet()
+  for file_list in args.file_lists:
+    logger.info("Loading file list %s", file_list)
+    train_set.load(file_list)
 
-  scores = [read_score_file(os.path.join(args.directory, f)) for f in args.files]
+  # create the test examples
+  sampler = bob.ip.facedetect.detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
 
-  false_alarms = []
-  detection_rate = []
-  logger.info("Computing FROC curves")
-  for score in scores:
-    # compute some thresholds
-    tmin = min(score[2])
-    tmax = max(score[2])
-    count = 100
-    thresholds = [tmin + float(x)/count * (tmax - tmin) for x in range(count+2)]
-    false_alarms.append([])
-    detection_rate.append([])
-    for threshold in thresholds:
-      detection_rate[-1].append(numpy.count_nonzero(numpy.array(score[1]) >= threshold) / float(score[0]))
-      false_alarms[-1].append(numpy.count_nonzero(numpy.array(score[2]) >= threshold))
-    # to display 0 in a semilogx plot, we have to add a little
-#    false_alarms[-1][-1] += 1e-8
+  # iterate over the test files and detect the faces
+  i = 1
+  with open(args.score_file, 'w') as f:
+    # write configuration
+    f.write("# --cascade-file %s --distance %d --scale-base %f --lowest-scale %s --prediction-threshold %s --detection-threshold %f\n" % (args.cascade_file, args.distance, args.scale_base, args.lowest_scale, str(args.prediction_threshold) if args.prediction_threshold is not None else "None", args.detection_threshold))
+    for image, ground_truth, file_name in train_set.iterate(args.limit_test_files):
+      logger.info("Loading image %d of %d from %s", i, args.limit_test_files or len(train_set), file_name)
 
-  # also read baselines
-  if args.baselines is not None:
-    for baseline in args.baselines:
-      dr = []
-      fa = []
-      with open(os.path.join(args.baseline_directory, baseline)) as f:
-        for line in f:
-          splits = line.rstrip().split()
-          dr.append(float(splits[0]))
-          fa.append(int(splits[1]))
-      false_alarms.append(fa)
-      detection_rate.append(dr)
+      # get the detection scores for the image
+      predictions = []
+      detections = []
+      for prediction, bounding_box in sampler.iterate_cascade(cascade, image, args.prediction_threshold):
+        predictions.append(prediction)
+        detections.append(bounding_box)
 
-  logger.info("Plotting FROC curves to file '%s'", args.output)
-  # create a multi-page PDF for the ROC curve
-  pdf = PdfPages(args.output)
-  figure = _plot_froc(false_alarms, detection_rate, colors, args.legends, args.title, args.max)
-  mpl.xlabel('False Alarm (of %d pruned)' % len(scores[0][2]))
-  mpl.ylabel('Detection Rate in \%% (total %d faces)' % scores[0][0])
-  pdf.savefig(figure)
-  pdf.close()
+      logger.info("Number of detections: %d", len(detections))
 
-  if args.count_detections:
-    for i, f in enumerate(args.files):
-      det, all = count_detections(f)
-      print("The number of detected faces for %s is %d out of %d" % (args.legends[i], det, all))
+      # prune detections
+      detections, predictions = bob.ip.facedetect.prune_detections(detections, numpy.array(predictions), args.prune_detections)
+      logger.info("Number of pruned detections: %d", len(detections))
+
+      # get ground truth bounding boxes from annotations
+      f.write("%s %d\n" % (file_name, len(ground_truth)))
+
+      # check if we have found a bounding box
+      all_positives = []
+      for bounding_box in ground_truth:
+        for value, detection in zip(predictions, detections):
+          if detection.similarity(bounding_box) > args.detection_threshold:
+            f.write("%f " % value)
+            all_positives.append(detection)
+        f.write("\n")
+      # write all others as negatives
+      for value, detection in zip(predictions, detections):
+        if detection not in all_positives:
+          f.write("%f " % value)
+      f.write("\n")
+      i += 1

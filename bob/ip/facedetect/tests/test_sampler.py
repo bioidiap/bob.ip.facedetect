@@ -3,7 +3,6 @@ import math
 from nose.plugins.skip import SkipTest
 
 import numpy
-import facereclib
 import pkg_resources
 
 import bob.io.base

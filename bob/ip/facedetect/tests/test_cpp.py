@@ -3,7 +3,6 @@ import math
 from nose.plugins.skip import SkipTest
 
 import numpy
-import facereclib
 import pkg_resources
 
 import bob.io.base
@@ -31,22 +30,22 @@ def test_bbx():
   assert sbb.topleft == (-8,0)
   assert sbb.bottomright == (25,34)
 
-  bb = fd.utils.bounding_box_from_annotation(leye=(10,10), reye=(10,30))
+  bb = fd.train.bounding_box_from_annotation(leye=(10,10), reye=(10,30))
   assert bb.topleft == (-4,0)
   assert bb.bottomright == (44,40)
 
   # test that left and right profile versions work
-  lbb = fd.utils.bounding_box_from_annotation(source='left-profile', mouth=(40,10), eye=(20,10))
+  lbb = fd.train.bounding_box_from_annotation(source='left-profile', mouth=(40,10), eye=(20,10))
   assert bb.topleft == (-4,0)
   assert bb.bottomright == (44,40)
 
   # test the direct way
-  bb1 = fd.utils.bounding_box_from_annotation(topleft=(10,20), bottomright=(30,40))
+  bb1 = fd.train.bounding_box_from_annotation(topleft=(10,20), bottomright=(30,40))
   assert bb1.topleft == (10,20)
   assert bb1.bottomright == (30,40)
   assert bb1.area == 400
 
-  bb2 = fd.utils.bounding_box_from_annotation(topleft=(15,25), bottomright=(35,45))
+  bb2 = fd.train.bounding_box_from_annotation(topleft=(15,25), bottomright=(35,45))
   bb3 = bb1.overlap(bb2)
   assert bb3.topleft == (15,25)
   assert bb3.bottomright == (30,40)
@@ -59,7 +58,7 @@ def test_bbx():
 
 
 def test_mirror():
-  bb = fd.utils.bounding_box_from_annotation(topleft=(10,20), bottomright=(30,40))
+  bb = fd.train.bounding_box_from_annotation(topleft=(10,20), bottomright=(30,40))
   mirrored = bb.mirror_x(60)
   assert mirrored.top == bb.top
   assert mirrored.bottom == bb.bottom

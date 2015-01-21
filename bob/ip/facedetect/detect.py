@@ -3,7 +3,6 @@ import math
 
 from .detector import Sampler, Cascade
 from ._library import prune_detections
-from .utils import best_detection
 
 import bob.io.base
 
@@ -69,6 +68,9 @@ def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.
 
   **Keyword Parameters:**
 
+  image : array_like (2D)
+    The image to detect a face in.
+
   cascade : str or :py:class:`bob.ip.facedetect.Cascade` or ``None``
     If given, the cascade file name or the loaded cascase to be used.
     If not given, the :py:attr:`bob.ip.facedetect.default_cascade` is loaded.
@@ -83,7 +85,7 @@ def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.
   **Return value:**
 
   bounding_box : :py:class:`bob.ip.facedetect.BoundingBox`
-    The bounding box containing the detected face
+    The bounding box containing the detected face.
   """
 
   if sampler is None:
