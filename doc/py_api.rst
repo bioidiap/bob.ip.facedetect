@@ -37,7 +37,7 @@ Constants
    The pre-trained cascade file that is used by all scripts.
 
 
-Script Documentation
+Detailed Information
 --------------------
 
 .. automodule:: bob.ip.facedetect
