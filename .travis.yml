@@ -4,7 +4,7 @@ matrix:
   - python: 2.6
     env:
     - SCIPYSPEC===0.12.0
- - python: 2.7
+  - python: 2.7
     env:
     - SCIPYSPEC===0.12.0
     - secure: IrUGhi6wLNjZTcVmyvlUW4S8gvbsjd1KGTONBBFJLe2SsczfuTIp0UrwPYAu3O2mEh04ivdgpjy/sKKH+atd+mx1WGYpyc7telS+6pzzGhW+utLnknETJYN0diK1Th62GFDhbwtvjoLcn2VMT22Agh94Ob4JvD0tzlDcZpEOOEs=
