@@ -21,8 +21,8 @@ before_install:
 - sudo apt-get install -qq --force-yes libboost-all-dev libblitz1-dev libjpeg8-dev libnetpbm10-dev libpng12-dev libtiff4-dev libgif-dev
 - sudo apt-get install -qq --force-yes libhdf5-serial-dev libvl-dev texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
 - sudo apt-get install -qq --force-yes libatlas-dev libatlas-base-dev liblapack-dev gfortran
-- pip install --find-links http://wheels.astropy.org/ --find-links http://wheels2.astropy.org/ --use-wheel --no-index --upgrade numpy$NUMPYSPEC scipy$SCIPYSPEC matplotlib
-- pip install --find-links http://wheels.astropy.org/ --find-links http://wheels2.astropy.org/ --use-wheel sphinx nose==1.3.0 jinja2==2.6 cpp-coveralls pygments==1.6
+- pip install --find-links https://www2.mpia.de/~robitaille/wheelhouse --use-wheel --no-index --upgrade numpy$NUMPYSPEC scipy$SCIPYSPEC matplotlib
+- pip install --find-links https://www2.mpia.de/~robitaille/wheelhouse --use-wheel sphinx nose==1.3.0 jinja2==2.6 cpp-coveralls pygments==1.6
 install:
 - python bootstrap-buildout.py
 - CFLAGS=-coverage ./bin/buildout
