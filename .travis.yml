@@ -2,13 +2,10 @@ language: python
 matrix:
   include:
   - python: 2.6
-    env:
-    - SCIPYSPEC===0.12.0
   - python: 2.7
     env:
-    - SCIPYSPEC===0.12.0
-    - secure: IrUGhi6wLNjZTcVmyvlUW4S8gvbsjd1KGTONBBFJLe2SsczfuTIp0UrwPYAu3O2mEh04ivdgpjy/sKKH+atd+mx1WGYpyc7telS+6pzzGhW+utLnknETJYN0diK1Th62GFDhbwtvjoLcn2VMT22Agh94Ob4JvD0tzlDcZpEOOEs=
-    - secure: YV9GTtTddGgvvaW/o0esSY5ov8qIZJI77+mapAR138JrUi4opSXPzVk9XzHXCRR6K1IPBJ/PZfF+optX6SGWiD634A8T1vvrt8X/RrvV0Lbu3V33Qxi7UQgVRTGbR61RlzSEe1WjVXUKdZGMz+O07hwzS/MVkY88K48h/3Gtej8=
+    - secure: f9tUziw8T7DIjfkieH0QuMOvXRRwTw+7RUMB7DJW9t8ZVrzMnlv4TAu3sT1u70JOe8XABqbPNQwssLotTfs/MOknTEUgw6Jo94pDWsbdBJKUs1e4IBOZDTDyflsdth0BOFOZEfOqCSEj05Tn+OIL0NLHmZsjmRhCt0F+n4vLgos=
+    - secure: nSvMgqBsJTqYvpwDtOmAicnpha5RI4skPixe7/Gfv11i20c41Lx73GX/At8DMgkbNVOtSPQbxLzJNGeylho0tAq8LNMxcVnTK47BCVEutA6LfNbiTb14WPkzg2F5VaS/yDal7VSyP13plJV4KbTcyMoz+8miyDtqsPWei45cfEg=
     - BOB_DOCUMENTATION_SERVER=https://www.idiap.ch/software/bob/docs/latest/bioidiap/%s/master
   - python: 3.2
     env:
