@@ -5,7 +5,7 @@ import bob.learn.boosting
 
 from ._library import FeatureExtractor, BoundingBox, prune_detections, overlapping_detections
 from .detector import Sampler, Cascade
-from .train import TrainingSet
+from .train import TrainingSet, expected_eye_positions
 
 from .detect import default_cascade, best_detection, detect_single_face
 

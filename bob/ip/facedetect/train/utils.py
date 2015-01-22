@@ -93,6 +93,16 @@ def bounding_box_from_annotation(source=None, padding=None, **kwargs):
   return BoundingBox((top, left), (bottom - top, right - left))
 
 
+def expected_eye_positions(bounding_box):
+  """Computes the expected eye positions based on the relative coordinates of the bounding box."""
+  top, left, right = default_paddings['eyes']['top'], default_paddings['eyes']['left'], default_paddings['eyes']['right']
+  inter_eye_distance = (bounding_box.size[1]) / (right - left)
+  return {
+    'reye':(bounding_box.top_f - top*inter_eye_distance, bounding_box.left_f - left/2.*inter_eye_distance),
+    'leye':(bounding_box.top_f - top*inter_eye_distance, bounding_box.right_f - right/2.*inter_eye_distance)
+  }
+
+
 
 def parallel_part(data, parallel):
   """Splits off samples from the the given data list and the given number of parallel jobs based on the SGE_TASK_ID."""

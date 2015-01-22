@@ -27,6 +27,7 @@ Functions
    bob.ip.facedetect.best_detection
    bob.ip.facedetect.overlapping_detections
    bob.ip.facedetect.prune_detections
+   bob.ip.facedetect.expected_eye_positions
 
 
 Constants

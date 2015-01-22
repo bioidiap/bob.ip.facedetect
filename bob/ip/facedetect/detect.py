@@ -2,9 +2,10 @@ import pkg_resources
 import math
 
 from .detector import Sampler, Cascade
-from ._library import prune_detections
+from ._library import BoundingBox, prune_detections, overlapping_detections
 
 import bob.io.base
+import numpy
 
 default_cascade = pkg_resources.resource_filename("bob.ip.facedetect", "MCT_cascade.hdf5")
 
@@ -99,15 +100,14 @@ def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.
   detections = []
   predictions = []
   # get the detection scores for the image
-  for prediction, bounding_box in sampler.iterate_cascade(cascade, image):
-    if prediction_threshold is None or prediction > prediction_threshold:
-      detections.append(bounding_box)
-      predictions.append(prediction)
+  for prediction, bounding_box in sampler.iterate_cascade(cascade, image, None):
+    detections.append(bounding_box)
+    predictions.append(prediction)
 
   if not detections:
     return None
 
   # compute average over the best locations
-  bb, value = best_detection(detections, predictions, best_detection_overlap)
+  bb, value = best_detection(detections, predictions, minimum_overlap)
 
   return bb
