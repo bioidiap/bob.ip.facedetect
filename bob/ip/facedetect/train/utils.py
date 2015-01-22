@@ -40,7 +40,7 @@ def bounding_box_from_annotation(source=None, padding=None, **kwargs):
 
   if source is None:
     # try to estimate the source
-    for s,k in available_sources.iteritems():
+    for s,k in available_sources.items():
       # check if the according keyword arguments are given
       if k[0] in kwargs and k[1] in kwargs:
         # check if we already assigned a source before
