@@ -13,6 +13,8 @@ matrix:
   - python: 3.3
     env:
     - PYVER=3
+virtualenv:
+  system_site_packages: true
 before_install:
 - sudo add-apt-repository -y ppa:biometrics/bob
 - sudo apt-get update -qq
