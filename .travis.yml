@@ -7,14 +7,14 @@ matrix:
     - secure: f9tUziw8T7DIjfkieH0QuMOvXRRwTw+7RUMB7DJW9t8ZVrzMnlv4TAu3sT1u70JOe8XABqbPNQwssLotTfs/MOknTEUgw6Jo94pDWsbdBJKUs1e4IBOZDTDyflsdth0BOFOZEfOqCSEj05Tn+OIL0NLHmZsjmRhCt0F+n4vLgos=
     - secure: nSvMgqBsJTqYvpwDtOmAicnpha5RI4skPixe7/Gfv11i20c41Lx73GX/At8DMgkbNVOtSPQbxLzJNGeylho0tAq8LNMxcVnTK47BCVEutA6LfNbiTb14WPkzg2F5VaS/yDal7VSyP13plJV4KbTcyMoz+8miyDtqsPWei45cfEg=
     - BOB_DOCUMENTATION_SERVER=https://www.idiap.ch/software/bob/docs/latest/bioidiap/%s/master
-  - python: 3.2
-    env:
-    - NUMPYSPEC===1.8.0
-    - SCIPYSPEC===0.13.1
-  - python: 3.3
-    env:
-    - NUMPYSPEC===1.8.0
-    - SCIPYSPEC===0.13.1
+#  - python: 3.2
+#    env:
+#    - NUMPYSPEC===1.8.0
+#    - SCIPYSPEC===0.13.1
+#  - python: 3.3
+#    env:
+#    - NUMPYSPEC===1.8.0
+#    - SCIPYSPEC===0.13.1
 before_install:
 - sudo add-apt-repository -y ppa:biometrics/bob
 - sudo apt-get update -qq
@@ -22,7 +22,7 @@ before_install:
 - sudo apt-get install -qq --force-yes libhdf5-serial-dev libvl-dev texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
 - sudo apt-get install -qq --force-yes libatlas-dev libatlas-base-dev liblapack-dev gfortran
 - if [ -n "${NUMPYSPEC}" ]; then pip install --find-links http://wheels.astropy.org/ --find-links http://wheels2.astropy.org/ --use-wheel numpy$NUMPYSPEC; fi
-- pip install --find-links http://wheels.astropy.org/ --find-links http://wheels2.astropy.org/ --use-wheel scipy$SCIPYSPEC matplotlib
+- pip install --find-links http://wheels.astropy.org/ --find-links http://wheels2.astropy.org/ --use-wheel scipy$SCIPYSPEC matplotlib==1.3.1
 - pip install --find-links http://wheels.astropy.org/ --find-links http://wheels2.astropy.org/ --use-wheel sphinx nose==1.3.0 jinja2==2.6 cpp-coveralls pygments==1.6
 install:
 - python bootstrap-buildout.py
