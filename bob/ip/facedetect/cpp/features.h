@@ -1,3 +1,6 @@
+#ifndef BOB_IP_FACEDETECT_FEATURES_H
+#define BOB_IP_FACEDETECT_FEATURES_H
+
 #include <bob.io.base/HDF5File.h>
 #include <bob.ip.base/LBP.h>
 #include <bob.ip.base/IntegralImage.h>
@@ -5,6 +8,8 @@
 #include <bob.core/array_convert.h>
 #include <boost/shared_ptr.hpp>
 #include <limits.h>
+
+namespace bob { namespace ip { namespace facedetect {
 
 class BoundingBox{
   public:
@@ -157,3 +162,6 @@ template <typename T>
     }
   }
 
+} } } // namespaces
+
+#endif // BOB_IP_FACEDETECT_FEATURES_H

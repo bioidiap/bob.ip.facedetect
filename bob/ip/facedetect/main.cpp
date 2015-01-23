@@ -23,7 +23,7 @@ bob::extension::FunctionDoc prune_detections_doc = bob::extension::FunctionDoc(
 .add_return("pruned_detections", "[:py:class:`BoundingBox`]", "The list of pruned bounding boxes")
 .add_return("pruned_predictions", "array_like <float, 1D>", "The according predictions (qualities, weights, ...)")
 ;
-PyObject* prune_detections(PyObject*, PyObject* args, PyObject* kwargs) {
+PyObject* PyBobIpFacedetect_PruneDetections(PyObject*, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = prune_detections_doc.kwlist();
 
@@ -38,25 +38,25 @@ PyObject* prune_detections(PyObject*, PyObject* args, PyObject* kwargs) {
   if (!p) return 0;
 
   // get bounding box list
-  std::vector<boost::shared_ptr<BoundingBox>> boxes(PyList_GET_SIZE(list)), pruned_boxes;
+  std::vector<boost::shared_ptr<bob::ip::facedetect::BoundingBox>> boxes(PyList_GET_SIZE(list)), pruned_boxes;
   for (Py_ssize_t i = 0; i < PyList_GET_SIZE(list); ++i){
     PyObject* v = PyList_GET_ITEM(list, i);
-    if (!BoundingBox_Check(v)){
+    if (!PyBobIpFacedetectBoundingBox_Check(v)){
       PyErr_Format(PyExc_TypeError, "prune_detections : expected a list of BoundingBox objects, but object number %d is of type `%s'", (int)i, Py_TYPE(v)->tp_name);
       return 0;
     }
-    boxes[i] = ((BoundingBoxObject*)v)->cxx;
+    boxes[i] = ((PyBobIpFacedetectBoundingBoxObject*)v)->cxx;
   }
 
   blitz::Array<double,1> pruned_predictions;
 
   // perform pruning
-  pruneDetections(boxes, *p, threshold, pruned_boxes, pruned_predictions, number_of_detections);
+  bob::ip::facedetect::pruneDetections(boxes, *p, threshold, pruned_boxes, pruned_predictions, number_of_detections);
 
   // re-transform boxes into python list
   PyObject* pruned = PyList_New(pruned_boxes.size());
   for (Py_ssize_t i = 0; i < PyList_GET_SIZE(pruned); ++i){
-    BoundingBoxObject* bb = reinterpret_cast<BoundingBoxObject*>(BoundingBox_Type.tp_alloc(&BoundingBox_Type, 0));
+    PyBobIpFacedetectBoundingBoxObject* bb = reinterpret_cast<PyBobIpFacedetectBoundingBoxObject*>(PyBobIpFacedetectBoundingBox_Type.tp_alloc(&PyBobIpFacedetectBoundingBox_Type, 0));
     bb->cxx = pruned_boxes[i];
     PyList_SET_ITEM(pruned, i, Py_BuildValue("O", bb));
   }
@@ -80,7 +80,7 @@ bob::extension::FunctionDoc overlapping_detections_doc = bob::extension::Functio
 .add_return("overlapped_detections", "[:py:class:`BoundingBox`]", "The list of overlapping bounding boxes")
 .add_return("overlapped_predictions", "array_like <float, 1D>", "The according predictions (qualities, weights, ...)")
 ;
-PyObject* overlapping_detections(PyObject*, PyObject* args, PyObject* kwargs) {
+PyObject* PyBobIpFacedetect_OverlappingDetections(PyObject*, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = overlapping_detections_doc.kwlist();
 
@@ -94,25 +94,25 @@ PyObject* overlapping_detections(PyObject*, PyObject* args, PyObject* kwargs) {
   if (!p) return 0;
 
   // get bounding box list
-  std::vector<boost::shared_ptr<BoundingBox>> boxes(PyList_GET_SIZE(list)), overlapped_boxes;
+  std::vector<boost::shared_ptr<bob::ip::facedetect::BoundingBox>> boxes(PyList_GET_SIZE(list)), overlapped_boxes;
   for (Py_ssize_t i = 0; i < PyList_GET_SIZE(list); ++i){
     PyObject* v = PyList_GET_ITEM(list, i);
-    if (!BoundingBox_Check(v)){
+    if (!PyBobIpFacedetectBoundingBox_Check(v)){
       PyErr_Format(PyExc_TypeError, "overlapping_detections : expected a list of BoundingBox objects, but object number %d is of type `%s'", (int)i, Py_TYPE(v)->tp_name);
       return 0;
     }
-    boxes[i] = ((BoundingBoxObject*)v)->cxx;
+    boxes[i] = ((PyBobIpFacedetectBoundingBoxObject*)v)->cxx;
   }
 
   blitz::Array<double,1> overlapped_predictions;
 
   // perform pruning
-  bestOverlap(boxes, *p, threshold, overlapped_boxes, overlapped_predictions);
+  bob::ip::facedetect::bestOverlap(boxes, *p, threshold, overlapped_boxes, overlapped_predictions);
 
   // re-transform boxes into python list
   PyObject* overlapped = PyList_New(overlapped_boxes.size());
   for (Py_ssize_t i = 0; i < PyList_GET_SIZE(overlapped); ++i){
-    BoundingBoxObject* bb = reinterpret_cast<BoundingBoxObject*>(BoundingBox_Type.tp_alloc(&BoundingBox_Type, 0));
+    PyBobIpFacedetectBoundingBoxObject* bb = reinterpret_cast<PyBobIpFacedetectBoundingBoxObject*>(PyBobIpFacedetectBoundingBox_Type.tp_alloc(&PyBobIpFacedetectBoundingBox_Type, 0));
     bb->cxx = overlapped_boxes[i];
     PyList_SET_ITEM(overlapped, i, Py_BuildValue("O", bb));
   }
@@ -127,13 +127,13 @@ PyObject* overlapping_detections(PyObject*, PyObject* args, PyObject* kwargs) {
 static PyMethodDef module_methods[] = {
   {
     prune_detections_doc.name(),
-    (PyCFunction)prune_detections,
+    (PyCFunction)PyBobIpFacedetect_PruneDetections,
     METH_VARARGS|METH_KEYWORDS,
     prune_detections_doc.doc()
   },
   {
     overlapping_detections_doc.name(),
-    (PyCFunction)overlapping_detections,
+    (PyCFunction)PyBobIpFacedetect_OverlappingDetections,
     METH_VARARGS|METH_KEYWORDS,
     overlapping_detections_doc.doc()
   },
@@ -165,8 +165,8 @@ static PyObject* create_module (void) {
   auto module_ = make_safe(module); ///< protects against early returns
 
   if (PyModule_AddStringConstant(module, "__version__", BOB_EXT_MODULE_VERSION) < 0) return 0;
-  if (!init_BoundingBox(module)) return 0;
-  if (!init_FeatureExtractor(module)) return 0;
+  if (!init_PyBobIpFacedetectBoundingBox(module)) return 0;
+  if (!init_PyBobIpFacedetectFeatureExtractor(module)) return 0;
 
   /* imports bob.blitz C-API + dependencies */
   if (import_bob_blitz() < 0) return 0;

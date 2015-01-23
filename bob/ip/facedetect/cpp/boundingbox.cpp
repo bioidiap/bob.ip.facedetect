@@ -1,7 +1,7 @@
 #include "features.h"
 #include <bob.core/logging.h>
 
-boost::shared_ptr<BoundingBox> BoundingBox::overlap(const BoundingBox& other) const{
+boost::shared_ptr<bob::ip::facedetect::BoundingBox> bob::ip::facedetect::BoundingBox::overlap(const BoundingBox& other) const{
   // compute intersection rectangle
   double t = std::max(top(), other.top()),
          b = std::min(bottom(), other.bottom()),
@@ -10,7 +10,7 @@ boost::shared_ptr<BoundingBox> BoundingBox::overlap(const BoundingBox& other) co
   return boost::shared_ptr<BoundingBox>(new BoundingBox(t, l, b-t, r-l));
 }
 
-double BoundingBox::similarity(const BoundingBox& other) const{
+double bob::ip::facedetect::BoundingBox::similarity(const BoundingBox& other) const{
   // compute intersection rectangle
   double t = std::max(top(), other.top()),
          b = std::min(bottom(), other.bottom()),
@@ -31,7 +31,7 @@ bool gt(const indexer& a, const indexer& b){
   return a.first > b.first;
 }
 
-void pruneDetections(const std::vector<boost::shared_ptr<BoundingBox>>& boxes, const blitz::Array<double, 1>& weights, double threshold, std::vector<boost::shared_ptr<BoundingBox>>& pruned_boxes, blitz::Array<double, 1>& pruned_weights, const int number_of_detections){
+void bob::ip::facedetect::pruneDetections(const std::vector<boost::shared_ptr<BoundingBox>>& boxes, const blitz::Array<double, 1>& weights, double threshold, std::vector<boost::shared_ptr<BoundingBox>>& pruned_boxes, blitz::Array<double, 1>& pruned_weights, const int number_of_detections){
   // sort boxes
   std::vector<indexer> sorted(boxes.size());
   for (int i = boxes.size(); i--;){
@@ -73,7 +73,7 @@ void pruneDetections(const std::vector<boost::shared_ptr<BoundingBox>>& boxes, c
   // done.
 }
 
-void bestOverlap(const std::vector<boost::shared_ptr<BoundingBox>>& boxes, const blitz::Array<double, 1>& weights, double threshold, std::vector<boost::shared_ptr<BoundingBox>>& overlapping_boxes, blitz::Array<double, 1>& overlapping_weights){
+void bob::ip::facedetect::bestOverlap(const std::vector<boost::shared_ptr<BoundingBox>>& boxes, const blitz::Array<double, 1>& weights, double threshold, std::vector<boost::shared_ptr<BoundingBox>>& overlapping_boxes, blitz::Array<double, 1>& overlapping_weights){
   if (boxes.empty()){
     bob::core::error << "Cannot find any box to compute overlaps" << std::endl;
     return;

@@ -33,7 +33,7 @@ static auto BoundingBox_doc = bob::extension::ClassDoc(
 );
 
 
-static int BoundingBox_init(BoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
+static int PyBobIpFacedetectBoundingBox_init(PyBobIpFacedetectBoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
 
   char** kwlist1 = BoundingBox_doc.kwlist(0);
@@ -44,37 +44,37 @@ static int BoundingBox_init(BoundingBoxObject* self, PyObject* args, PyObject* k
 
   if (nargs == 1){
     // copy construct
-    BoundingBoxObject* bb;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", kwlist2, &BoundingBox_Type, &bb)) return -1;
+    PyBobIpFacedetectBoundingBoxObject* bb;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", kwlist2, &PyBobIpFacedetectBoundingBox_Type, &bb)) return -1;
 
-    self->cxx.reset(new BoundingBox(*bb->cxx));
+    self->cxx.reset(new bob::ip::facedetect::BoundingBox(*bb->cxx));
     return 0;
   }
 
   blitz::TinyVector<double,2> topleft, size;
   if (!(PyArg_ParseTupleAndKeywords(args, kwargs, "(dd)|(dd)", kwlist1, &topleft[0], &topleft[1], &size[0], &size[1]))) return -1;
-  self->cxx.reset(new BoundingBox(topleft[0], topleft[1], size[0], size[1]));
+  self->cxx.reset(new bob::ip::facedetect::BoundingBox(topleft[0], topleft[1], size[0], size[1]));
   return 0;
 
   BOB_CATCH_MEMBER("cannot create BoundingBox", -1)
 }
 
-static void BoundingBox_delete(BoundingBoxObject* self) {
+static void PyBobIpFacedetectBoundingBox_delete(PyBobIpFacedetectBoundingBoxObject* self) {
   self->cxx.reset();
   Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
-int BoundingBox_Check(PyObject* o) {
-  return PyObject_IsInstance(o, reinterpret_cast<PyObject*>(&BoundingBox_Type));
+int PyBobIpFacedetectBoundingBox_Check(PyObject* o) {
+  return PyObject_IsInstance(o, reinterpret_cast<PyObject*>(&PyBobIpFacedetectBoundingBox_Type));
 }
 
-static PyObject* BoundingBox_RichCompare(BoundingBoxObject* self, PyObject* other, int op) {
+static PyObject* PyBobIpFacedetectBoundingBox_RichCompare(PyBobIpFacedetectBoundingBoxObject* self, PyObject* other, int op) {
   BOB_TRY
-  if (!BoundingBox_Check(other)) {
+  if (!PyBobIpFacedetectBoundingBox_Check(other)) {
     PyErr_Format(PyExc_TypeError, "cannot compare `%s' with `%s'", Py_TYPE(self)->tp_name, Py_TYPE(other)->tp_name);
     return 0;
   }
-  auto other_ = reinterpret_cast<BoundingBoxObject*>(other);
+  auto other_ = reinterpret_cast<PyBobIpFacedetectBoundingBoxObject*>(other);
   switch (op) {
     case Py_EQ:
       if (*self->cxx==*other_->cxx) Py_RETURN_TRUE; else Py_RETURN_FALSE;
@@ -87,7 +87,7 @@ static PyObject* BoundingBox_RichCompare(BoundingBoxObject* self, PyObject* othe
   BOB_CATCH_MEMBER("cannot compare BoundingBox objects", 0)
 }
 
-PyObject* BoundingBox_Str(BoundingBoxObject* self) {
+PyObject* PyBobIpFacedetectBoundingBox_Str(PyBobIpFacedetectBoundingBoxObject* self) {
   BOB_TRY
   return PyString_FromString((boost::format("<BB topleft=(%3.2f, %3.2f), bottomright=(%3.2f, %3.2f)>") % self->cxx->top() % self->cxx->left() % self->cxx->bottom() % self->cxx->right()).str().c_str());
   BOB_CATCH_MEMBER("cannot create __repr__ string", 0)
@@ -103,7 +103,7 @@ static auto topleft = bob::extension::VariableDoc(
   "(int, int)",
   "The top-left position of the bounding box as integral values, read access only"
 );
-PyObject* BoundingBox_topleft(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_topleft(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("ii", self->cxx->itop(), self->cxx->ileft());
   BOB_CATCH_MEMBER("topleft could not be read", 0)
@@ -114,7 +114,7 @@ static auto bottomright = bob::extension::VariableDoc(
   "(int, int)",
   "The bottom-right position of the bounding box (which is just outside the bounding box) as integral values, read access only"
 );
-PyObject* BoundingBox_bottomright(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_bottomright(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("ii", self->cxx->ibottom(), self->cxx->iright());
   BOB_CATCH_MEMBER("bottomright could not be read", 0)
@@ -125,7 +125,7 @@ static auto top = bob::extension::VariableDoc(
   "int",
   "The top position of the bounding box as int, read access only"
 );
-PyObject* BoundingBox_top(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_top(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("i", self->cxx->itop());
   BOB_CATCH_MEMBER("top could not be read", 0)
@@ -136,7 +136,7 @@ static auto left = bob::extension::VariableDoc(
   "int",
   "The left position of the bounding box as int, read access only"
 );
-PyObject* BoundingBox_left(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_left(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("i", self->cxx->ileft());
   BOB_CATCH_MEMBER("left could not be read", 0)
@@ -147,7 +147,7 @@ static auto bottom = bob::extension::VariableDoc(
   "int",
   "The bottom position of the bounding box (which is just outside the bounding box) as int, read access only"
 );
-PyObject* BoundingBox_bottom(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_bottom(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("i", self->cxx->ibottom());
   BOB_CATCH_MEMBER("bottom_f could not be read", 0)
@@ -158,7 +158,7 @@ static auto right = bob::extension::VariableDoc(
   "int",
   "The right position of the bounding box (which is just outside the bounding box) as int, read access only"
 );
-PyObject* BoundingBox_right(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_right(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("i", self->cxx->iright());
   BOB_CATCH_MEMBER("right_f could not be read", 0)
@@ -170,7 +170,7 @@ static auto size = bob::extension::VariableDoc(
   "(int, int)",
   "The size of the bounding box as integral values, read access only"
 );
-PyObject* BoundingBox_size(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_size(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("ii", self->cxx->iheight(), self->cxx->iwidth());
   BOB_CATCH_MEMBER("topleft could not be read", 0)
@@ -182,7 +182,7 @@ static auto topleft_f = bob::extension::VariableDoc(
   "(float, float)",
   "The top-left position of the bounding box as float values, read access only"
 );
-PyObject* BoundingBox_topleft_f(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_topleft_f(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("dd", self->cxx->top(), self->cxx->left());
   BOB_CATCH_MEMBER("topleft_f could not be read", 0)
@@ -193,7 +193,7 @@ static auto bottomright_f = bob::extension::VariableDoc(
   "(float, float)",
   "The bottom-right position of the bounding box (which is just outside the bounding box) as float values, read access only"
 );
-PyObject* BoundingBox_bottomright_f(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_bottomright_f(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("dd", self->cxx->bottom(), self->cxx->right());
   BOB_CATCH_MEMBER("bottomright_f could not be read", 0)
@@ -204,7 +204,7 @@ static auto top_f = bob::extension::VariableDoc(
   "float",
   "The top position of the bounding box as float, read access only"
 );
-PyObject* BoundingBox_top_f(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_top_f(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("d", self->cxx->top());
   BOB_CATCH_MEMBER("top_f could not be read", 0)
@@ -215,7 +215,7 @@ static auto left_f = bob::extension::VariableDoc(
   "float",
   "The left position of the bounding box as float, read access only"
 );
-PyObject* BoundingBox_left_f(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_left_f(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("d", self->cxx->left());
   BOB_CATCH_MEMBER("left_f could not be read", 0)
@@ -226,7 +226,7 @@ static auto bottom_f = bob::extension::VariableDoc(
   "float",
   "The bottom position of the bounding box (which is just outside the bounding box) as float, read access only"
 );
-PyObject* BoundingBox_bottom_f(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_bottom_f(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("d", self->cxx->bottom());
   BOB_CATCH_MEMBER("bottom_f could not be read", 0)
@@ -237,7 +237,7 @@ static auto right_f = bob::extension::VariableDoc(
   "float",
   "The right position of the bounding box (which is just outside the bounding box) as float, read access only"
 );
-PyObject* BoundingBox_right_f(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_right_f(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("d", self->cxx->right());
   BOB_CATCH_MEMBER("right_f could not be read", 0)
@@ -248,7 +248,7 @@ static auto size_f = bob::extension::VariableDoc(
   "(float, float)",
   "The size of the bounding box as float values, read access only"
 );
-PyObject* BoundingBox_size_f(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_size_f(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("dd", self->cxx->height(), self->cxx->width());
   BOB_CATCH_MEMBER("size_f could not be read", 0)
@@ -260,7 +260,7 @@ static auto center = bob::extension::VariableDoc(
   "(float, float)",
   "The center of the bounding box (as float values), read access only"
 );
-PyObject* BoundingBox_center(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_center(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("dd", self->cxx->center()[0], self->cxx->center()[1]);
   BOB_CATCH_MEMBER("center could not be read", 0)
@@ -271,121 +271,121 @@ static auto area = bob::extension::VariableDoc(
   "float",
   "The area (height x width) of the bounding box, read access only"
 );
-PyObject* BoundingBox_area(BoundingBoxObject* self, void*){
+PyObject* PyBobIpFacedetectBoundingBox_area(PyBobIpFacedetectBoundingBoxObject* self, void*){
   BOB_TRY
   return Py_BuildValue("d", self->cxx->area());
   BOB_CATCH_MEMBER("area could not be read", 0)
 }
 
-static PyGetSetDef BoundingBox_getseters[] = {
+static PyGetSetDef PyBobIpFacedetectBoundingBox_getseters[] = {
     {
       topleft.name(),
-      (getter)BoundingBox_topleft,
+      (getter)PyBobIpFacedetectBoundingBox_topleft,
       0,
       topleft.doc(),
       0
     },
     {
       top.name(),
-      (getter)BoundingBox_top,
+      (getter)PyBobIpFacedetectBoundingBox_top,
       0,
       top.doc(),
       0
     },
     {
       left.name(),
-      (getter)BoundingBox_left,
+      (getter)PyBobIpFacedetectBoundingBox_left,
       0,
       left.doc(),
       0
     },
     {
       topleft_f.name(),
-      (getter)BoundingBox_topleft_f,
+      (getter)PyBobIpFacedetectBoundingBox_topleft_f,
       0,
       topleft_f.doc(),
       0
     },
     {
       top_f.name(),
-      (getter)BoundingBox_top_f,
+      (getter)PyBobIpFacedetectBoundingBox_top_f,
       0,
       top_f.doc(),
       0
     },
     {
       left_f.name(),
-      (getter)BoundingBox_left_f,
+      (getter)PyBobIpFacedetectBoundingBox_left_f,
       0,
       left_f.doc(),
       0
     },
     {
       bottomright.name(),
-      (getter)BoundingBox_bottomright,
+      (getter)PyBobIpFacedetectBoundingBox_bottomright,
       0,
       bottomright.doc(),
       0
     },
     {
       bottom.name(),
-      (getter)BoundingBox_bottom,
+      (getter)PyBobIpFacedetectBoundingBox_bottom,
       0,
       bottom.doc(),
       0
     },
     {
       right.name(),
-      (getter)BoundingBox_right,
+      (getter)PyBobIpFacedetectBoundingBox_right,
       0,
       right.doc(),
       0
     },
     {
       bottomright_f.name(),
-      (getter)BoundingBox_bottomright_f,
+      (getter)PyBobIpFacedetectBoundingBox_bottomright_f,
       0,
       bottomright_f.doc(),
       0
     },
     {
       bottom_f.name(),
-      (getter)BoundingBox_bottom_f,
+      (getter)PyBobIpFacedetectBoundingBox_bottom_f,
       0,
       bottom_f.doc(),
       0
     },
     {
       right_f.name(),
-      (getter)BoundingBox_right_f,
+      (getter)PyBobIpFacedetectBoundingBox_right_f,
       0,
       right_f.doc(),
       0
     },
     {
       size.name(),
-      (getter)BoundingBox_size,
+      (getter)PyBobIpFacedetectBoundingBox_size,
       0,
       size.doc(),
       0
     },
     {
       size_f.name(),
-      (getter)BoundingBox_size_f,
+      (getter)PyBobIpFacedetectBoundingBox_size_f,
       0,
       size_f.doc(),
       0
     },
     {
       center.name(),
-      (getter)BoundingBox_center,
+      (getter)PyBobIpFacedetectBoundingBox_center,
       0,
       center.doc(),
       0
     },
     {
       area.name(),
-      (getter)BoundingBox_area,
+      (getter)PyBobIpFacedetectBoundingBox_area,
       0,
       area.doc(),
       0
@@ -408,13 +408,13 @@ static auto shift = bob::extension::FunctionDoc(
 .add_return("bounding_box", ":py:class:`BoundingBox`", "The shifted version of this bounding box")
 ;
 
-static PyObject* BoundingBox_shift(BoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectBoundingBox_shift(PyBobIpFacedetectBoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = shift.kwlist();
 
   blitz::TinyVector<double,2> offset;
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "(dd)", kwlist, &offset[0], &offset[1])) return 0;
-  BoundingBoxObject* ret = reinterpret_cast<BoundingBoxObject*>(BoundingBox_Type.tp_alloc(&BoundingBox_Type, 0));
+  PyBobIpFacedetectBoundingBoxObject* ret = reinterpret_cast<PyBobIpFacedetectBoundingBoxObject*>(PyBobIpFacedetectBoundingBox_Type.tp_alloc(&PyBobIpFacedetectBoundingBox_Type, 0));
   ret->cxx = self->cxx->shift(offset[0], offset[1]);
 
   return (PyObject*)ret;
@@ -434,7 +434,7 @@ static auto scale = bob::extension::FunctionDoc(
 .add_return("bounding_box", ":py:class:`BoundingBox`", "The scaled version of this bounding box")
 ;
 
-static PyObject* BoundingBox_scale(BoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectBoundingBox_scale(PyBobIpFacedetectBoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = scale.kwlist();
 
@@ -444,7 +444,7 @@ static PyObject* BoundingBox_scale(BoundingBoxObject* self, PyObject* args, PyOb
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "d|O!", kwlist, &scale, &PyBool_Type, &centered)){
     return 0;
   }
-  BoundingBoxObject* ret = reinterpret_cast<BoundingBoxObject*>(BoundingBox_Type.tp_alloc(&BoundingBox_Type, 0));
+  PyBobIpFacedetectBoundingBoxObject* ret = reinterpret_cast<PyBobIpFacedetectBoundingBoxObject*>(PyBobIpFacedetectBoundingBox_Type.tp_alloc(&PyBobIpFacedetectBoundingBox_Type, 0));
   if (f(centered))
     ret->cxx = self->cxx->scaleCentered(scale);
   else
@@ -463,7 +463,7 @@ static auto mirror_x = bob::extension::FunctionDoc(
 .add_parameter("width", "int", "The width of the image at which this bounding box should be mirrored")
 .add_return("bounding_box", ":py:class:`BoundingBox`", "The mirrored version of this bounding box")
 ;
-static PyObject* BoundingBox_mirror_x(BoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectBoundingBox_mirror_x(PyBobIpFacedetectBoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = mirror_x.kwlist();
 
@@ -472,7 +472,7 @@ static PyObject* BoundingBox_mirror_x(BoundingBoxObject* self, PyObject* args, P
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i", kwlist, &width)){
     return 0;
   }
-  BoundingBoxObject* ret = reinterpret_cast<BoundingBoxObject*>(BoundingBox_Type.tp_alloc(&BoundingBox_Type, 0));
+  PyBobIpFacedetectBoundingBoxObject* ret = reinterpret_cast<PyBobIpFacedetectBoundingBoxObject*>(PyBobIpFacedetectBoundingBox_Type.tp_alloc(&PyBobIpFacedetectBoundingBox_Type, 0));
   ret->cxx = self->cxx->mirrorX(width);
   return Py_BuildValue("N", ret);
   BOB_CATCH_MEMBER("cannot mirror horizontally", 0)
@@ -488,15 +488,15 @@ static auto overlap = bob::extension::FunctionDoc(
 .add_parameter("other", ":py:class:`BoundingBox`", "The other bounding box to compute the overlap with")
 .add_return("bounding_box", ":py:class:`BoundingBox`", "The overlap between this and the other bounding box")
 ;
-static PyObject* BoundingBox_overlap(BoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectBoundingBox_overlap(PyBobIpFacedetectBoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = overlap.kwlist();
 
-  BoundingBoxObject* other;
+  PyBobIpFacedetectBoundingBoxObject* other;
   // by shape
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", kwlist, &BoundingBox_Type, &other)) return 0;
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", kwlist, &PyBobIpFacedetectBoundingBox_Type, &other)) return 0;
 
-  BoundingBoxObject* ret = reinterpret_cast<BoundingBoxObject*>(BoundingBox_Type.tp_alloc(&BoundingBox_Type, 0));
+  PyBobIpFacedetectBoundingBoxObject* ret = reinterpret_cast<PyBobIpFacedetectBoundingBoxObject*>(PyBobIpFacedetectBoundingBox_Type.tp_alloc(&PyBobIpFacedetectBoundingBox_Type, 0));
   ret->cxx = self->cxx->overlap(*other->cxx);
   return Py_BuildValue("N", ret);
   BOB_CATCH_MEMBER("cannot compute overlap", 0)
@@ -512,13 +512,13 @@ static auto similarity = bob::extension::FunctionDoc(
 .add_parameter("other", ":py:class:`BoundingBox`", "The other bounding box to compute the overlap with")
 .add_return("sim", "float", "The Jaccard similarity index between this and the given BoundingBox")
 ;
-static PyObject* BoundingBox_similarity(BoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectBoundingBox_similarity(PyBobIpFacedetectBoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = similarity.kwlist();
 
-  BoundingBoxObject* other;
+  PyBobIpFacedetectBoundingBoxObject* other;
   // by shape
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", kwlist, &BoundingBox_Type, &other)){
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", kwlist, &PyBobIpFacedetectBoundingBox_Type, &other)){
     return 0;
   }
 
@@ -537,7 +537,7 @@ static auto is_valid_for = bob::extension::FunctionDoc(
 .add_parameter("size", "(int, int)", "The size of the image to test")
 .add_return("valid", "bool", "``True`` if the bounding box is inside the image boundaries, ``False`` otherwise")
 ;
-static PyObject* BoundingBox_is_valid_for(BoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectBoundingBox_is_valid_for(PyBobIpFacedetectBoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = is_valid_for.kwlist();
 
@@ -554,40 +554,40 @@ static PyObject* BoundingBox_is_valid_for(BoundingBoxObject* self, PyObject* arg
 }
 
 
-static PyMethodDef BoundingBox_methods[] = {
+static PyMethodDef PyBobIpFacedetectBoundingBox_methods[] = {
   {
     scale.name(),
-    (PyCFunction)BoundingBox_scale,
+    (PyCFunction)PyBobIpFacedetectBoundingBox_scale,
     METH_VARARGS|METH_KEYWORDS,
     scale.doc()
   },
   {
     shift.name(),
-    (PyCFunction)BoundingBox_shift,
+    (PyCFunction)PyBobIpFacedetectBoundingBox_shift,
     METH_VARARGS|METH_KEYWORDS,
     shift.doc()
   },
   {
     mirror_x.name(),
-    (PyCFunction)BoundingBox_mirror_x,
+    (PyCFunction)PyBobIpFacedetectBoundingBox_mirror_x,
     METH_VARARGS|METH_KEYWORDS,
     mirror_x.doc()
   },
   {
     overlap.name(),
-    (PyCFunction)BoundingBox_overlap,
+    (PyCFunction)PyBobIpFacedetectBoundingBox_overlap,
     METH_VARARGS|METH_KEYWORDS,
     overlap.doc()
   },
   {
     similarity.name(),
-    (PyCFunction)BoundingBox_similarity,
+    (PyCFunction)PyBobIpFacedetectBoundingBox_similarity,
     METH_VARARGS|METH_KEYWORDS,
     similarity.doc()
   },
   {
     is_valid_for.name(),
-    (PyCFunction)BoundingBox_is_valid_for,
+    (PyCFunction)PyBobIpFacedetectBoundingBox_is_valid_for,
     METH_VARARGS|METH_KEYWORDS,
     is_valid_for.doc()
   },
@@ -600,33 +600,33 @@ static PyMethodDef BoundingBox_methods[] = {
 /******************************************************************/
 
 // Define the DCTFeatures type struct; will be initialized later
-PyTypeObject BoundingBox_Type = {
+PyTypeObject PyBobIpFacedetectBoundingBox_Type = {
   PyVarObject_HEAD_INIT(0,0)
   0
 };
 
-bool init_BoundingBox(PyObject* module)
+bool init_PyBobIpFacedetectBoundingBox(PyObject* module)
 {
   // initialize the type struct
-  BoundingBox_Type.tp_name = BoundingBox_doc.name();
-  BoundingBox_Type.tp_basicsize = sizeof(BoundingBoxObject);
-  BoundingBox_Type.tp_flags = Py_TPFLAGS_DEFAULT;
-  BoundingBox_Type.tp_doc = BoundingBox_doc.doc();
-  BoundingBox_Type.tp_repr = (reprfunc)BoundingBox_Str;
-  BoundingBox_Type.tp_str = (reprfunc)BoundingBox_Str;
+  PyBobIpFacedetectBoundingBox_Type.tp_name = BoundingBox_doc.name();
+  PyBobIpFacedetectBoundingBox_Type.tp_basicsize = sizeof(PyBobIpFacedetectBoundingBoxObject);
+  PyBobIpFacedetectBoundingBox_Type.tp_flags = Py_TPFLAGS_DEFAULT;
+  PyBobIpFacedetectBoundingBox_Type.tp_doc = BoundingBox_doc.doc();
+  PyBobIpFacedetectBoundingBox_Type.tp_repr = (reprfunc)PyBobIpFacedetectBoundingBox_Str;
+  PyBobIpFacedetectBoundingBox_Type.tp_str = (reprfunc)PyBobIpFacedetectBoundingBox_Str;
 
   // set the functions
-  BoundingBox_Type.tp_new = PyType_GenericNew;
-  BoundingBox_Type.tp_init = reinterpret_cast<initproc>(BoundingBox_init);
-  BoundingBox_Type.tp_dealloc = reinterpret_cast<destructor>(BoundingBox_delete);
-  BoundingBox_Type.tp_richcompare = reinterpret_cast<richcmpfunc>(BoundingBox_RichCompare);
-  BoundingBox_Type.tp_methods = BoundingBox_methods;
-  BoundingBox_Type.tp_getset = BoundingBox_getseters;
+  PyBobIpFacedetectBoundingBox_Type.tp_new = PyType_GenericNew;
+  PyBobIpFacedetectBoundingBox_Type.tp_init = reinterpret_cast<initproc>(PyBobIpFacedetectBoundingBox_init);
+  PyBobIpFacedetectBoundingBox_Type.tp_dealloc = reinterpret_cast<destructor>(PyBobIpFacedetectBoundingBox_delete);
+  PyBobIpFacedetectBoundingBox_Type.tp_richcompare = reinterpret_cast<richcmpfunc>(PyBobIpFacedetectBoundingBox_RichCompare);
+  PyBobIpFacedetectBoundingBox_Type.tp_methods = PyBobIpFacedetectBoundingBox_methods;
+  PyBobIpFacedetectBoundingBox_Type.tp_getset = PyBobIpFacedetectBoundingBox_getseters;
 
   // check that everything is fine
-  if (PyType_Ready(&BoundingBox_Type) < 0) return false;
+  if (PyType_Ready(&PyBobIpFacedetectBoundingBox_Type) < 0) return false;
 
   // add the type to the module
-  Py_INCREF(&BoundingBox_Type);
-  return PyModule_AddObject(module, "BoundingBox", (PyObject*)&BoundingBox_Type) >= 0;
+  Py_INCREF(&PyBobIpFacedetectBoundingBox_Type);
+  return PyModule_AddObject(module, "BoundingBox", (PyObject*)&PyBobIpFacedetectBoundingBox_Type) >= 0;
 }

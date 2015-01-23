@@ -49,7 +49,7 @@ static auto FeatureExtractor_doc = bob::extension::ClassDoc(
 );
 
 
-static int FeatureExtractor_init(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
+static int PyBobIpFacedetectFeatureExtractor_init(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
 
   char** kwlist1 = FeatureExtractor_doc.kwlist(0);
@@ -66,17 +66,17 @@ static int FeatureExtractor_init(FeatureExtractorObject* self, PyObject* args, P
     // get first arguments
     PyObject* first = PyTuple_Size(args) ? PyTuple_GET_ITEM(args, 0) : PyList_GET_ITEM(make_safe(PyDict_Values(kwargs)).get(), 0);
     if (PyBobIoHDF5File_Check(first)){
-      self->cxx.reset(new FeatureExtractor(*((PyBobIoHDF5FileObject*)first)->f));
+      self->cxx.reset(new bob::ip::facedetect::FeatureExtractor(*((PyBobIoHDF5FileObject*)first)->f));
       return 0;
     }
-    if (FeatureExtractor_Check(first)){
-      self->cxx.reset(new FeatureExtractor(*((FeatureExtractorObject*)first)->cxx));
+    if (PyBobIpFacedetectFeatureExtractor_Check(first)){
+      self->cxx.reset(new bob::ip::facedetect::FeatureExtractor(*((PyBobIpFacedetectFeatureExtractorObject*)first)->cxx));
       return 0;
     }
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "(ii)", kwlist1, &patch_size[0], &patch_size[1])){
       return -1;
     }
-    self->cxx.reset(new FeatureExtractor(patch_size));
+    self->cxx.reset(new bob::ip::facedetect::FeatureExtractor(patch_size));
     return 0;
   }
 
@@ -91,7 +91,7 @@ static int FeatureExtractor_init(FeatureExtractorObject* self, PyObject* args, P
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "(ii)O&|O!O!ii", kwlist3, &patch_size[0], &patch_size[1], &PyBobIpBaseLBP_Converter, &lbp, &PyBool_Type, &overlap, &PyBool_Type, &square, &min_size, &max_size)) return -1;
     auto lbp_ = make_safe(lbp);
-    self->cxx.reset(new FeatureExtractor(patch_size, *lbp->cxx, f(overlap), f(square), min_size, max_size));
+    self->cxx.reset(new bob::ip::facedetect::FeatureExtractor(patch_size, *lbp->cxx, f(overlap), f(square), min_size, max_size));
     return 0;
   }
   // with list of LBP's
@@ -104,17 +104,17 @@ static int FeatureExtractor_init(FeatureExtractorObject* self, PyObject* args, P
     }
     lbps[i] = ((PyBobIpBaseLBPObject*)lbp)->cxx;
   }
-  self->cxx.reset(new FeatureExtractor(patch_size, lbps));
+  self->cxx.reset(new bob::ip::facedetect::FeatureExtractor(patch_size, lbps));
   return 0;
   BOB_CATCH_MEMBER("cannot create FeatureExtractor", -1)
 }
 
-static void FeatureExtractor_delete(FeatureExtractorObject* self) {
+static void PyBobIpFacedetectFeatureExtractor_delete(PyBobIpFacedetectFeatureExtractorObject* self) {
   Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
-int FeatureExtractor_Check(PyObject* o) {
-  return PyObject_IsInstance(o, reinterpret_cast<PyObject*>(&FeatureExtractor_Type));
+int PyBobIpFacedetectFeatureExtractor_Check(PyObject* o) {
+  return PyObject_IsInstance(o, reinterpret_cast<PyObject*>(&PyBobIpFacedetectFeatureExtractor_Type));
 }
 
 #if 0 // TODO:
@@ -154,7 +154,7 @@ static auto image = bob::extension::VariableDoc(
   "array_like <2D, uint8>",
   "The (prepared) image the next features will be extracted from, read access only"
 );
-PyObject* FeatureExtractor_image(FeatureExtractorObject* self, void*){
+PyObject* PyBobIpFacedetectFeatureExtractor_image(PyBobIpFacedetectFeatureExtractorObject* self, void*){
   BOB_TRY
   return PyBlitzArrayCxx_AsConstNumpy(self->cxx->getImage());
   BOB_CATCH_MEMBER("image could not be read", 0)
@@ -165,12 +165,12 @@ static auto model_indices = bob::extension::VariableDoc(
   "array_like <1D, int32>",
   "The indices at which the features are extracted, read and write access"
 );
-PyObject* FeatureExtractor_get_model_indices(FeatureExtractorObject* self, void*){
+PyObject* PyBobIpFacedetectFeatureExtractor_get_model_indices(PyBobIpFacedetectFeatureExtractorObject* self, void*){
   BOB_TRY
   return PyBlitzArrayCxx_AsConstNumpy(self->cxx->getModelIndices());
   BOB_CATCH_MEMBER("model_indices could not be read", 0)
 }
-int FeatureExtractor_set_model_indices(FeatureExtractorObject* self, PyObject* value, void*){
+int PyBobIpFacedetectFeatureExtractor_set_model_indices(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* value, void*){
   BOB_TRY
   PyBlitzArrayObject* data;
   if (!PyBlitzArray_Converter(value, &data)) return 0;
@@ -188,7 +188,7 @@ static auto number_of_features = bob::extension::VariableDoc(
   "int",
   "The length of the feature vector that will be extracted by this class, read access only"
 );
-PyObject* FeatureExtractor_number_of_features(FeatureExtractorObject* self, void*){
+PyObject* PyBobIpFacedetectFeatureExtractor_number_of_features(PyBobIpFacedetectFeatureExtractorObject* self, void*){
   BOB_TRY
   return Py_BuildValue("i", self->cxx->numberOfFeatures());
   BOB_CATCH_MEMBER("number_of_features could not be read", 0)
@@ -199,7 +199,7 @@ static auto number_of_labels = bob::extension::VariableDoc(
   "int",
   "The maximum label for the features in this class, read access only"
 );
-PyObject* FeatureExtractor_number_of_labels(FeatureExtractorObject* self, void*){
+PyObject* PyBobIpFacedetectFeatureExtractor_number_of_labels(PyBobIpFacedetectFeatureExtractorObject* self, void*){
   BOB_TRY
   return Py_BuildValue("i", self->cxx->getMaxLabel());
   BOB_CATCH_MEMBER("number_of_labels could not be read", 0)
@@ -210,7 +210,7 @@ static auto extractors = bob::extension::VariableDoc(
   "[:py:class:`bob.ip.LBP`]",
   "The LBP extractors, read access only"
 );
-PyObject* FeatureExtractor_extractors(FeatureExtractorObject* self, void*){
+PyObject* PyBobIpFacedetectFeatureExtractor_extractors(PyBobIpFacedetectFeatureExtractorObject* self, void*){
   BOB_TRY
   auto lbps = self->cxx->getExtractors();
   PyObject* list = PyList_New(lbps.size());
@@ -230,52 +230,52 @@ static auto patch_size = bob::extension::VariableDoc(
   "(int, int)",
   "The expected size of the patch that this extractor can handle, read access only"
 );
-PyObject* FeatureExtractor_patch_size(FeatureExtractorObject* self, void*){
+PyObject* PyBobIpFacedetectFeatureExtractor_patch_size(PyBobIpFacedetectFeatureExtractorObject* self, void*){
   BOB_TRY
   return Py_BuildValue("ii", self->cxx->patchSize()[0], self->cxx->patchSize()[1]);
   BOB_CATCH_MEMBER("patch_size could not be read", 0)
 }
 
 
-static PyGetSetDef FeatureExtractor_getseters[] = {
+static PyGetSetDef PyBobIpFacedetectFeatureExtractor_getseters[] = {
     {
       image.name(),
-      (getter)FeatureExtractor_image,
+      (getter)PyBobIpFacedetectFeatureExtractor_image,
       0,
       image.doc(),
       0
     },
     {
       model_indices.name(),
-      (getter)FeatureExtractor_get_model_indices,
-      (setter)FeatureExtractor_set_model_indices,
+      (getter)PyBobIpFacedetectFeatureExtractor_get_model_indices,
+      (setter)PyBobIpFacedetectFeatureExtractor_set_model_indices,
       model_indices.doc(),
       0
     },
     {
       number_of_features.name(),
-      (getter)FeatureExtractor_number_of_features,
+      (getter)PyBobIpFacedetectFeatureExtractor_number_of_features,
       0,
       number_of_features.doc(),
       0
     },
     {
       number_of_labels.name(),
-      (getter)FeatureExtractor_number_of_labels,
+      (getter)PyBobIpFacedetectFeatureExtractor_number_of_labels,
       0,
       number_of_labels.doc(),
       0
     },
     {
       extractors.name(),
-      (getter)FeatureExtractor_extractors,
+      (getter)PyBobIpFacedetectFeatureExtractor_extractors,
       0,
       extractors.doc(),
       0
     },
     {
       patch_size.name(),
-      (getter)FeatureExtractor_patch_size,
+      (getter)PyBobIpFacedetectFeatureExtractor_patch_size,
       0,
       patch_size.doc(),
       0
@@ -300,7 +300,7 @@ static auto append = bob::extension::FunctionDoc(
 .add_parameter("offsets", "[(int,int)]", "The offset positions at which the given LBP will be extracted")
 ;
 
-static PyObject* FeatureExtractor_append(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectFeatureExtractor_append(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist1 = append.kwlist(0);
   char** kwlist2 = append.kwlist(1);
@@ -309,8 +309,8 @@ static PyObject* FeatureExtractor_append(FeatureExtractorObject* self, PyObject*
   Py_ssize_t nargs = (args?PyTuple_Size(args):0) + (kwargs?PyDict_Size(kwargs):0);
 
   if (nargs == 1){
-    FeatureExtractorObject* other;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", kwlist1, &FeatureExtractor_Type, &other)) return 0;
+    PyBobIpFacedetectFeatureExtractorObject* other;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", kwlist1, &PyBobIpFacedetectFeatureExtractor_Type, &other)) return 0;
     self->cxx->append(*other->cxx);
   } else {
     PyBobIpBaseLBPObject* lbp;
@@ -341,7 +341,7 @@ static auto extractor = bob::extension::FunctionDoc(
 .add_parameter("index", "int", "The feature index for which the extractor should be retrieved")
 .add_return("lbp", ":py:class:`bob.ip.base.LBP`", "The feature extractor for the given feature index")
 ;
-static PyObject* FeatureExtractor_extractor(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectFeatureExtractor_extractor(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = extractor.kwlist();
 
@@ -364,7 +364,7 @@ static auto offset = bob::extension::FunctionDoc(
 .add_parameter("index", "int", "The feature index for which the extractor should be retrieved")
 .add_return("offset", "(int,int)", "The offset position for the given feature index")
 ;
-static PyObject* FeatureExtractor_offset(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectFeatureExtractor_offset(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = offset.kwlist();
 
@@ -388,7 +388,7 @@ static auto prepare = bob::extension::FunctionDoc(
 .add_parameter("scale", "float", "The scale of the image to extract")
 .add_parameter("compute_integral_square_image", "bool", "[Default: ``False``] : Enable the computation of the integral square image")
 ;
-static PyObject* FeatureExtractor_prepare(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectFeatureExtractor_prepare(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = prepare.kwlist();
 
@@ -425,15 +425,15 @@ static auto extract_all = bob::extension::FunctionDoc(
 .add_parameter("dataset", "array_like <2D, uint16>", "The (training) dataset, into which the features should be extracted; must be of shape (#training_patches, :py:attr:`number_of_features`)")
 .add_parameter("dataset_index", "int", "The index of the current training patch")
 ;
-static PyObject* FeatureExtractor_extract_all(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectFeatureExtractor_extract_all(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = extract_all.kwlist();
 
-  BoundingBoxObject* bb;
+  PyBobIpFacedetectBoundingBoxObject* bb;
   PyBlitzArrayObject* dataset;
   int index;
   // by shape
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O&i", kwlist, &BoundingBox_Type, &bb, &PyBlitzArray_OutputConverter, &dataset, &index)){
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O&i", kwlist, &PyBobIpFacedetectBoundingBox_Type, &bb, &PyBlitzArray_OutputConverter, &dataset, &index)){
     return 0;
   }
   auto dataset_ = make_safe(dataset);
@@ -455,14 +455,14 @@ static auto extract_indexed = bob::extension::FunctionDoc(
 .add_parameter("feature_vector", "array_like <1D, uint16>", "The feature vector, into which the features should be extracted; must be of size :py:attr:`number_of_features`")
 .add_parameter("indices", "array_like<1D,int32>", "The indices, for which the features should be extracted; if not given, :py:attr:`model_indices` is used (must be set beforehands)")
 ;
-static PyObject* FeatureExtractor_extract_indexed(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectFeatureExtractor_extract_indexed(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = extract_indexed.kwlist();
 
-  BoundingBoxObject* bb;
+  PyBobIpFacedetectBoundingBoxObject* bb;
   PyBlitzArrayObject* fv, *indices = 0;
   // by shape
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O&|O&", kwlist, &BoundingBox_Type, &bb, &PyBlitzArray_OutputConverter, &fv, &PyBlitzArray_Converter, &indices)){
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O&|O&", kwlist, &PyBobIpFacedetectBoundingBox_Type, &bb, &PyBlitzArray_OutputConverter, &fv, &PyBlitzArray_Converter, &indices)){
     return 0;
   }
   auto fv_ = make_safe(fv);
@@ -492,14 +492,14 @@ static auto mean_variance = bob::extension::FunctionDoc(
 .add_parameter("compute_variance", "bool", "[Default: ``False``] If enabled, the variance is computed as well; requires the ``compute_integral_square_image`` enabled in the :py:func:`prepare` function")
 .add_return("mv", "float or (float, float)", "The mean (or the mean and the variance) of the pixel gray values for the given bounding box")
 ;
-static PyObject* FeatureExtractor_mean_variance(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectFeatureExtractor_mean_variance(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = mean_variance.kwlist();
 
-  BoundingBoxObject* bb;
+  PyBobIpFacedetectBoundingBoxObject* bb;
   PyObject* cv = 0;
   // by shape
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!", kwlist, &BoundingBox_Type, &bb, &PyBool_Type, &cv)){
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!", kwlist, &PyBobIpFacedetectBoundingBox_Type, &bb, &PyBool_Type, &cv)){
     return 0;
   }
 
@@ -522,7 +522,7 @@ static auto load = bob::extension::FunctionDoc(
 .add_prototype("hdf5")
 .add_parameter("hdf5", ":py:class:`bob.ip.base.HDF5File`", "The file to read from")
 ;
-static PyObject* FeatureExtractor_load(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectFeatureExtractor_load(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = load.kwlist();
 
@@ -544,7 +544,7 @@ static auto save = bob::extension::FunctionDoc(
 .add_prototype("hdf5")
 .add_parameter("hdf5", ":py:class:`bob.ip.base.HDF5File`", "The file to write to")
 ;
-static PyObject* FeatureExtractor_save(FeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyBobIpFacedetectFeatureExtractor_save(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
   char** kwlist = save.kwlist();
 
@@ -558,58 +558,58 @@ static PyObject* FeatureExtractor_save(FeatureExtractorObject* self, PyObject* a
 }
 
 
-static PyMethodDef FeatureExtractor_methods[] = {
+static PyMethodDef PyBobIpFacedetectFeatureExtractor_methods[] = {
   {
     append.name(),
-    (PyCFunction)FeatureExtractor_append,
+    (PyCFunction)PyBobIpFacedetectFeatureExtractor_append,
     METH_VARARGS|METH_KEYWORDS,
     append.doc()
   },
   {
     extractor.name(),
-    (PyCFunction)FeatureExtractor_extractor,
+    (PyCFunction)PyBobIpFacedetectFeatureExtractor_extractor,
     METH_VARARGS|METH_KEYWORDS,
     extractor.doc()
   },
   {
     offset.name(),
-    (PyCFunction)FeatureExtractor_offset,
+    (PyCFunction)PyBobIpFacedetectFeatureExtractor_offset,
     METH_VARARGS|METH_KEYWORDS,
     offset.doc()
   },
   {
     prepare.name(),
-    (PyCFunction)FeatureExtractor_prepare,
+    (PyCFunction)PyBobIpFacedetectFeatureExtractor_prepare,
     METH_VARARGS|METH_KEYWORDS,
     prepare.doc()
   },
   {
     extract_all.name(),
-    (PyCFunction)FeatureExtractor_extract_all,
+    (PyCFunction)PyBobIpFacedetectFeatureExtractor_extract_all,
     METH_VARARGS|METH_KEYWORDS,
     extract_all.doc()
   },
   {
     extract_indexed.name(),
-    (PyCFunction)FeatureExtractor_extract_indexed,
+    (PyCFunction)PyBobIpFacedetectFeatureExtractor_extract_indexed,
     METH_VARARGS|METH_KEYWORDS,
     extract_indexed.doc()
   },
   {
     mean_variance.name(),
-    (PyCFunction)FeatureExtractor_mean_variance,
+    (PyCFunction)PyBobIpFacedetectFeatureExtractor_mean_variance,
     METH_VARARGS|METH_KEYWORDS,
     mean_variance.doc()
   },
   {
     load.name(),
-    (PyCFunction)FeatureExtractor_load,
+    (PyCFunction)PyBobIpFacedetectFeatureExtractor_load,
     METH_VARARGS|METH_KEYWORDS,
     load.doc()
   },
   {
     save.name(),
-    (PyCFunction)FeatureExtractor_save,
+    (PyCFunction)PyBobIpFacedetectFeatureExtractor_save,
     METH_VARARGS|METH_KEYWORDS,
     save.doc()
   },
@@ -621,34 +621,34 @@ static PyMethodDef FeatureExtractor_methods[] = {
 /******************************************************************/
 
 // Define the DCTFeatures type struct; will be initialized later
-PyTypeObject FeatureExtractor_Type = {
+PyTypeObject PyBobIpFacedetectFeatureExtractor_Type = {
   PyVarObject_HEAD_INIT(0,0)
   0
 };
 
-bool init_FeatureExtractor(PyObject* module)
+bool init_PyBobIpFacedetectFeatureExtractor(PyObject* module)
 {
   // initialize the type struct
-  FeatureExtractor_Type.tp_name = FeatureExtractor_doc.name();
-  FeatureExtractor_Type.tp_basicsize = sizeof(FeatureExtractorObject);
-  FeatureExtractor_Type.tp_flags = Py_TPFLAGS_DEFAULT;
-  FeatureExtractor_Type.tp_doc = FeatureExtractor_doc.doc();
-//  FeatureExtractor_Type.tp_repr = (reprfunc)FeatureExtractor_Str;
-//  FeatureExtractor_Type.tp_str = (reprfunc)FeatureExtractor_Str;
+  PyBobIpFacedetectFeatureExtractor_Type.tp_name = FeatureExtractor_doc.name();
+  PyBobIpFacedetectFeatureExtractor_Type.tp_basicsize = sizeof(PyBobIpFacedetectFeatureExtractorObject);
+  PyBobIpFacedetectFeatureExtractor_Type.tp_flags = Py_TPFLAGS_DEFAULT;
+  PyBobIpFacedetectFeatureExtractor_Type.tp_doc = FeatureExtractor_doc.doc();
+//  PyBobIpFacedetectFeatureExtractor_Type.tp_repr = (reprfunc)PyBobIpFacedetectFeatureExtractor_Str;
+//  PyBobIpFacedetectFeatureExtractor_Type.tp_str = (reprfunc)PyBobIpFacedetectFeatureExtractor_Str;
 
   // set the functions
-  FeatureExtractor_Type.tp_new = PyType_GenericNew;
-  FeatureExtractor_Type.tp_init = reinterpret_cast<initproc>(FeatureExtractor_init);
-  FeatureExtractor_Type.tp_dealloc = reinterpret_cast<destructor>(FeatureExtractor_delete);
-//  FeatureExtractor_Type.tp_richcompare = reinterpret_cast<richcmpfunc>(FeatureExtractor_RichCompare);
-  FeatureExtractor_Type.tp_methods = FeatureExtractor_methods;
-  FeatureExtractor_Type.tp_getset = FeatureExtractor_getseters;
+  PyBobIpFacedetectFeatureExtractor_Type.tp_new = PyType_GenericNew;
+  PyBobIpFacedetectFeatureExtractor_Type.tp_init = reinterpret_cast<initproc>(PyBobIpFacedetectFeatureExtractor_init);
+  PyBobIpFacedetectFeatureExtractor_Type.tp_dealloc = reinterpret_cast<destructor>(PyBobIpFacedetectFeatureExtractor_delete);
+//  PyBobIpFacedetectFeatureExtractor_Type.tp_richcompare = reinterpret_cast<richcmpfunc>(PyBobIpFacedetectFeatureExtractor_RichCompare);
+  PyBobIpFacedetectFeatureExtractor_Type.tp_methods = PyBobIpFacedetectFeatureExtractor_methods;
+  PyBobIpFacedetectFeatureExtractor_Type.tp_getset = PyBobIpFacedetectFeatureExtractor_getseters;
 
   // check that everything is fine
-  if (PyType_Ready(&FeatureExtractor_Type) < 0)
+  if (PyType_Ready(&PyBobIpFacedetectFeatureExtractor_Type) < 0)
     return false;
 
   // add the type to the module
-  Py_INCREF(&FeatureExtractor_Type);
-  return PyModule_AddObject(module, "FeatureExtractor", (PyObject*)&FeatureExtractor_Type) >= 0;
+  Py_INCREF(&PyBobIpFacedetectFeatureExtractor_Type);
+  return PyModule_AddObject(module, "FeatureExtractor", (PyObject*)&PyBobIpFacedetectFeatureExtractor_Type) >= 0;
 }

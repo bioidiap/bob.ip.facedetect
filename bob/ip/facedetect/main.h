@@ -24,27 +24,27 @@ static inline bool f(PyObject* o){return o != 0 && PyObject_IsTrue(o) > 0;}  /* 
 // BoundingBox
 typedef struct {
   PyObject_HEAD
-  boost::shared_ptr<BoundingBox> cxx;
-} BoundingBoxObject;
+  boost::shared_ptr<bob::ip::facedetect::BoundingBox> cxx;
+} PyBobIpFacedetectBoundingBoxObject;
 
-extern PyTypeObject BoundingBox_Type;
-bool init_BoundingBox(PyObject* module);
-int BoundingBox_Check(PyObject* o);
+extern PyTypeObject PyBobIpFacedetectBoundingBox_Type;
+bool init_PyBobIpFacedetectBoundingBox(PyObject* module);
+int PyBobIpFacedetectBoundingBox_Check(PyObject* o);
 
 // Feature extractor
 typedef struct {
   PyObject_HEAD
-  boost::shared_ptr<FeatureExtractor> cxx;
-} FeatureExtractorObject;
+  boost::shared_ptr<bob::ip::facedetect::FeatureExtractor> cxx;
+} PyBobIpFacedetectFeatureExtractorObject;
 
-extern PyTypeObject FeatureExtractor_Type;
-bool init_FeatureExtractor(PyObject* module);
-int FeatureExtractor_Check(PyObject* o);
+extern PyTypeObject PyBobIpFacedetectFeatureExtractor_Type;
+bool init_PyBobIpFacedetectFeatureExtractor(PyObject* module);
+int PyBobIpFacedetectFeatureExtractor_Check(PyObject* o);
 
 // Functions
-PyObject* prune_detections(PyObject*, PyObject*, PyObject*);
+PyObject* PyBobIpFacedetect_PruneDetections(PyObject*, PyObject*, PyObject*);
 extern bob::extension::FunctionDoc prune_detections_doc;
-PyObject* overlapping_detections(PyObject*, PyObject*, PyObject*);
+PyObject* PyBobIpFacedetect_OverlappingDetections(PyObject*, PyObject*, PyObject*);
 extern bob::extension::FunctionDoc overlapping_detections_doc;
 
 #endif // FACERECLIB_FACEDETECT_MAIN_H

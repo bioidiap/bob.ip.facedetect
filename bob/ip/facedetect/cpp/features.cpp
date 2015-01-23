@@ -1,7 +1,7 @@
 #include "features.h"
 #include <boost/format.hpp>
 
-FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize)
+bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize)
 : m_patchSize(patchSize),
   m_lookUpTable(0,3),
   m_extractors(),
@@ -13,7 +13,7 @@ FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize)
   m_featureStarts(0) = 0;
 }
 
-FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const bob::ip::base::LBP& templAte, bool overlap, bool square, int min_size, int max_size, int distance)
+bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const bob::ip::base::LBP& templAte, bool overlap, bool square, int min_size, int max_size, int distance)
 : m_patchSize(patchSize),
   m_lookUpTable(0,3),
   m_extractors(),
@@ -69,7 +69,7 @@ FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, co
 }
 
 
-FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const std::vector<boost::shared_ptr<bob::ip::base::LBP>>& extractors)
+bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const std::vector<boost::shared_ptr<bob::ip::base::LBP>>& extractors)
 : m_patchSize(patchSize),
   m_lookUpTable(0,3),
   m_extractors(extractors),
@@ -86,7 +86,7 @@ FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, co
   init();
 }
 
-FeatureExtractor::FeatureExtractor(const FeatureExtractor& other)
+bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const FeatureExtractor& other)
 : m_patchSize(other.m_patchSize),
   m_lookUpTable(other.m_lookUpTable),
   m_extractors(other.m_extractors),
@@ -106,12 +106,12 @@ FeatureExtractor::FeatureExtractor(const FeatureExtractor& other)
 }
 
 
-FeatureExtractor::FeatureExtractor(bob::io::base::HDF5File& file){
+bob::ip::facedetect::FeatureExtractor::FeatureExtractor(bob::io::base::HDF5File& file){
   // read information from file
   load(file);
 }
 
-void FeatureExtractor::append(const FeatureExtractor& other){
+void bob::ip::facedetect::FeatureExtractor::append(const FeatureExtractor& other){
   // read information from file
   if (other.m_isMultiBlock != m_isMultiBlock)
     throw std::runtime_error("Cannot append given extractor since multi-block types differ.");
@@ -137,7 +137,7 @@ void FeatureExtractor::append(const FeatureExtractor& other){
 }
 
 
-void FeatureExtractor::append(const boost::shared_ptr<bob::ip::base::LBP>& lbp, const std::vector<blitz::TinyVector<int32_t, 2> >& offsets){
+void bob::ip::facedetect::FeatureExtractor::append(const boost::shared_ptr<bob::ip::base::LBP>& lbp, const std::vector<blitz::TinyVector<int32_t, 2> >& offsets){
   // read information from file
   if (lbp->isMultiBlockLBP() != m_isMultiBlock && ! m_extractors.empty())
     throw std::runtime_error("Cannot append given extractor since multi-block types differ.");
@@ -166,7 +166,7 @@ void FeatureExtractor::append(const boost::shared_ptr<bob::ip::base::LBP>& lbp, 
 }
 
 
-void FeatureExtractor::init(){
+void bob::ip::facedetect::FeatureExtractor::init(){
   // initialize the indices for the full feature vector extraction
   m_featureStarts.resize(m_extractors.size()+1);
   m_featureStarts(0) = 0;
@@ -194,7 +194,7 @@ void FeatureExtractor::init(){
   }
 }
 
-double FeatureExtractor::mean(const BoundingBox& boundingBox) const{
+double bob::ip::facedetect::FeatureExtractor::mean(const BoundingBox& boundingBox) const{
   int t = boundingBox.itop(), b = boundingBox.ibottom()-1, l = boundingBox.ileft(), r = boundingBox.iright()-1;
   // compute the mean using the integral image
   double sum = m_integralImage(t, l)
@@ -208,7 +208,7 @@ double FeatureExtractor::mean(const BoundingBox& boundingBox) const{
 }
 
 
-double FeatureExtractor::variance(const BoundingBox& boundingBox) const{
+double bob::ip::facedetect::FeatureExtractor::variance(const BoundingBox& boundingBox) const{
   int t = boundingBox.itop(), b = boundingBox.ibottom()-1, l = boundingBox.ileft(), r = boundingBox.iright()-1;
   // compute the variance using the integral image and the integral square image
   double square = m_integralSquareImage(t, l)
@@ -227,7 +227,7 @@ double FeatureExtractor::variance(const BoundingBox& boundingBox) const{
 }
 
 
-blitz::TinyVector<double,2> FeatureExtractor::meanAndVariance(const BoundingBox& boundingBox) const{
+blitz::TinyVector<double,2> bob::ip::facedetect::FeatureExtractor::meanAndVariance(const BoundingBox& boundingBox) const{
   int t = boundingBox.itop(), b = boundingBox.ibottom()-1, l = boundingBox.ileft(), r = boundingBox.iright()-1;
   // compute the variance using the integral image and the integral square image
   double square = m_integralSquareImage(t, l)
@@ -247,7 +247,7 @@ blitz::TinyVector<double,2> FeatureExtractor::meanAndVariance(const BoundingBox&
 
 
 
-void FeatureExtractor::extractAll(const BoundingBox& boundingBox, blitz::Array<uint16_t,2>& dataset, int datasetIndex) const{
+void bob::ip::facedetect::FeatureExtractor::extractAll(const BoundingBox& boundingBox, blitz::Array<uint16_t,2>& dataset, int datasetIndex) const{
   if (m_hasSingleOffsets){
     if (m_isMultiBlock){
       for (int i = m_lookUpTable.extent(0); i--;){
@@ -290,14 +290,14 @@ void FeatureExtractor::extractAll(const BoundingBox& boundingBox, blitz::Array<u
   }
 }
 
-void FeatureExtractor::extractSome(const BoundingBox& boundingBox, blitz::Array<uint16_t,1>& featureVector) const{
+void bob::ip::facedetect::FeatureExtractor::extractSome(const BoundingBox& boundingBox, blitz::Array<uint16_t,1>& featureVector) const{
   if (m_modelIndices.extent(0) == 0)
     throw std::runtime_error("Please set the model indices before calling this function!");
   // extract only required data
   return extractIndexed(boundingBox, featureVector, m_modelIndices);
 }
 
-void FeatureExtractor::extractIndexed(const BoundingBox& boundingBox, blitz::Array<uint16_t,1>& featureVector, const blitz::Array<int32_t,1>& indices) const{
+void bob::ip::facedetect::FeatureExtractor::extractIndexed(const BoundingBox& boundingBox, blitz::Array<uint16_t,1>& featureVector, const blitz::Array<int32_t,1>& indices) const{
   if (indices.extent(0) == 0)
     throw std::runtime_error("The given indices are empty!");
   // extract only requested data
@@ -316,7 +316,7 @@ void FeatureExtractor::extractIndexed(const BoundingBox& boundingBox, blitz::Arr
   }
 }
 
-void FeatureExtractor::load(bob::io::base::HDF5File& hdf5file){
+void bob::ip::facedetect::FeatureExtractor::load(bob::io::base::HDF5File& hdf5file){
   // get global information
   m_patchSize[0] = hdf5file.read<int32_t>("PatchSize", 0);
   m_patchSize[1] = hdf5file.read<int32_t>("PatchSize", 1);
@@ -354,7 +354,7 @@ void FeatureExtractor::load(bob::io::base::HDF5File& hdf5file){
   }
 }
 
-void FeatureExtractor::save(bob::io::base::HDF5File& hdf5file) const{
+void bob::ip::facedetect::FeatureExtractor::save(bob::io::base::HDF5File& hdf5file) const{
   // set global information
   blitz::Array<int32_t,1> t(2);
   t(0) = m_patchSize[0];
@@ -375,4 +375,3 @@ void FeatureExtractor::save(bob::io::base::HDF5File& hdf5file) const{
     hdf5file.setArray("SelectedOffsets", m_lookUpTable);
   }
 }
-
