@@ -63,7 +63,7 @@ def best_detection(detections, predictions, minimum_overlap = 0.2):
 
 
 def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.2):
-  """detect_single_face(image, [cascade], [sampler], [minimum_overlap]) -> bounding_box
+  """detect_single_face(image, [cascade], [sampler], [minimum_overlap]) -> bounding_box, quality
 
   Detects a single face in the given image, i.e., the one with the highest prediction value.
 
@@ -87,6 +87,9 @@ def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.
 
   bounding_box : :py:class:`bob.ip.facedetect.BoundingBox`
     The bounding box containing the detected face.
+
+  quality : float
+    The quality of the detected face, a value greater than 0.
   """
 
   if sampler is None:
@@ -108,6 +111,6 @@ def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.
     return None
 
   # compute average over the best locations
-  bb, value = best_detection(detections, predictions, minimum_overlap)
+  bb, quality = best_detection(detections, predictions, minimum_overlap)
 
-  return bb
+  return bb, quality
