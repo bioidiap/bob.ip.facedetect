@@ -28,7 +28,7 @@ def test_detection():
   # test that the detection works as expected
   test_image = bob.ip.color.rgb_to_gray(bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'bob.ip.facedetect')))
 
-  cascade = fd.detector.Cascade(bob.io.base.HDF5File(fd.default_cascade))
+  cascade = fd.default_cascade()
   classifier = cascade.generate_boosted_machine()
   extractor = cascade.extractor
   extractor.model_indices = classifier.indices
@@ -62,7 +62,7 @@ def test_cascade():
   # test that the cascade works as expected
   test_image = bob.ip.color.rgb_to_gray(bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'bob.ip.facedetect')))
 
-  cascade = fd.detector.Cascade(bob.io.base.HDF5File(fd.default_cascade))
+  cascade = fd.default_cascade()
 
   # sample the image
   sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), lowest_scale=0.125)

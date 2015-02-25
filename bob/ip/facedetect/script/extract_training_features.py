@@ -1,4 +1,3 @@
-
 """Extracts features for the training set of the given file lists using the given feature extractor."""
 
 import argparse
@@ -27,16 +26,16 @@ def command_line_options(command_line_arguments):
   parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('--file-lists', '-i', nargs='+', help = "Select the training lists to extract features for.")
-  parser.add_argument('--feature-directory', '-d', default = "/idiap/temp/mguenther/FaceDetect/features")
+  parser.add_argument('--feature-directory', '-d', default = "features", help = "The output directory, where features will be stores")
   parser.add_argument('--parallel', '-P', type=int, help = "Use this option to run the script in parallel in the SGE grid, using the given number of parallel processes")
 
   parser.add_argument('--patch-size', '-p', type=int, nargs=2, default=(24,20), help = "The size of the patch for the image in y and x.")
   parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
   parser.add_argument('--scale-base', '-S', type=float, default=math.pow(2.,-1./8.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
-  parser.add_argument('--negative-examples-every', '-N', type=int, default=4, help = "Use only every nth frame to extract negative examples.")
+  parser.add_argument('--negative-examples-every', '-N', type=int, default=4, help = "Use only every nth scale to extract negative examples.")
   parser.add_argument('--lowest-scale', '-f', type=float, default=0, help = "Patches which will be lower than the given scale times the image resolution will not be taken into account; if 0. (the default) all patches will be considered.")
   parser.add_argument('--similarity-thresholds', '-t', type=float, nargs=2, default=(0.2, 0.8), help = "The bounding box overlap thresholds for which negative (< thres[0]) and positive (> thers[1]) examples are accepted.")
-  parser.add_argument('--mirror-samples', '-M', action='store_false', help = "Enable mirroring of the training samples.")
+  parser.add_argument('--mirror-samples', '-M', action='store_false', help = "Disable mirroring of the training samples.")
   parser.add_argument('--examples-per-image-scale', '-e', type=int, nargs=2, default = [100, 100], help = "The number of positive and negative training examples for each image scale.")
 
   parser.add_argument('--lbp-multi-block', '-m', action='store_true', help = "If given multi-block LBP features will be extracted (otherwise, it's regular LBP).")

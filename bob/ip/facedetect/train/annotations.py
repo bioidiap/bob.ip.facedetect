@@ -1,9 +1,22 @@
 
 def read_annotation_file(annotation_file, annotation_type):
+  """Reads annotations from the given annotation file.
+
+  The way, how annotations are read depends on the given annotation_type.
+  Depending on the type, one or several annotations might be present in the annotation file.
+  Currently, these variants are implemented:
+
+  - ``'lr-eyes'``: Only the eye positions are stored, in a single row, like: ``le_x le_y re_x re_y``, comment lines starting with ``'#'`` are ignored.
+  - ``'named'``: Each line of the file contains a name and two floats, like ``reye x y``; empty lines separate between sets of annotations.
+  - ``'idiap'``: A special 22 point format, where each line contains the index and the locations, like ``1 x y``.
+  - ``'fddb'``: a special format for the FDDB database; empty lines separate between sets of annotations
+
+  Finally, a list of annotations is returned in the format: ``[{name: (y,x)}]``.
+  """
   annotations = [{}]
   with open(annotation_file) as f:
     if annotation_type == 'idiap':
-      # This is a special format where we have enumerated annotations (where 3 and 8 are the eyes), and a 'gender'
+      # This is a special format where we have enumerated annotations, and a 'gender'
       for line in f:
         positions = line.rstrip().split()
         if positions:

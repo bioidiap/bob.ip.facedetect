@@ -4,6 +4,8 @@ import numpy
 import math
 import os
 
+import pkg_resources
+
 import bob.io.base
 import bob.io.image
 import bob.ip.color
@@ -21,7 +23,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
   parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./8.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--lowest-scale', '-f', type=float, default = 0.0625, help = "Faces which will be lower than the given scale times the image resolution will not be found.")
-  parser.add_argument('--cascade-file', '-r', help = "The file to read the cascade from (has a proper default).")
+  parser.add_argument('--cascade-file', '-r', default = pkg_resources.resource_filename("bob.ip.facedetect", "MCT_cascade.hdf5"), help = "The file to read the cascade from (has a proper default).")
   parser.add_argument('--prediction-threshold', '-T', type=float, help = "Detections with values below this threshold will be rejected by the detector.")
   parser.add_argument('--score-file', '-w', default='cascaded_scores.txt', help = "The score file to be written.")
   parser.add_argument('--prune-detections', '-p', type=float, default = 0.2, help = "If given, detections that overlap with the given threshold are pruned")
@@ -30,10 +32,6 @@ def command_line_options(command_line_arguments):
   bob.core.log.add_command_line_option(parser)
   args = parser.parse_args(command_line_arguments)
   bob.core.log.set_verbosity_level(logger, args.verbose)
-
-  if args.cascade_file is None:
-    import pkg_resources
-    args.cascade_file = bob.ip.facedetect.default_cascade
 
   return args
 

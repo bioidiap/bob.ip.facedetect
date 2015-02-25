@@ -22,7 +22,7 @@ class Sampler:
     scale_factor : float
       image pyramids are computed using the given scale factor between two scales
 
-    lowest_scale : float
+    lowest_scale : float or None
       patches which will be lower than the given scale times the image resolution will not be taken into account;
       if 0. all possible patches will be considered
 
@@ -32,8 +32,6 @@ class Sampler:
 
   def __init__(self, patch_size = (24,20), scale_factor = math.pow(2., -1./16.), lowest_scale = math.pow(2., -6.), distance = 2):
 
-    self.m_scales = []
-    self.m_patch_size = patch_size
     self.m_patch_box = BoundingBox((0, 0), patch_size)
     self.m_scale_factor = scale_factor
     self.m_lowest_scale = lowest_scale
@@ -43,7 +41,7 @@ class Sampler:
   def scales(self, image):
     """Computes the all possible scales for the given image and returns a tuple of the scale and the scaled image shape as an iterator."""
     # compute the minimum scale so that the patch size still fits into the given image
-    minimum_scale = max(self.m_patch_box.size_f[0] / image.shape[0], self.m_patch_box.size_f[1] / image.shape[1])
+    minimum_scale = max(self.m_patch_box.size_f[0] / image.shape[-2], self.m_patch_box.size_f[1] / image.shape[-1])
     if self.m_lowest_scale:
       maximum_scale = min(minimum_scale / self.m_lowest_scale, 1.)
     else:
@@ -64,12 +62,20 @@ class Sampler:
       yield scale, scaled_image_shape
 
 
-  def sample(self, scaled_image_shape):
+  def sample_scaled(self, scaled_image_shape):
     """Returns an iterator that iterates over all sampled bounding boxes in the given (scaled) image shape."""
-    for y in range(0, scaled_image_shape[0]-self.m_patch_box.bottomright[0], self.m_distance):
-      for x in range(0, scaled_image_shape[1]-self.m_patch_box.bottomright[1], self.m_distance):
+    for y in range(0, scaled_image_shape[-2]-self.m_patch_box.bottomright[0], self.m_distance):
+      for x in range(0, scaled_image_shape[-1]-self.m_patch_box.bottomright[1], self.m_distance):
         # create bounding box for the current shift
         yield self.m_patch_box.shift((y,x))
+
+  def sample(self, image):
+    """Returns an iterator over all bounding boxes that are sampled for the given image."""
+    for scale, scaled_image_shape in self.scales(image):
+      # prepare the feature extractor to extract features from the given image
+      for bb in self.sample_scaled(scaled_image_shape):
+        # extract features for
+        yield bb.scale(1./scale)
 
 
   def iterate(self, image, feature_extractor, feature_vector):
@@ -78,7 +84,7 @@ class Sampler:
     for scale, scaled_image_shape in self.scales(image):
       # prepare the feature extractor to extract features from the given image
       feature_extractor.prepare(image, scale)
-      for bb in self.sample(scaled_image_shape):
+      for bb in self.sample_scaled(scaled_image_shape):
         # extract features for
         feature_extractor.extract_indexed(bb, feature_vector)
         yield bb.scale(1./scale)
@@ -90,7 +96,7 @@ class Sampler:
     for scale, scaled_image_shape in self.scales(image):
       # prepare the feature extractor to extract features from the given image
       cascade.prepare(image, scale)
-      for bb in self.sample(scaled_image_shape):
+      for bb in self.sample_scaled(scaled_image_shape):
         # return the prediction and the bounding box, if the prediction is over threshold
         prediction = cascade(bb)
         if threshold is None or prediction > threshold:

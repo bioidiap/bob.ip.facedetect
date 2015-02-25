@@ -134,8 +134,8 @@ setup(
         'extract_training_features.py = bob.ip.facedetect.script.extract_training_features:main',
         'train_detector.py = bob.ip.facedetect.script.train_detector:main',
         'validate_detector.py = bob.ip.facedetect.script.validate_detector:main',
-        'display.py = bob.ip.facedetect.script.display:main',
-        'evaluate.py = bob.ip.facedetect.script.evaluate:main',
+        'display_detections.py = bob.ip.facedetect.script.display:main',
+        'evaluate_detections.py = bob.ip.facedetect.script.evaluate:main',
         'plot_froc.py = bob.ip.facedetect.script.plot_froc:main'
       ],
     },
@@ -145,7 +145,7 @@ setup(
     # useful here (http://pypi.python.org/pypi?%3Aaction=list_classifiers).
     classifiers = [
       'Framework :: Bob',
-      'Development Status :: 3 - Alpha',
+      'Development Status :: 4 - Beta',
       'Intended Audience :: Developers',
       'License :: OSI Approved :: BSD License',
       'Natural Language :: English',

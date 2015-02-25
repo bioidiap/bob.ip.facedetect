@@ -24,18 +24,16 @@ Functions
 .. autosummary::
 
    bob.ip.facedetect.detect_single_face
+   bob.ip.facedetect.detect_all_faces
+   bob.ip.facedetect.default_cascade
    bob.ip.facedetect.best_detection
    bob.ip.facedetect.overlapping_detections
    bob.ip.facedetect.prune_detections
    bob.ip.facedetect.expected_eye_positions
 
+   bob.ip.facedetect.bounding_box_from_annotation
+   bob.ip.facedetect.read_annotation_file
 
-Constants
----------
-
-.. py:data:: bob.ip.facedetect.default_cascade
-
-   The pre-trained cascade file that is used by all scripts.
 
 
 Detailed Information

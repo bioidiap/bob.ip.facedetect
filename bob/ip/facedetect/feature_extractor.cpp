@@ -207,7 +207,7 @@ PyObject* PyBobIpFacedetectFeatureExtractor_number_of_labels(PyBobIpFacedetectFe
 
 static auto extractors = bob::extension::VariableDoc(
   "extractors",
-  "[:py:class:`bob.ip.LBP`]",
+  "[:py:class:`bob.ip.base.LBP`]",
   "The LBP extractors, read access only"
 );
 PyObject* PyBobIpFacedetectFeatureExtractor_extractors(PyBobIpFacedetectFeatureExtractorObject* self, void*){

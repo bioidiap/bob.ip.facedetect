@@ -1,3 +1,4 @@
+"""Collects training data including ground truth bounding boxes and writes them into file lists."""
 
 import argparse
 import bob.ip.facedetect
@@ -7,7 +8,6 @@ import os
 
 logger = bob.core.log.setup('bob.ip.facedetect')
 
-"""Collects training data including bounding boxes and writes them into file lists."""
 
 def command_line_options(command_line_arguments):
 

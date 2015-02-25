@@ -1,3 +1,4 @@
+"""Trains a cascade of classifiers from the given training features"""
 
 import argparse
 import numpy
@@ -17,9 +18,8 @@ def command_line_options(command_line_arguments):
 
   parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-  parser.add_argument('--feature-directory', '-d', default = "/idiap/temp/mguenther/FaceDetect/features")
+  parser.add_argument('--feature-directory', '-d', default = "features")
 
-  parser.add_argument('--parallel', '-P', default=1, type=int, help = "The number of parallel threads to use for feature extraction.")
   parser.add_argument('--features-in-first-round', '-r', default=8, type=int, help = "The number of features to extract in the first bootstrapping round (will be doubled in each bootstrapping round).")
   parser.add_argument('--bootstrapping-rounds', '-R', default=7, type=int, help = "The number of bootstrapping rounds to perform.")
   parser.add_argument('--training-examples', '-E', type=int, nargs=2, default = [5000, 5000], help = "The number of positive and negative training examples to add per round.")

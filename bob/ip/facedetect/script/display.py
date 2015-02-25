@@ -13,6 +13,7 @@ import os
 
 import bob.io.base
 import bob.ip.draw
+import pkg_resources
 
 import bob.ip.facedetect
 import bob.core
@@ -26,7 +27,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
   parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./16.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--lowest-scale', '-f', type=float, default = 0.125, help = "Faces which will be lower than the given scale times the image resolution will not be found.")
-  parser.add_argument('--cascade-file', '-r', help = "The file to read the resulting cascade from; If left empty, the default cascade will be loaded")
+  parser.add_argument('--cascade-file', '-r', default = pkg_resources.resource_filename('bob.ip.facedetect', 'MCT_cascade.hdf5'), help = "The file to read the resulting cascade from; If left empty, the default cascade will be loaded")
   parser.add_argument('--prediction-threshold', '-t', type = float, help = "If given, all detection above this threshold will be displayed.")
   parser.add_argument('--prune-detections', '-p', type=float, default=1., help = "If given, detections that overlap with the given threshold are pruned")
   parser.add_argument('--best-detection-overlap', '-b', type=float, help = "If given, the average of the overlapping detections with this minimum overlap will be considered.")
@@ -35,9 +36,6 @@ def command_line_options(command_line_arguments):
   bob.core.log.add_command_line_option(parser)
   args = parser.parse_args(command_line_arguments)
   bob.core.log.set_verbosity_level(logger, args.verbose)
-
-  if args.cascade_file is None:
-    args.cascade_file = pkg_resources.resource_filename('bob.ip.facedetect', 'MCT_cascade.hdf5')
 
   return args
 
@@ -74,7 +72,7 @@ def main(command_line_arguments = None):
 
   if args.best_detection_overlap is not None:
     # compute average over the best locations
-    bb, value = bob.ip.facedetect.utils.best_detection(detections, predictions, args.best_detection_overlap)
+    bb, value = bob.ip.facedetect.best_detection(detections, predictions, args.best_detection_overlap)
     detections = [bb]
     logger.info("Limiting to a single BoundingBox %s with value %f", str(detections[0]), value)
 

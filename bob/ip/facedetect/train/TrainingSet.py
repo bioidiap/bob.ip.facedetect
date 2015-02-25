@@ -145,7 +145,7 @@ class TrainingSet:
           positives = []
           negatives = []
           # iterate over all possible positions in the image
-          for bb in sampler.sample(scaled_image_shape):
+          for bb in sampler.sample_scaled(scaled_image_shape):
             # check if the patch is a positive example
             positive = False
             negative = True
