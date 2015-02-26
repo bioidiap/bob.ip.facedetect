@@ -55,8 +55,6 @@ static int PyBobIpFacedetectFeatureExtractor_init(PyBobIpFacedetectFeatureExtrac
   char** kwlist1 = FeatureExtractor_doc.kwlist(0);
   char** kwlist2 = FeatureExtractor_doc.kwlist(1);
   char** kwlist3 = FeatureExtractor_doc.kwlist(2);
-//  char* kwlist4[] = FeatureExtractor_doc.kwlist(3);
-//  char* kwlist5[] = FeatureExtractor_doc.kwlist(4);
 
   // get the number of command line arguments
   Py_ssize_t nargs = (args?PyTuple_Size(args):0) + (kwargs?PyDict_Size(kwargs):0);
@@ -216,14 +214,15 @@ PyObject* PyBobIpFacedetectFeatureExtractor_extractors(PyBobIpFacedetectFeatureE
   BOB_TRY
   auto lbps = self->cxx->getExtractors();
   PyObject* list = PyList_New(lbps.size());
+  if (!list) return 0;
   auto list_ = make_safe(list);
   for (Py_ssize_t i = 0; i < PyList_GET_SIZE(list); ++i){
     PyBobIpBaseLBPObject* lbp = reinterpret_cast<PyBobIpBaseLBPObject*>(PyBobIpBaseLBP_Type.tp_alloc(&PyBobIpBaseLBP_Type, 0));
+    if (!lbp) return 0;
     lbp->cxx = lbps[i];
-    PyList_SET_ITEM(list, i, Py_BuildValue("O", lbp));
+    PyList_SET_ITEM(list, i, Py_BuildValue("N", lbp));
   }
-  Py_INCREF(list);
-  return list;
+  return Py_BuildValue("O", list);
   BOB_CATCH_MEMBER("extractors could not be read", 0)
 }
 

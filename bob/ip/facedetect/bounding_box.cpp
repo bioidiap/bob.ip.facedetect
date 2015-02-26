@@ -52,7 +52,7 @@ static int PyBobIpFacedetectBoundingBox_init(PyBobIpFacedetectBoundingBoxObject*
   }
 
   blitz::TinyVector<double,2> topleft, size;
-  if (!(PyArg_ParseTupleAndKeywords(args, kwargs, "(dd)|(dd)", kwlist1, &topleft[0], &topleft[1], &size[0], &size[1]))) return -1;
+  if (!(PyArg_ParseTupleAndKeywords(args, kwargs, "(dd)(dd)", kwlist1, &topleft[0], &topleft[1], &size[0], &size[1]))) return -1;
   self->cxx.reset(new bob::ip::facedetect::BoundingBox(topleft[0], topleft[1], size[0], size[1]));
   return 0;
 
@@ -417,8 +417,7 @@ static PyObject* PyBobIpFacedetectBoundingBox_shift(PyBobIpFacedetectBoundingBox
   PyBobIpFacedetectBoundingBoxObject* ret = reinterpret_cast<PyBobIpFacedetectBoundingBoxObject*>(PyBobIpFacedetectBoundingBox_Type.tp_alloc(&PyBobIpFacedetectBoundingBox_Type, 0));
   ret->cxx = self->cxx->shift(offset[0], offset[1]);
 
-  return (PyObject*)ret;
-//  return Py_BuildValue("N", ret);
+  return Py_BuildValue("N", ret);
   BOB_CATCH_MEMBER("cannot shift", 0)
 }
 

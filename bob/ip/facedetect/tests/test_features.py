@@ -18,6 +18,9 @@ def test01_single_LBP():
   for i, lbp in enumerate((bob.ip.base.LBP(8, 2.), bob.ip.base.LBP(8, (3,3)), bob.ip.base.LBP(8, (3,3), (2,2)))):
     extractor = bob.ip.facedetect.FeatureExtractor(patch_size = (24,20), extractors = [lbp])
 
+    assert len(extractor.extractors) == 1
+    assert extractor.extractors[0] == lbp
+
     feature_length = extractor.number_of_features
 
     # check that both feature extractors extract the same features

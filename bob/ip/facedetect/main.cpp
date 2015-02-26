@@ -58,7 +58,7 @@ PyObject* PyBobIpFacedetect_PruneDetections(PyObject*, PyObject* args, PyObject*
   for (Py_ssize_t i = 0; i < PyList_GET_SIZE(pruned); ++i){
     PyBobIpFacedetectBoundingBoxObject* bb = reinterpret_cast<PyBobIpFacedetectBoundingBoxObject*>(PyBobIpFacedetectBoundingBox_Type.tp_alloc(&PyBobIpFacedetectBoundingBox_Type, 0));
     bb->cxx = pruned_boxes[i];
-    PyList_SET_ITEM(pruned, i, Py_BuildValue("O", bb));
+    PyList_SET_ITEM(pruned, i, Py_BuildValue("N", bb));
   }
 
   // return tuple: detections, predictions
@@ -114,7 +114,7 @@ PyObject* PyBobIpFacedetect_OverlappingDetections(PyObject*, PyObject* args, PyO
   for (Py_ssize_t i = 0; i < PyList_GET_SIZE(overlapped); ++i){
     PyBobIpFacedetectBoundingBoxObject* bb = reinterpret_cast<PyBobIpFacedetectBoundingBoxObject*>(PyBobIpFacedetectBoundingBox_Type.tp_alloc(&PyBobIpFacedetectBoundingBox_Type, 0));
     bb->cxx = overlapped_boxes[i];
-    PyList_SET_ITEM(overlapped, i, Py_BuildValue("O", bb));
+    PyList_SET_ITEM(overlapped, i, Py_BuildValue("N", bb));
   }
 
   // return tuple: detections, predictions
