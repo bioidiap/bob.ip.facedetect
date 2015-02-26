@@ -110,6 +110,7 @@ static int PyBobIpFacedetectFeatureExtractor_init(PyBobIpFacedetectFeatureExtrac
 }
 
 static void PyBobIpFacedetectFeatureExtractor_delete(PyBobIpFacedetectFeatureExtractorObject* self) {
+  self->cxx.reset();
   Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -174,6 +175,7 @@ int PyBobIpFacedetectFeatureExtractor_set_model_indices(PyBobIpFacedetectFeature
   BOB_TRY
   PyBlitzArrayObject* data;
   if (!PyBlitzArray_Converter(value, &data)) return 0;
+  auto data_ = make_safe(data);
   if (data->type_num != NPY_INT32 || data->ndim != 1){
     PyErr_Format(PyExc_TypeError, "model_indices can only be 1D and of type int32");
     return -1;
@@ -552,6 +554,8 @@ static PyObject* PyBobIpFacedetectFeatureExtractor_save(PyBobIpFacedetectFeature
   // by shape
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&", kwlist, &PyBobIoHDF5File_Converter, &hdf5)) return 0;
 
+  auto hdf5_ = make_safe(hdf5);
+
   self->cxx->save(*hdf5->f);
   Py_RETURN_NONE;
   BOB_CATCH_MEMBER("cannot save", 0)
@@ -626,7 +630,7 @@ PyTypeObject PyBobIpFacedetectFeatureExtractor_Type = {
   0
 };
 
-bool init_PyBobIpFacedetectFeatureExtractor(PyObject* module)
+bool init_BobIpFacedetectFeatureExtractor(PyObject* module)
 {
   // initialize the type struct
   PyBobIpFacedetectFeatureExtractor_Type.tp_name = FeatureExtractor_doc.name();

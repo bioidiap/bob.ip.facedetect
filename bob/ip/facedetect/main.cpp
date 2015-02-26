@@ -165,8 +165,8 @@ static PyObject* create_module (void) {
   auto module_ = make_safe(module); ///< protects against early returns
 
   if (PyModule_AddStringConstant(module, "__version__", BOB_EXT_MODULE_VERSION) < 0) return 0;
-  if (!init_PyBobIpFacedetectBoundingBox(module)) return 0;
-  if (!init_PyBobIpFacedetectFeatureExtractor(module)) return 0;
+  if (!init_BobIpFacedetectBoundingBox(module)) return 0;
+  if (!init_BobIpFacedetectFeatureExtractor(module)) return 0;
 
   /* imports bob.blitz C-API + dependencies */
   if (import_bob_blitz() < 0) return 0;

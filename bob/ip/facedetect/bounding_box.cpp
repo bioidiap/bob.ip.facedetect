@@ -605,7 +605,7 @@ PyTypeObject PyBobIpFacedetectBoundingBox_Type = {
   0
 };
 
-bool init_PyBobIpFacedetectBoundingBox(PyObject* module)
+bool init_BobIpFacedetectBoundingBox(PyObject* module)
 {
   // initialize the type struct
   PyBobIpFacedetectBoundingBox_Type.tp_name = BoundingBox_doc.name();

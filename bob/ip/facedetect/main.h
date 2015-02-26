@@ -28,7 +28,7 @@ typedef struct {
 } PyBobIpFacedetectBoundingBoxObject;
 
 extern PyTypeObject PyBobIpFacedetectBoundingBox_Type;
-bool init_PyBobIpFacedetectBoundingBox(PyObject* module);
+bool init_BobIpFacedetectBoundingBox(PyObject* module);
 int PyBobIpFacedetectBoundingBox_Check(PyObject* o);
 
 // Feature extractor
@@ -38,7 +38,7 @@ typedef struct {
 } PyBobIpFacedetectFeatureExtractorObject;
 
 extern PyTypeObject PyBobIpFacedetectFeatureExtractor_Type;
-bool init_PyBobIpFacedetectFeatureExtractor(PyObject* module);
+bool init_BobIpFacedetectFeatureExtractor(PyObject* module);
 int PyBobIpFacedetectFeatureExtractor_Check(PyObject* o);
 
 // Functions
