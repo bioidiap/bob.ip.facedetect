@@ -91,10 +91,10 @@ To extract all faces in a given image, the function :py:func:`bob.ip.facedetect.
 
    >>> bounding_boxes, qualities = bob.ip.facedetect.detect_all_faces(face_image, threshold=20)
    >>> for i in range(len(bounding_boxes)):
-   ...   print (qualities[i], bounding_boxes[i].topleft, bounding_boxes[i].size)
-   74.3044578216 (88, 66) (264, 220)
-   24.7024259609 (264, 192) (72, 60)
-   24.5685275925 (379, 126) (126, 105)
+   ...   print ("%3.4f"%qualities[i], bounding_boxes[i].topleft, bounding_boxes[i].size)
+   74.3045 (88, 66) (264, 220)
+   24.7024 (264, 192) (72, 60)
+   24.5685 (379, 126) (126, 105)
 
 The returned list of detected bounding boxes are sorted according to the quality values.
 Again, ``cascade``, ``sampler`` and ``minimum_overlap`` can be specified to the function.
@@ -118,13 +118,13 @@ In case you want to implement your own strategy of merging overlapping bounding 
    >>> gray_image = bob.ip.color.rgb_to_gray(face_image)
    >>> for quality, patch in sampler.iterate_cascade(cascade, gray_image):
    ...   if quality > 40:
-   ...     print (quality, patch.topleft, patch.size)
-   48.9982826044 (84, 84) (253, 210)
-   51.780881988 (105, 63) (253, 210)
-   56.5324707243 (105, 84) (253, 210)
-   47.945328029 (106, 88) (212, 177)
-   40.3315558377 (124, 71) (212, 177)
-   43.7717138458 (134, 104) (179, 149)
+   ...     print ("%3.4f"%quality, patch.topleft, patch.size)
+   48.9983 (84, 84) (253, 210)
+   51.7809 (105, 63) (253, 210)
+   56.5325 (105, 84) (253, 210)
+   47.9453 (106, 88) (212, 177)
+   40.3316 (124, 71) (212, 177)
+   43.7717 (134, 104) (179, 149)
 
 As you can see, most of the patches with high quality values overlap.
 
