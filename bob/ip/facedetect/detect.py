@@ -80,7 +80,7 @@ def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.
 
   sampler : :py:class:`bob.ip.facedetect.Sampler` or ``None``
     The sampler that defines the sampling of bounding boxes to search for the face.
-    If not specified, a default Sampler is instantiated.
+    If not specified, a default Sampler is instantiated, which will perform a tight sampling.
 
   minimum_overlap : float between 0 and 1
     Computes the best detection using the given minimum overlap, see :py:func:`bob.ip.facedetect.best_detection`

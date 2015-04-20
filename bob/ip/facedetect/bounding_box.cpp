@@ -553,6 +553,33 @@ static PyObject* PyBobIpFacedetectBoundingBox_is_valid_for(PyBobIpFacedetectBoun
 }
 
 
+static auto contains = bob::extension::FunctionDoc(
+  "contains",
+  "Checks if the bounding box contains the given point",
+  0,
+  true
+)
+.add_prototype("point", "contained")
+.add_parameter("point", "(float, float)", "The point to test")
+.add_return("contained", "bool", "``True`` if the bounding box contains the given point, ``False`` otherwise")
+;
+static PyObject* PyBobIpFacedetectBoundingBox_contains(PyBobIpFacedetectBoundingBoxObject* self, PyObject* args, PyObject* kwargs) {
+  BOB_TRY
+  char** kwlist = contains.kwlist();
+
+  blitz::TinyVector<double,2> point;
+  // by shape
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "(dd)", kwlist, &point[0], &point[1])){
+    return 0;
+  }
+  if (self->cxx->contains(point))
+    Py_RETURN_TRUE;
+  else
+    Py_RETURN_FALSE;
+  BOB_CATCH_MEMBER("cannot compute point", 0)
+}
+
+
 static PyMethodDef PyBobIpFacedetectBoundingBox_methods[] = {
   {
     scale.name(),
@@ -589,6 +616,12 @@ static PyMethodDef PyBobIpFacedetectBoundingBox_methods[] = {
     (PyCFunction)PyBobIpFacedetectBoundingBox_is_valid_for,
     METH_VARARGS|METH_KEYWORDS,
     is_valid_for.doc()
+  },
+  {
+    contains.name(),
+    (PyCFunction)PyBobIpFacedetectBoundingBox_contains,
+    METH_VARARGS|METH_KEYWORDS,
+    contains.doc()
   },
   {0} /* Sentinel */
 };

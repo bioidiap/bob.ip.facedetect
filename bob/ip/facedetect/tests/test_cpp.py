@@ -19,6 +19,11 @@ def test_bbx():
   assert bb.bottomright == (30,40)
   assert bb.size == (40,40)
 
+  assert bb.contains((-10,0))
+  assert bb.contains((29,39))
+  assert not bb.contains((100, 100))
+  assert not bb.contains((-100, -100))
+
   # check the scaling functionality
   sbb = bb.scale(0.5)
   assert sbb.topleft == (-5,0)

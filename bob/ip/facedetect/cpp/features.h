@@ -55,6 +55,8 @@ class BoundingBox{
 
     bool isValidFor(blitz::TinyVector<int,2> shape) const {return m_top >= 0 && m_top + m_height < shape[0] && m_left >= 0 && m_left + m_width < shape[1];}
 
+    bool contains(blitz::TinyVector<double,2> point) const {return point[0] >= m_top && point[1] >= m_left && point[0] < bottom() && point[1] < right();}
+
   private:
     int irnd(double x) const {return (int)round(x);}
 
