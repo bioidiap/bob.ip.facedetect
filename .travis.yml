@@ -22,7 +22,7 @@ before_install:
 - pip install --find-links https://www.idiap.ch/software/bob/wheels/travis/ --use-wheel --pre -r requirements.txt coveralls
 install:
 - python bootstrap-buildout.py
-- CPPFLAGS=--coverage LDFLAGS=--coverage ./bin/buildout
+- CPPFLAGS=--coverage LDFLAGS=--coverage ./bin/buildout buildout:debug=false buildout:develop=. buildout:extensions=bob.buildout buildout:auto-checkout=
 script:
 - ./bin/python -c 'import pkg_resources; from bob.ip.facedetect import get_config; print(get_config())'
 - ./bin/coverage run --source=bob.ip.facedetect ./bin/nosetests -sv
