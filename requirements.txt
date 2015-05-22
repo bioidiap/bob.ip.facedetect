@@ -2,8 +2,9 @@ setuptools
 bob.blitz
 bob.core
 bob.io.base
-bob.io.image
 bob.ip.base
+# python-only dependencies
+bob.learn.boosting
+bob.io.image
 bob.ip.color
 bob.ip.draw
-bob.learn.boosting

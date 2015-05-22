@@ -83,6 +83,14 @@ setup(
     },
 
     ext_modules = [
+      Extension("bob.ip.facedetect.version",
+        [
+          "bob/ip/facedetect/version.cpp",
+        ],
+        version = version,
+        bob_packages = bob_packages,
+      ),
+
       Extension(
         'bob.ip.facedetect._library',
         [

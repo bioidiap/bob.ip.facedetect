@@ -164,19 +164,16 @@ static PyObject* create_module (void) {
   if (!module) return 0;
   auto module_ = make_safe(module); ///< protects against early returns
 
-  if (PyModule_AddStringConstant(module, "__version__", BOB_EXT_MODULE_VERSION) < 0) return 0;
   if (!init_BobIpFacedetectBoundingBox(module)) return 0;
   if (!init_BobIpFacedetectFeatureExtractor(module)) return 0;
 
   /* imports bob.blitz C-API + dependencies */
   if (import_bob_blitz() < 0) return 0;
+  if (import_bob_core_logging() < 0) return 0;
   if (import_bob_io_base() < 0) return 0;
-  if (import_bob_sp() < 0) return 0;
   if (import_bob_ip_base() < 0) return 0;
 
-  Py_INCREF(module);
-  return module;
-
+  return Py_BuildValue("O", module);
 }
 
 PyMODINIT_FUNC BOB_EXT_ENTRY_NAME (void) {
