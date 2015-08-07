@@ -3,7 +3,6 @@ bob.blitz
 bob.core
 bob.io.base
 bob.ip.base
-# python-only dependencies
 bob.learn.boosting
 bob.io.image
 bob.ip.color
