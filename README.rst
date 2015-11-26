@@ -6,10 +6,10 @@
    :target: http://pythonhosted.org/bob.ip.facedetect/index.html
 .. image:: http://img.shields.io/badge/docs-latest-orange.png
    :target: https://www.idiap.ch/software/bob/docs/latest/bioidiap/bob.ip.facedetect/master/index.html
-.. image:: https://travis-ci.org/bioidiap/bob.ip.facedetect.svg?branch=master
-   :target: https://travis-ci.org/bioidiap/bob.ip.facedetect?branch=master
-.. image:: https://coveralls.io/repos/bioidiap/bob.ip.facedetect/badge.png?branch=master
-   :target: https://coveralls.io/r/bioidiap/bob.ip.facedetect?branch=master
+.. image:: https://travis-ci.org/bioidiap/bob.ip.facedetect.svg?branch=v2.0.3
+   :target: https://travis-ci.org/bioidiap/bob.ip.facedetect?branch=v2.0.3
+.. image:: https://coveralls.io/repos/bioidiap/bob.ip.facedetect/badge.png?branch=v2.0.3
+   :target: https://coveralls.io/r/bioidiap/bob.ip.facedetect?branch=v2.0.3
 .. image:: https://img.shields.io/badge/github-master-0000c0.png
    :target: https://github.com/bioidiap/bob.ip.facedetect/tree/master
 .. image:: http://img.shields.io/pypi/v/bob.ip.facedetect.png
