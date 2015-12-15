@@ -79,7 +79,7 @@ class Cascade:
     ``classification_threshold`` : float
       A single threshold that will be applied in all rounds of the cascade.
     """
-    indices = range(0, len(boosted_machine.weak_machines), classifiers_per_round)
+    indices = list(range(0, len(boosted_machine.weak_machines), classifiers_per_round))
     if indices[-1] != len(boosted_machine.weak_machines): indices.append(len(boosted_machine.weak_machines))
     self.cascade = []
     self.indices = []

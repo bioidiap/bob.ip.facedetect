@@ -38,7 +38,7 @@ def test_collection():
             ]
 
   devnull = open(os.devnull, 'w')
-  subprocess.call(command, stdout=devnull, stderr=devnull)
+  subprocess.call(command, stdout=devnull)
   assert os.path.exists(list_file)
 
   # check that we can read this file with our IO function
@@ -78,7 +78,7 @@ def test_extraction():
               ]
 
     devnull = open(os.devnull, 'w')
-    subprocess.call(command, stdout=devnull, stderr=devnull)
+    subprocess.call(command, stdout=devnull)
 
     assert os.path.exists(os.path.join(feature_dir, "Extractor.hdf5"))
     assert os.path.exists(os.path.join(feature_dir, "Features_00.hdf5"))
@@ -127,7 +127,7 @@ def test_training():
               ]
 
     devnull = open(os.devnull, 'w')
-    subprocess.call(command, stdout=devnull, stderr=devnull)
+    subprocess.call(command, stdout=devnull)
 
     # check that the training succeeded
     assert os.path.exists(cascade_file)
@@ -162,7 +162,7 @@ def test_detection():
               ]
 
     devnull = open(os.devnull, 'w')
-    subprocess.call(command, stdout=devnull, stderr=devnull)
+    subprocess.call(command, stdout=devnull)
 
     # check that we can read the detected file
     assert os.path.exists(detected_file)
