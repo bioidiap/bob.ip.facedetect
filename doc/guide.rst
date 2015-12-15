@@ -1,3 +1,5 @@
+.. py:currentmodule:: bob.ip.facedetect
+
 .. testsetup:: *
 
    from __future__ import print_function
@@ -35,8 +37,8 @@ This task can be achieved using a single command:
    :include-source: False
 
 As you can see, the bounding box is **not** square as for other face detectors, but has an aspect ratio of :math:`5:6`.
-The function :py:func:`bob.ip.facedetect.detect_single_face` has several optional parameters with proper default values.
-The first optional parameter specifies the :py:class:`bob.ip.facedetect.Cascade`, which contains the classifier cascade.
+The function :py:func:`detect_single_face` has several optional parameters with proper default values.
+The first optional parameter specifies the :py:class:`Cascade`, which contains the classifier cascade.
 We will see later, how this cascade can be re-trained.
 
 The ``minimum_overlap`` parameter defines the minimum overlap that patches of multiple detections of the same face might have.
@@ -45,7 +47,7 @@ If set to ``1`` (or ``None``), only the bounding box of the best detection is re
 Sampling
 ========
 
-The second parameter is a :py:class:`bob.ip.facedetect.Sampler`, which defines how the image is scanned.
+The second parameter is a :py:class:`Sampler`, which defines how the image is scanned.
 The ``scale_factor`` (a value between 0.5 and 1) defines, in which scale granularity the image is scanned.
 For higher scale factors like the default :math:`2^{-1/16}` many scales are tested and the detection time is increased.
 For lower scale factors like :math:`2^{-1/4}`, fewer scales are tested, which might reduce the stability of the detection.
@@ -60,7 +62,7 @@ Theoretically, this parameter might be set to ``None``, for which **all** possib
 
 Finally, the sampler has a given ``patch_size``, which is tightly connected to the cascade and should not be changed.
 
-The :py:class:`bob.ip.facedetect.Sampler` can return an `iterator` of bounding boxes that will be tested:
+The :py:class:`Sampler` can return an `iterator` of bounding boxes that will be tested:
 
 .. doctest::
 
@@ -85,7 +87,7 @@ The classifiers in the cascade do not only provide a decision if a given patch c
 For the pre-trained cascade, this quality value lies approximately between -100 and +100.
 Higher values indicate that there is a face, while patches with smaller values usually contain background.
 
-To extract all faces in a given image, the function :py:func:`bob.ip.facedetect.detect_all_faces` requires that this threshold is given as well:
+To extract all faces in a given image, the function :py:func:`detect_all_faces` requires that this threshold is given as well:
 
 .. doctest::
 
@@ -101,7 +103,7 @@ Again, ``cascade``, ``sampler`` and ``minimum_overlap`` can be specified to the 
 
 .. note::
    The strategy for merging overlapping detections differ between the two detection functions.
-   While :py:func:`bob.ip.facedetect.detect_single_face` uses :py:func:`bob.ip.facedetect.best_detection` to merge detections, :py:func:`bob.ip.facedetect.detect_all_faces` simply uses :py:func:`bob.ip.facedetect.prune_detections` to keep only the detection with the highest quality in the overlapping area.
+   While :py:func:`detect_single_face` uses :py:func:`best_detection` to merge detections, :py:func:`detect_all_faces` simply uses :py:func:`prune_detections` to keep only the detection with the highest quality in the overlapping area.
 
 
 Iterating over the Sampler
@@ -110,7 +112,7 @@ Iterating over the Sampler
 In case you want to implement your own strategy of merging overlapping bounding boxes, you can simply get the detection qualities for all sampled patches.
 
 .. note::
-   For the low level functions, only grayscale images are supported.
+   For the low level functions, only gray-scale images are supported.
 
 .. doctest::
 
@@ -128,6 +130,45 @@ In case you want to implement your own strategy of merging overlapping bounding 
 
 As you can see, most of the patches with high quality values overlap.
 
+
+Using the Command line
+======================
+
+Finally, we have developed a script, namely ``./bin/detect_faces.py``, which integrates most of the above functionality.
+Given an image, the script will detect one or more faces in it, and display the bounding boxes around them.
+When the script is run using default parameters, it will detect just the face in the image that comes with the highest confidence, as the result of :py:func:`detect_single_face` would do.
+
+.. note::
+   We are using :py:func:`matplotlib.pyplot.imshow` to display the resulting image.
+   We are aware that in some cases, no display shows up.
+   In these cases, please try to change the display setup of matplotlib (which isn't easy, I have to admit), or use the ``--write-detection`` parameter to write the result to an image file, and inspect the image with your preferred application.
+
+.. note::
+   Each line of the bounding box is displayed as a single row.
+   When your image resolution is too high, you might not be able to see the lines.
+   Please zoom into the image to increase the visibility of the lines.
+
+However, most of the parameters of the :py:class:`Sampler` that were discussed above, can be specified on command line such as:
+
+* ``--distance`` : The distance between two offsets. Lower values will increase detection probability, but slow down detection speed.
+* ``--scale-factor`` : The (logarithmic) distance between two tested scales. Must be in range ``]0, 1[``. Higher values (closer to 1) will increase detection probability, but slow down detection speed.
+* ``--lowest-scale`` : The lowest image scale (relative to the image resolution), in which faces are detected. Must be in range ``[0,1]``. Lower values will slow down detection speed.
+* ``--best-detection-overlap`` : If given, the bounding box is merged using several overlapping detections, where the given value specifies the minimum Jaccard :py:meth:`BoundingBox.similarity` value (which must be in range ``]0,1[``) between the bounding boxes that take part in the merging process. A good value for this parameter is ``0.2``.
+
+Also, parameters to change the nature of the displayed results can be changed.
+When the ``--prediction-threshold`` parameter is present, many bounding boxes will be displayed, where the color ranges from black (the lowest) to red (the highest prediction value):
+
+* ``--prediction-threshold`` : Displays all detected bounding boxes that have a prediction value greater than the specified value. The lower the value, the more bounding boxes will be displayed. Good values (for the default cascade) might range in ``[20, 50]``.
+* ``--prune-detections`` : Prunes the detected bounding boxes by eliminating all overlapping bounding boxes and keeping only the non-overlapping ones with the highest prediction values. The given parameter, again, specifies the amount of Jaccard :py:meth:`BoundingBox.similarity` for which two bounding boxes are considered to overlap. Anything in range ``[0,1]`` will work.
+
+  .. note::
+     For large images or very tight sampling, the pruning process might take a while, as the implementation currently in in :math:`O(N^2)` with :math:`N` being the number of bounding boxes.
+
+Finally, when you have trained your own cascade, you can specify it using the ``--cascade-file`` parameter.
+How to train your own face detection cascade is described in the next section.
+
+
+.. _retrain_detector:
 
 Retrain the Detector
 --------------------
@@ -148,13 +189,13 @@ This script has several options:
 
 To train the detector, both positive and negative training data needs to be present.
 Positive data is defined by annotations of the images, which can be translated into bounding boxes.
-E.g., for frontal facial images, bounding boxes can be defined by the eye coordinates (see :py:func:`bob.ip.facedetect.bounding_box_from_annotation`) or directly by specifying the top-left and bottom-right coordinate.
+E.g., for frontal facial images, bounding boxes can be defined by the eye coordinates (see :py:func:`bounding_box_from_annotation`) or directly by specifying the top-left and bottom-right coordinate.
 There are two different ways, how annotations can be read.
-One way is to read annotations from annotation file using the :py:func:`bob.ip.facedetect.read_annotation_file` function, which can read various types of annotations.
+One way is to read annotations from annotation file using the :py:func:`read_annotation_file` function, which can read various types of annotations.
 To use this function, simply specify the command line options for the ``./bin/collect_training_data.py`` script:
 
 - ``--annotation-directory``: For each image in the ``--image-directory``, an annotation file with the given ``--annotation-extension`` needs to be available in this directory.
-- ``--annotation-type``: The way how annotations are stored in the annotation files (see :py:func:`bob.ip.facedetect.read_annotation_file`).
+- ``--annotation-type``: The way how annotations are stored in the annotation files (see :py:func:`read_annotation_file`).
 
 The second way is to use one of our database interfaces (see https://github.com/idiap/bob/wiki/Packages), which have annotations stored internally:
 
@@ -186,24 +227,24 @@ First, the ``./bin/extract_training_features.py`` can be used to extracted train
 Again, several options can be selected:
 
 - ``--file-lists``: The file lists to process
-- ``--feature-directory``: A directory, where extracted features will be stored; this directory should be able to store several 100 GB of data.
+- ``--feature-directory``: A directory, where extracted features will be stored; this directory should be able to store several 100 GB of data
 - ``--patch-size``: The size of the patches that should be extracted from the images; the default ``(24,20)`` has shown to be large enough
-- ``--mirror-samples``: Select this to **disable** the mirroring of training samples.
+- ``--no-mirror-samples``: Turn off the horizontally mirroring of the sample images, which is enabled by default
 
 
-Since the detector will use the :py:class:`bob.ip.facedetect.Sampler` to extract image patches, we follow a similar approach to generate training data.
+Since the detector will use the :py:class:`Sampler` to extract image patches, we follow a similar approach to generate training data.
 A sampler is used to iterate over the training images and extract image patches.
 Depending on the overlap of the image patches, they are considered as positive or negative samples, or they are ignored, i.e., when the overlap has a value between the:
 
 - ``--similarity-thresholds``: The upper bound to accept patches as negative and the lower bound to accept patches as positive training samples
 - ``--distance``: The distance to scan the image with, see `Sampling`_.
-- ``--lowest-scale``: The lowest image scale to scan, see Sampling_.
-- ``--scale-base``: The scale factor between two scales to scan, see Sampling_.
+- ``--lowest-scale``: The lowest image scale to scan, see `Sampling`_
+- ``--scale-base``: The scale factor between two scales to scan, see Sampling_
 
 Since this sampling strategy would end up with a **huge** amount of negative samples, there are two options to limit them:
 
-- ``--negative-examples-every``: limits the number of scales, from which negative examples are extracted.
-- ``--examples-per-image-scale``: limits the number of positive and negative examples for each image scale.
+- ``--negative-examples-every``: limits the number of scales, from which negative examples are extracted
+- ``--examples-per-image-scale``: limits the number of positive and negative examples for each image scale
 
 Now, the type of LBP features that are extracted have to be defined.
 Usually, LBP features in all possible sizes and aspect ratios that fit into the given ``--patch-size`` are generated.
@@ -285,3 +326,15 @@ For completeness it is worth mentioning that the default pre-trained cascade was
 - Yale-B: all images of all protocols
 - FDHD-background: background images without faces
 - CalTech-background: background images without faces
+
+Feature extraction was performed using a single scale MCT, as:
+
+.. code-block:: sh
+
+   $ ./bin/extract_training_features.py -vv --lbp-scale 1 --lbp-variant mct --negative-samples-every 1 --filelists [ALL of ABOVE]
+
+Finally, the cascade training used default parameters:
+
+.. code-block:: sh
+
+  $ ./bin/extract_training_features.py -vv

@@ -17,26 +17,26 @@ def best_detection(detections, predictions, minimum_overlap = 0.2):
 
   Computes the best detection for the given detections and according predictions.
 
-  This is acheived by computing a weighted sum of detections that overlap with the best detection (the one with the highest prediction), where the weights are based on the predictions.
+  This is achieved by computing a weighted sum of detections that overlap with the best detection (the one with the highest prediction), where the weights are based on the predictions.
   Only detections with according prediction values > 0 are considered.
 
-  **Keyword Parameters:**
+  **Parameters:**
 
-  detections : [:py:class:`bob.ip.facedetect.BoundingBox`]
+  ``detections`` : [:py:class:`BoundingBox`]
     The detected bounding boxes.
 
-  predictions : [float]
+  ``predictions`` : [float]
     The predictions for the ``detections``.
 
-  minimum_overlap : float between 0 and 1
-    The minimum overlap of bounding boxes with the best detection to be considered.
+  ``minimum_overlap`` : float between 0 and 1
+    The minimum overlap (in terms of Jaccard :py:meth:`BoundingBox.similarity`) of bounding boxes with the best detection to be considered.
 
   **Returns:**
 
-  bounding_box : :py:class:`bob.ip.facedetect.BoundingBox`
+  ``bounding_box`` : :py:class:`BoundingBox`
     The bounding box which has been merged from the detections
 
-  prediction : float
+  ``prediction`` : float
     The prediction value of the bounding box, which is a weighted sum of the predictions with minimum overlap
   """
   # remove all negative predictions since they harm the calculation of the weights
@@ -69,28 +69,28 @@ def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.
 
   Detects a single face in the given image, i.e., the one with the highest prediction value.
 
-  **Keyword Parameters:**
+  **Parameters:**
 
-  image : array_like (2D aka gray or 3D aka RGB)
+  ``image`` : array_like (2D aka gray or 3D aka RGB)
     The image to detect a face in.
 
-  cascade : str or :py:class:`bob.ip.facedetect.Cascade` or ``None``
-    If given, the cascade file name or the loaded cascase to be used.
-    If not given, the :py:func:`bob.ip.facedetect.default_cascade` is used.
+  ``cascade`` : str or :py:class:`Cascade` or ``None``
+    If given, the cascade file name or the loaded cascade to be used.
+    If not given, the :py:func:`default_cascade` is used.
 
-  sampler : :py:class:`bob.ip.facedetect.Sampler` or ``None``
+  ``sampler`` : :py:class:`Sampler` or ``None``
     The sampler that defines the sampling of bounding boxes to search for the face.
     If not specified, a default Sampler is instantiated, which will perform a tight sampling.
 
-  minimum_overlap : float between 0 and 1
-    Computes the best detection using the given minimum overlap, see :py:func:`bob.ip.facedetect.best_detection`
+  ``minimum_overlap`` : float between 0 and 1
+    Computes the best detection using the given minimum overlap, see :py:func:`best_detection`
 
-  **Return value:**
+  **Returns:**
 
-  bounding_box : :py:class:`bob.ip.facedetect.BoundingBox`
+  ``bounding_box`` : :py:class:`BoundingBox`
     The bounding box containing the detected face.
 
-  quality : float
+  ``quality`` : float
     The quality of the detected face, a value greater than 0.
   """
 
@@ -121,39 +121,39 @@ def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.
   return bb, quality
 
 
-def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, minimum_overlap=0.2):
+def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, minimum_overlap = 0.2):
   """detect_all_faces(image, [cascade], [sampler], [minimum_overlap]) -> bounding_boxes, qualities
 
   Detects a single face in the given image, i.e., the one with the highest prediction value.
 
-  **Keyword Parameters:**
+  **Parameters:**
 
-  image : array_like (2D aka gray or 3D aka RGB)
+  ``image`` : array_like (2D aka gray or 3D aka RGB)
     The image to detect a face in.
 
-  cascade : str or :py:class:`bob.ip.facedetect.Cascade` or ``None``
-    If given, the cascade file name or the loaded cascase to be used.
-    If not given, the :py:func:`bob.ip.facedetect.default_cascade` is used.
+  ``cascade`` : str or :py:class:`Cascade` or ``None``
+    If given, the cascade file name or the loaded cascade to be used to classify image patches.
+    If not given, the :py:func:`default_cascade` is used.
 
-  sampler : :py:class:`bob.ip.facedetect.Sampler` or ``None``
+  ``sampler`` : :py:class:`Sampler` or ``None``
     The sampler that defines the sampling of bounding boxes to search for the face.
     If not specified, a default Sampler is instantiated.
 
-  threshold : float
+  ``threshold`` : float
     The threshold of the quality of detected faces.
     Detections with a quality lower than this value will not be considered.
     Higher thresholds will not detect all faces, while lower thresholds will generate false detections.
 
-  minimum_overlap : float between 0 and 1
-    Computes the best detection using the given minimum overlap, see :py:func:`bob.ip.facedetect.best_detection`
+  ``minimum_overlap`` : float between 0 and 1
+    Computes the best detection using the given minimum overlap, see :py:func:`best_detection`
 
-  **Return value:**
+  **Returns:**
 
-  bounding_boxes : [:py:class:`bob.ip.facedetect.BoundingBox`]
+  ``bounding_boxes`` : [:py:class:`BoundingBox`]
     The bounding box containing the detected face.
 
-  quality : [float]
-    The quality of the detected face, a value greater than 0.
+  ``qualities`` : [float]
+    The qualities of the ``bounding_boxes``, values greater than ``threshold``.
   """
   if cascade is None:
     cascade = default_cascade()

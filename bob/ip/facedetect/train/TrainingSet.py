@@ -1,6 +1,7 @@
 
 import bob.io.base
 import bob.io.image
+import bob.ip.base
 import bob.ip.color
 import numpy
 
@@ -13,31 +14,76 @@ from .utils import bounding_box_from_annotation, parallel_part, quasi_random_ind
 from .._library import BoundingBox, FeatureExtractor
 
 class TrainingSet:
-  """A set of images including bounding boxes that are used as a training set"""
+  """A set of images including bounding boxes that are used as a training set
 
-  def __init__(self, feature_directory = None, list_file=None):
+  The ``TrainingSet`` incorporates information about the data used to train the face detector.
+  It is heavily bound to the scripts to re-train the face detector, which are documented in section :ref:`retrain_detector`.
+
+  The training set can be in several stages, which are optimized for speed.
+  First, training data is collected in different ways and stored in one or more list files.
+  These list files contain the location of the image files, and where the face bounding boxes in the according images are.
+  Then, positive and negative features from one or more file lists are extracted and stored in a given ``feature_directory``, where 'positive' features represent faces, and 'negative' features represent the background.
+  Finally, the training is performed using only these features only, without keeping track of where they actually stem from.
+
+  **Constructor Documentation**
+
+    Creates an empty training set.
+
+    **Parameters:**
+
+    ``feature_directory`` : str
+      The name of a temporary directory, where (intermediate) features will be stored.
+      This directory should be able to store several 100GB of data.
+  """
+
+  def __init__(self, feature_directory = None):
     self.feature_directory = feature_directory
     self.image_paths = []
     self.bounding_boxes = []
-    if list_file is not None:
-      self.load(list_file)
 
     self.positive_indices = set()
     self.negative_indices = set()
 
   def add_image(self, image_path, annotations):
+    """Adds an image and its bounding boxes to the current list of files
+
+    The bounding boxes are automatically estimated based on the given annotations.
+
+    **Parameters:**
+
+    ``image_path`` : str
+      The file name of the image, including its full path
+
+    ``annotations`` : [dict]
+      A list of annotations, i.e., where each annotation can be anything that :py:func:`bounding_box_from_annotation` can handle; this list can be empty, in case the image does not contain any faces
+    """
     self.image_paths.append(image_path)
     self.bounding_boxes.append([bounding_box_from_annotation(**a) for a in annotations])
 
   def add_from_db(self, database, files):
-    """Adds image path and bounding boxes from the given annotations."""
+    """Adds images and bounding boxes for the given files of a database that follows the :py:ref:`bob.db.verification.utils.Database <bob.db.verification.utils>` interface.
+
+    **Parameters:**
+
+    ``database`` : a derivative of :py:class:`bob.db.verification.utils.Database`
+      The database interface, which provides file names and annotations for the given ``files``
+
+    ``files`` : :py:class:`bob.db.verification.utils.File` or compatible
+      The files (as returned by :py:meth:`bob.db.verification.utils.Database.objects`) which should be added to the training list
+    """
     for f in files:
       annotation = database.annotations(f)
       image_path = database.original_file_name(f)
       self.add_image(image_path, [annotation])
 
   def save(self, list_file):
-    """Saves the current list of annotations to the given file."""
+    """Saves the current list of annotations to the given file.
+
+    **Parameters:**
+
+    ``list_file`` : str
+      The name of a list file to write the currently stored list into
+    """
     bob.io.base.create_directories_safe(os.path.dirname(list_file))
     with open(list_file, 'w') as f:
       for i in range(len(self.image_paths)):
@@ -47,7 +93,11 @@ class TrainingSet:
         f.write("\n")
 
   def load(self, list_file):
-    """Loads the list of annotations from the given file and **appends** it to the current list."""
+    """Loads the list of annotations from the given file and **appends** it to the current list.
+
+    ``list_file`` : str
+      The name of a list file to load and append
+    """
     with open(list_file) as f:
       for line in f:
         if line and line[0] != '#':
@@ -61,7 +111,29 @@ class TrainingSet:
 
 
   def iterate(self, max_number_of_files=None):
-    """Returns the image name and the bounding boxes stored in the training set as an iterator."""
+    """iterate([max_number_of_files]) -> image, bounding_boxes, image_file
+
+    Yields the image and the bounding boxes stored in the training set as an iterator.
+
+    This function loads the images and converts them to gray-scale.
+    It yields the image, the list of bounding boxes and the original image file name.
+
+    **Parameters:**
+
+    ``max_number_of_files`` : int or ``None``
+      If specified, limit the number of returned data by sub-selection using :py:func:`quasi_random_indices`
+
+    **Yields:**
+
+    ``image`` : array_like(2D)
+      The image loaded from file and converted to gray scale
+
+    ``bounding_boxes`` : [:py:class:`BoundingBox`]
+      A list of bounding boxes, where faces are found in the image; might be empty (in case of pure background images)
+
+    `` image_file`` : str
+      The name of the original image that was read
+    """
     indices = quasi_random_indices(len(self), max_number_of_files)
     for index in indices:
       image = bob.io.base.load(self.image_paths[index])
@@ -72,34 +144,62 @@ class TrainingSet:
 
 
   def _feature_file(self, parallel = None, index = None):
+    """Returns the name of an intermediate file for storing features."""
     if index is None:
-      index = '0' if parallel is None or "SGE_TASK_ID" not in os.environ else os.environ["SGE_TASK_ID"]
-    if len(index) == 1:
-      index = '0' + index
-    return os.path.join(self.feature_directory, "Features_%s.hdf5" % index)
+      index = 0 if parallel is None or "SGE_TASK_ID" not in os.environ else int(os.environ["SGE_TASK_ID"])
+    return os.path.join(self.feature_directory, "Features_%02d.hdf5" % index)
 
   def __len__(self):
     """Returns the number of files stored inside this training set."""
     return len(self.image_paths)
 
 
-  def extract(self, sampler, feature_extractor, number_of_examples_per_scale = None, similarity_thresholds = (0.5, 0.8), parallel = None, mirror = False, use_every_nth_negative_scale = 1):
-    """Extracts **all** features from **all** images in **all** scales and writes them to file.
+  def extract(self, sampler, feature_extractor, number_of_examples_per_scale = (100, 100), similarity_thresholds = (0.5, 0.8), parallel = None, mirror = False, use_every_nth_negative_scale = 1):
+    """Extracts features from **all** images in **all** scales and writes them to file.
 
+    This function iterates over all images that are present in the internally stored list, and extracts features using the given ``feature_extractor`` for every image patch that the given ``sampler`` returns.
+    The final features will be stored in the ``feature_directory`` that is set in the constructor.
 
-    similarity_thresholds : (float, float)
-      two patches will be compared: the (scaled) annotated patch and the (shifted) extracted patch
-      if the similarity is lower than the first value of the similarity_thresholds tuple, it will be accepted as negative example,
-      if the similarity is higher than the second value of the similarity_thresholds tuple, it will be accepted as positive example,
-      otherwise the patch will be rejected.
+    For each image, the ``sampler`` samples patch locations, which cover the whole image in different scales.
+    For each patch locations is tested, how similar they are to the face bounding boxes that belong to that image, using the Jaccard :py:meth:`BoundingBox.similarity`.
+    The similarity is compared to the ``similarity_thresholds``.
+    If it is smaller than the first threshold, the patch is considered as background, when it is greater the the second threshold, it is considered as a face, otherwise it is rejected.
+    Depending on the image resolution and the number of bounding boxes, this will usually result in some positive and thousands of negative patches per image.
+    To limit the total amount of training data, for all scales, only up to a given number of positive and negative patches are kept.
+    Also, to further limit the number of negative samples, only every ``use_every_nth_negative_scale`` scale is considered (for the positives, always all scales are processed).
 
-    mirror_samples : bool
-      extract also mirrored patches
+    To increase the number (especially of positive) examples, features can also be extracted for horizontally mirrored images.
+    Simply set the ``mirror`` parameter to ``True``.
+    Furthermore, this function is designed to be run using several parallel processes, e.g., using the `GridTK <https://pypi.python.org/pypi/gridtk>`_.
+    Each of the processes will run on a particular subset of the images, which is defined by the ``SGE_TASK_ID`` environment variable.
+    The ``parallel`` parameter defines the total number of parallel processes that are used.
+
+    **Parameters:**
+
+    ``sampler`` : :py:class:`Sampler`
+      The sampler to use to sample patches of the images. Please assure that the sampler is set up such that it samples patch locations which can overlap with the face locations.
+
+    ``feature_extractor`` : :py:class:`FeatureExtractor`
+      The feature extractor to be used to extract features from image patches
+
+    ``number_of_examples_per_scale`` : (int, int)
+      The maximum number of positive and negative examples to extract for each scale of the image
+
+    ``similarity_thresholds`` : (float, float)
+      The Jaccard similarity threshold, below which patch locations are considered to be negative, and above which patch locations are considered to be positive examples.
+
+    ``parallel`` : int or ``None``
+      If given, the total number of parallel processes, which are used to extract features (the current process index is read from the ``SGE_TASK_ID`` environment variable)
+
+    ``mirror`` : bool
+      Extract positive and negative samples also from horizontally mirrored images?
+
+    ``use_every_nth_negative_scale`` : int
+      Skip some negative scales to decrease the number of negative examples, i.e., only extract and store negative features, when ``scale_counter % use_every_nth_negative_scale == 0``
+
+      .. note::
+         The ``scale_counter`` is not reset between images, so that we might get features from different scales in subsequent images.
     """
-
-    # TODO: implement mirroring of samples
-    if number_of_examples_per_scale is None:
-      number_of_examples_per_scale = (None, None)
 
     feature_file = self._feature_file(parallel)
     bob.io.base.create_directories_safe(self.feature_directory)
@@ -112,33 +212,34 @@ class TrainingSet:
 
     total_positives, total_negatives = 0, 0
 
-    indices = parallel_part(range(len(self.image_paths)), parallel)
+    indices = parallel_part(range(len(self)), parallel)
     if not indices:
       logger.warning("The index range for the current parallel thread is empty.")
     else:
-      logger.info("Extracting features for images in range %d - %d", indices[0], indices[-1])
+      logger.info("Extracting features for images in range %d - %d of %d", indices[0], indices[-1], len(self))
 
-    hdf5 = bob.io.base.HDF5File(self._feature_file(parallel), "w")
+    hdf5 = bob.io.base.HDF5File(feature_file, "w")
     for index in indices:
       hdf5.create_group("Image-%d" % index)
       hdf5.cd("Image-%d" % index)
 
-      logger.debug("Processing file %d of %d: %s", index, indices[-1], self.image_paths[index])
+      logger.debug("Processing file %d of %d: %s", index+1, indices[-1]+1, self.image_paths[index])
 
       # load image
       image = bob.io.base.load(self.image_paths[index])
-      if len(image.shape) == 3:
+      if image.ndim == 3:
         image = bob.ip.color.rgb_to_gray(image)
       # get ground_truth bounding boxes
       ground_truth = self.bounding_boxes[index]
 
       # collect image and GT for originally and mirrored image
-      images = [image] if not mirror else [image, image[:,::-1].copy()]
+      images = [image] if not mirror else [image, bob.ip.base.flop(image)]
       ground_truths = [ground_truth] if not mirror else [ground_truth, [gt.mirror_x(image.shape[1]) for gt in ground_truth]]
+      parts = "om"
 
       # now, sample
       scale_counter = -1
-      for image, ground_truth in zip(images, ground_truths):
+      for image, ground_truth, part in zip(images, ground_truths, parts):
         for scale, scaled_image_shape in sampler.scales(image):
           scale_counter += 1
           scaled_gt = [gt.scale(scale) for gt in ground_truth]
@@ -174,7 +275,7 @@ class TrainingSet:
             negative_features = numpy.zeros((len(negatives), feature_extractor.number_of_features), numpy.uint16)
             for i, bb in enumerate(negatives):
               feature_extractor.extract_all(bb, negative_features, i)
-            hdf5.set("Negatives-%.5f" % scale, negative_features)
+            hdf5.set("Negatives-%s-%.5f" % (part,scale), negative_features)
             total_negatives += len(negatives)
 
           # positive features
@@ -182,29 +283,61 @@ class TrainingSet:
             positive_features = numpy.zeros((len(positives), feature_extractor.number_of_features), numpy.uint16)
             for i, bb in enumerate(positives):
               feature_extractor.extract_all(bb, positive_features, i)
-            hdf5.set("Positives-%.5f" % scale, positive_features)
+            hdf5.set("Positives-%s-%.5f" % (part,scale), positive_features)
             total_positives += len(positives)
-        # cd backwards after each (mirrored) image
-        hdf5.cd("..")
+      # cd backwards after each image
+      hdf5.cd("..")
 
     hdf5.set("TotalPositives", total_positives)
     hdf5.set("TotalNegatives", total_negatives)
 
   def sample(self, model = None, maximum_number_of_positives = None, maximum_number_of_negatives = None, positive_indices = None, negative_indices = None):
-    """Returns positive and negative samples from the set of positives and negatives."""
+    """sample([model], [maximum_number_of_positives], [maximum_number_of_negatives], [positive_indices], [negative_indices]) -> positives, negatives
+
+    Returns positive and negative samples from the set of positives and negatives.
+
+    This reads the previously extracted feature file (or all of them, in case features were extracted in parallel) and returns features.
+    If the ``model`` is not specified, a random sub-selection of positive and negative features is returned.
+    When the ``model`` is given, all patches are first classified with the given ``model``, and the ones that are mis-classified most are returned.
+    The number of returned positives and negatives can be limited by specifying the ``maximum_number_of_positives`` and ``maximum_number_of_negatives``.
+
+    This function keeps track of the positives and negatives that it once has returned, so it does not return the same positive or negative feature twice.
+    However, when you have to restart training from a given point, you can set the ``positive_indices`` and ``negative_indices`` parameters, to retrieve the features for the given indices.
+    In this case, no additional features are selected, but the given sets of indices are stored internally.
+
+    .. note::
+       The ``positive_indices`` and ``negative_indices`` only have an effect, when ``model`` is ``None``.
+
+    **Parameters:**
+
+    ``model`` : :py:class:`bob.learn.boosting.BoostedMachine` or ``None``
+      If given, the ``model`` is used to predict the training features, and the highest mis-predicted features are returned
+
+    ``maximum_number_of_positives, maximum_number_of_negatives`` : int
+      The maximum number of positive and negative features to be returned
+
+    ``positive_indices, negative_indices`` : set(int) or ``None``
+      The set of positive and negative indices to extract features for, instead of randomly choosing indices; only considered when ``model = None``
+
+    **Returns:**
+
+    ``positives, negatives`` : array_like(2D, uint16)
+      The new set of training features for the positive class (faces) and negative class (background).
+    """
 
     # get all existing feature files
-    feature_file = self._feature_file(index = '0')
+    feature_file = self._feature_file(index = 0)
     if os.path.exists(feature_file):
       feature_files = [feature_file]
     else:
       feature_files = []
       i = 1
-      feature_file = self._feature_file(index = str(i))
-      while os.path.exists(feature_file):
+      while True:
+        feature_file = self._feature_file(index = i)
+        if not os.path.exists(feature_file):
+          break
         feature_files.append(feature_file)
         i += 1
-        feature_file = self._feature_file(index = str(i))
 
     features = []
     labels = []
@@ -222,11 +355,11 @@ class TrainingSet:
     if model is None:
       # get a list of indices and store them, so that we don't re-use them next time
       if positive_indices is None:
-        positive_indices = quasi_random_indices(positive_count, maximum_number_of_positives)
+        positive_indices = set(quasi_random_indices(positive_count, maximum_number_of_positives))
       if negative_indices is None:
-        negative_indices = quasi_random_indices(negative_count, maximum_number_of_negatives)
-      self.positive_indices |= set(positive_indices)
-      self.negative_indices |= set(negative_indices)
+        negative_indices = set(quasi_random_indices(negative_count, maximum_number_of_negatives))
+      self.positive_indices |= positive_indices
+      self.negative_indices |= negative_indices
 
       # now, iterate through the files again and sample
       positive_indices = collections.deque(sorted(positive_indices))
@@ -306,7 +439,19 @@ class TrainingSet:
 
 
   def feature_extractor(self):
-    """Returns the feature extractor used to extract the positive and negative features."""
+    """feature_extractor() -> extractor
+
+    Returns the feature extractor used to extract the positive and negative features.
+
+    This feature extractor is stored to file during the :py:meth:`extract` method ran, so this function reads that file (from the ``feature_directory`` set in the constructor) and returns its content.
+
+    **Returns:**
+
+    ``extractor`` : :py:class:`FeatureExtractor`
+      The feature extractor used to extract the features stored in the ``feature_directory``
+    """
     extractor_file = os.path.join(self.feature_directory, "Extractor.hdf5")
+    if not os.path.exists(extractor_file):
+      raise IOError("Could not found extractor file %s. Did you already run the extraction process? Did you specify the correct `feature_directory` in the constructor?" % extractor_file)
     hdf5 = bob.io.base.HDF5File(extractor_file)
     return FeatureExtractor(hdf5)

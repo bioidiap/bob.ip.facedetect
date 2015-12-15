@@ -35,7 +35,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--negative-examples-every', '-N', type=int, default=4, help = "Use only every nth scale to extract negative examples.")
   parser.add_argument('--lowest-scale', '-f', type=float, default=0, help = "Patches which will be lower than the given scale times the image resolution will not be taken into account; if 0. (the default) all patches will be considered.")
   parser.add_argument('--similarity-thresholds', '-t', type=float, nargs=2, default=(0.2, 0.8), help = "The bounding box overlap thresholds for which negative (< thres[0]) and positive (> thers[1]) examples are accepted.")
-  parser.add_argument('--mirror-samples', '-M', action='store_false', help = "Disable mirroring of the training samples.")
+  parser.add_argument('--no-mirror-samples', '-M', action='store_true', help = "Disable mirroring of the training samples.")
   parser.add_argument('--examples-per-image-scale', '-e', type=int, nargs=2, default = [100, 100], help = "The number of positive and negative training examples for each image scale.")
 
   parser.add_argument('--lbp-multi-block', '-m', action='store_true', help = "If given multi-block LBP features will be extracted (otherwise, it's regular LBP).")
@@ -81,4 +81,4 @@ def main(command_line_arguments = None):
   sampler = bob.ip.facedetect.detector.Sampler(patch_size=args.patch_size, scale_factor=args.scale_base, lowest_scale=args.lowest_scale, distance=args.distance)
 
   # extract features
-  train_set.extract(sampler, feature_extractor, number_of_examples_per_scale = args.examples_per_image_scale, similarity_thresholds = args.similarity_thresholds, parallel = args.parallel, mirror = args.mirror_samples, use_every_nth_negative_scale = args.negative_examples_every)
+  train_set.extract(sampler, feature_extractor, number_of_examples_per_scale = args.examples_per_image_scale, similarity_thresholds = args.similarity_thresholds, parallel = args.parallel, mirror = not args.no_mirror_samples, use_every_nth_negative_scale = args.negative_examples_every)

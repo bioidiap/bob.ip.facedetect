@@ -25,13 +25,14 @@ def command_line_options(command_line_arguments):
 
   parser.add_argument('test_image', help = "Select the image to detect the face in.")
   parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
-  parser.add_argument('--scale-base', '-S', type=float, default = math.pow(2.,-1./16.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
+  parser.add_argument('--scale-factor', '-S', type=float, default = math.pow(2.,-1./16.), help = "The logarithmic distance between two scales (should be between 0 and 1).")
   parser.add_argument('--lowest-scale', '-f', type=float, default = 0.125, help = "Faces which will be lower than the given scale times the image resolution will not be found.")
   parser.add_argument('--cascade-file', '-r', default = pkg_resources.resource_filename('bob.ip.facedetect', 'MCT_cascade.hdf5'), help = "The file to read the resulting cascade from; If left empty, the default cascade will be loaded")
   parser.add_argument('--prediction-threshold', '-t', type = float, help = "If given, all detection above this threshold will be displayed.")
-  parser.add_argument('--prune-detections', '-p', type=float, default=1., help = "If given, detections that overlap with the given threshold are pruned")
+  parser.add_argument('--prune-detections', '-p', type=float, default = 1., help = "If given, detections that overlap with the given threshold are pruned")
   parser.add_argument('--best-detection-overlap', '-b', type=float, help = "If given, the average of the overlapping detections with this minimum overlap will be considered.")
   parser.add_argument('--write-detection', '-w', help = "If given, the resulting image will be written to the given file.")
+  parser.add_argument('--no-display', '-x', action = 'store_true', help = "Disables the display of the detected faces.")
 
   bob.core.log.add_command_line_option(parser)
   args = parser.parse_args(command_line_arguments)
@@ -47,7 +48,7 @@ def main(command_line_arguments = None):
   # load classifier and feature extractor
   cascade = bob.ip.facedetect.detector.Cascade(bob.io.base.HDF5File(args.cascade_file))
 
-  sampler = bob.ip.facedetect.detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
+  sampler = bob.ip.facedetect.detector.Sampler(distance=args.distance, scale_factor=args.scale_factor, lowest_scale=args.lowest_scale)
 
   # load test file
   test_image = bob.io.base.load(args.test_image)
@@ -89,12 +90,10 @@ def main(command_line_arguments = None):
     color = (255,0,0) if args.prediction_threshold is None else (int(255. * (prediction - args.prediction_threshold) / (highest_detection-args.prediction_threshold)),0,0)
     bob.ip.draw.box(color_image, detection.topleft, detection.size, color)
 
-  import matplotlib.pyplot as mpl
-
-  rolled = numpy.rollaxis(numpy.rollaxis(color_image, 2),2)
-
-  mpl.imshow(rolled)
-  raw_input("Press Enter to continue...")
+  if not args.no_display:
+    import matplotlib.pyplot
+    matplotlib.pyplot.imshow(numpy.transpose(color_image, (1,2,0)))
+    raw_input("Press Enter to continue...")
 
   if args.write_detection:
     bob.io.base.save(color_image, args.write_detection)

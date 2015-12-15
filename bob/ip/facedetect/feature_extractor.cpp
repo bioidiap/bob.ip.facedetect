@@ -521,7 +521,7 @@ static auto load = bob::extension::FunctionDoc(
   true
 )
 .add_prototype("hdf5")
-.add_parameter("hdf5", ":py:class:`bob.ip.base.HDF5File`", "The file to read from")
+.add_parameter("hdf5", ":py:class:`bob.io.base.HDF5File`", "The file to read from")
 ;
 static PyObject* PyBobIpFacedetectFeatureExtractor_load(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY
@@ -543,7 +543,7 @@ static auto save = bob::extension::FunctionDoc(
   true
 )
 .add_prototype("hdf5")
-.add_parameter("hdf5", ":py:class:`bob.ip.base.HDF5File`", "The file to write to")
+.add_parameter("hdf5", ":py:class:`bob.io.base.HDF5File`", "The file to write to")
 ;
 static PyObject* PyBobIpFacedetectFeatureExtractor_save(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
   BOB_TRY

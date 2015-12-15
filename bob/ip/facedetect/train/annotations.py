@@ -1,8 +1,9 @@
 
 def read_annotation_file(annotation_file, annotation_type):
-  """Reads annotations from the given annotation file.
+  """read_annotation_file(annotation_file, annotation_type) -> annotations
+  Reads annotations from the given ``annotation_file``.
 
-  The way, how annotations are read depends on the given annotation_type.
+  The way, how annotations are read depends on the given ``annotation_type``.
   Depending on the type, one or several annotations might be present in the annotation file.
   Currently, these variants are implemented:
 
@@ -11,7 +12,21 @@ def read_annotation_file(annotation_file, annotation_type):
   - ``'idiap'``: A special 22 point format, where each line contains the index and the locations, like ``1 x y``.
   - ``'fddb'``: a special format for the FDDB database; empty lines separate between sets of annotations
 
-  Finally, a list of annotations is returned in the format: ``[{name: (y,x)}]``.
+  Finally, a list of ``annotations`` is returned in the format: ``[{name: (y,x)}]``.
+
+  **Parameters:**
+
+  ``annotation_file`` : str
+    The file name of the annotation file to read
+
+  ``annotation_type`` : str (see above)
+    The style of annotation file, in which the given ``annotation_file`` is
+
+  **Returns:**
+
+  ``annotations`` : [dict]
+    A list of annotations read from the given file, grouped by annotated objects (faces).
+    Each annotation is generally specified as the two eye coordinates, i.e., ``{'reye' : (rey, rex), 'leye' : (ley, lex)}``, but other types of annotations might occur as well.
   """
   annotations = [{}]
   with open(annotation_file) as f:

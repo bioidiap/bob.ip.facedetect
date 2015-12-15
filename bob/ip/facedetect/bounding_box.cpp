@@ -504,7 +504,8 @@ static PyObject* PyBobIpFacedetectBoundingBox_overlap(PyBobIpFacedetectBoundingB
 static auto similarity = bob::extension::FunctionDoc(
   "similarity",
   "This function computes the Jaccard similarity index between this and the given BoundingBox",
-  0,
+  "The Jaccard similarity coefficient between two bounding boxes is defined as their intersection divided by their union:\n\n"
+  ".. math::\n\n   J(A,B) = \\frac{|A\\cap B|}{|A\\cup B|}",
   true
 )
 .add_prototype("other", "sim")

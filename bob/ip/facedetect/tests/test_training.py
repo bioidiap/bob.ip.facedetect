@@ -32,7 +32,8 @@ def test_training_lists():
   train_set.save(temp_file)
 
   # load in another training set
-  train_set_2 = fd.train.TrainingSet(list_file=temp_file)
+  train_set_2 = fd.train.TrainingSet()
+  train_set_2.load(temp_file)
 
   os.remove(temp_file)
 
@@ -55,44 +56,44 @@ def test_extraction():
 
   temp_dir = tempfile.mkdtemp(prefix="FD_")
 
-  # add sample image and annotation file to training set
-  train_set = fd.train.TrainingSet(temp_dir)
-  annotations = fd.train.read_annotation_file(bob.io.base.test_utils.datafile("testimage.pos", 'bob.ip.facedetect'), 'named')
-  train_set.add_image(bob.io.base.test_utils.datafile("testimage.jpg", 'bob.ip.facedetect'), annotations)
+  try:
+    # add sample image and annotation file to training set
+    train_set = fd.train.TrainingSet(temp_dir)
+    annotations = fd.train.read_annotation_file(bob.io.base.test_utils.datafile("testimage.pos", 'bob.ip.facedetect'), 'named')
+    train_set.add_image(bob.io.base.test_utils.datafile("testimage.jpg", 'bob.ip.facedetect'), annotations)
 
-  # create sampler and feature extractor
-  sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), lowest_scale=0.125)
-  extractor = fd.FeatureExtractor(patch_size = (24,20), extractors = [bob.ip.base.LBP(8)])
+    # create sampler and feature extractor
+    sampler = fd.detector.Sampler(distance=2, scale_factor=math.pow(2.,-1./4.), lowest_scale=0.125)
+    extractor = fd.FeatureExtractor(patch_size = (24,20), extractors = [bob.ip.base.LBP(8)])
 
-  # extract features
-  train_set.extract(sampler, extractor, similarity_thresholds=(0.3,0.7))
+    # extract features
+    train_set.extract(sampler, extractor, number_of_examples_per_scale=(None, None), similarity_thresholds=(0.3,0.7))
 
-  assert os.path.exists(os.path.join(temp_dir, "Extractor.hdf5"))
-  assert os.path.exists(os.path.join(temp_dir, "Features_00.hdf5"))
+    assert os.path.exists(os.path.join(temp_dir, "Extractor.hdf5"))
+    assert os.path.exists(os.path.join(temp_dir, "Features_00.hdf5"))
 
-  # get all features
-  features, labels = train_set.sample()
+    # get all features
+    features, labels = train_set.sample()
 
-  shutil.rmtree(temp_dir)
+    # assert that the number of features and labels is correct
+    assert features.shape[0] == 14012
+    lbp_shape = bob.ip.base.LBP(8).lbp_shape((24,20))
+    assert features.shape[1] == lbp_shape[0] * lbp_shape[1]
+    assert numpy.count_nonzero(labels==1) == 12
+    assert numpy.count_nonzero(labels==-1) == 14000
 
-  # assert that the number of features and labels is correct
-  assert features.shape[0] == 14012
-  lbp_shape = bob.ip.base.LBP(8).lbp_shape((24,20))
-  assert features.shape[1] == lbp_shape[0] * lbp_shape[1]
-  assert numpy.count_nonzero(labels==1) == 12
-  assert numpy.count_nonzero(labels==-1) == 14000
+    # check exact values
+    if regenerate_refs:
+      f = bob.io.base.HDF5File(bob.io.base.test_utils.datafile("training.hdf5", 'bob.ip.facedetect'), 'w')
+      f.set("Features", features)
+      f.set("Labels", labels)
 
-  # check exact values
-  if regenerate_refs:
-    f = bob.io.base.HDF5File(bob.io.base.test_utils.datafile("training.hdf5", 'bob.ip.facedetect'), 'w')
-    f.set("Features", features)
-    f.set("Labels", labels)
-    del f
+    f = bob.io.base.HDF5File(bob.io.base.test_utils.datafile("training.hdf5", 'bob.ip.facedetect'))
+    ref_features = f.get("Features")
+    ref_labels = f.get("Labels")
 
-  f = bob.io.base.HDF5File(bob.io.base.test_utils.datafile("training.hdf5", 'bob.ip.facedetect'))
-  ref_features = f.get("Features")
-  ref_labels = f.get("Labels")
-  del f
-
-  assert (features == ref_features).all()
-  assert (labels == ref_labels).all()
+    assert (features == ref_features).all()
+    assert (labels == ref_labels).all()
+  finally:
+    if os.path.exists(temp_dir):
+      shutil.rmtree(temp_dir)

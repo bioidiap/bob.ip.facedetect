@@ -14,5 +14,5 @@ bounding_box, _ = bob.ip.facedetect.detect_single_face(color_image)
 # create figure
 from matplotlib import pyplot
 import numpy
-bob.ip.draw.box(color_image, bounding_box.topleft, bounding_box.size, color=(0,255,0))
+bob.ip.draw.box(color_image, bounding_box.topleft, bounding_box.size, color=(255,0,0))
 pyplot.imshow(numpy.rollaxis(numpy.rollaxis(color_image, 2),2))

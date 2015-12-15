@@ -139,7 +139,7 @@ setup(
         'extract_training_features.py = bob.ip.facedetect.script.extract_training_features:main',
         'train_detector.py = bob.ip.facedetect.script.train_detector:main',
         'validate_detector.py = bob.ip.facedetect.script.validate_detector:main',
-        'display_detections.py = bob.ip.facedetect.script.display:main',
+        'detect_faces.py = bob.ip.facedetect.script.detect_faces:main',
         'evaluate_detections.py = bob.ip.facedetect.script.evaluate:main',
         'plot_froc.py = bob.ip.facedetect.script.plot_froc:main'
       ],

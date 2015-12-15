@@ -35,8 +35,11 @@ def command_line_options(command_line_arguments):
   if not os.path.exists(args.image_directory):
     raise ValueError("The given image directory '%s' does not exist" % args.image_directory)
 
-  if args.annotation_directory and not os.path.exists(args.annotation_directory):
+  if args.annotation_directory is not None and not os.path.exists(args.annotation_directory):
     raise ValueError("The given annotation directory '%s' does not exist" % args.annotation_directory)
+
+  if args.database is None and args.annotation_directory is None and not args.no_annotations:
+    raise ValueError("When scanning for images, please specify the --annotation-directory, or use the --no-annotations flag to disable searching for annotations")
 
   return args
 
@@ -77,7 +80,6 @@ def main(command_line_arguments = None):
         base, ext = os.path.splitext(f)
         if ext in args.image_extensions:
           # check if annotation file exists
-#          import pdb; pdb.set_trace()
           if args.no_annotations:
             train_set.add_image(os.path.join(directory, f), [])
           else:

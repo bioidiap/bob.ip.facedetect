@@ -18,7 +18,7 @@ class Cascade:
     The second way instantiates an empty cascade, with the given ``feature_extractor``.
     Please use the :py:meth:`add` function to add new strong classifiers with according thresholds.
 
-    Keyword parameters:
+    **Parameters:**
 
     ``cascade_file`` : :py:class:`bob.io.base.HDF5File`
       An HDF5 file open for reading
@@ -44,7 +44,7 @@ class Cascade:
   def add(self, classifier, threshold, begin=None, end=None):
     """Adds a new strong classifier with the given threshold to the cascade.
 
-    Keyword parameters:
+    **Parameters:**
 
     classifier : :py:class:`bob.learn.boosting.BoostedMachine`
       A strong classifier to add
@@ -68,7 +68,7 @@ class Cascade:
   def create_from_boosted_machine(self, boosted_machine, classifiers_per_round, classification_thresholds=-5.):
     """Creates this cascade from the given boosted machine, by simply splitting off strong classifiers that have classifiers_per_round weak classifiers.
 
-    Keyword parameters:
+    **Parameters:**
 
     ``boosted_machine`` : :py:class:`bob.learn.boosting.BoostedMachine`
       The strong classifier to split into a regular cascade.
@@ -95,11 +95,13 @@ class Cascade:
 
 
   def generate_boosted_machine(self):
-    """Creates a single strong classifier from this cascade by concatenating all strong classifiers.
+    """generate_boosted_machine() -> strong
 
-    Returns:
+    Creates a single strong classifier from this cascade by concatenating all strong classifiers.
 
-    :py:class:`bob.learn.boosting.BoostedMachine`
+    **Returns:**
+
+    ``strong`` : :py:class:`bob.learn.boosting.BoostedMachine`
       The strong classifier as a combination of all classifiers in this cascade.
     """
     strong = bob.learn.boosting.BoostedMachine()
@@ -123,7 +125,7 @@ class Cascade:
   def prepare(self, image, scale):
     """Prepares the cascade for extracting features of the given image in the given scale.
 
-    Keyword parameters:
+    **Parameters:**
 
     ``image`` : array_like (2D, float)
       The image from which features will be extracted
@@ -136,22 +138,24 @@ class Cascade:
 
 
   def __call__(self, bounding_box):
-    """Computes the classification result of this cascade for the given bounding_box.
+    """__call__(bounding_box) -> sum
+
+    Computes the classification result of this cascade for the given bounding_box.
 
     The features will be extracted from the image at the scale that was set by the latest call to :py:meth:`prepare`.
     The classification result is obtained by summing all results of all cascade steps, as long as the sum is not below the threshold of the current cascade step.
 
     Finally, the sum is returned.
 
-    Keyword parameters:
+    **Parameters:**
 
     ``bounding_box`` : :py:class:`BoundingBox`
       The bounding box for which the features should be classified.
       Please assure that the bounding box is inside the image resolution at the scale that was set by the latest call to :py:meth:`prepare`.
 
-    Returns:
+    **Returns:**
 
-    float
+    ``sum`` : float
       The sum of the cascaded classifiers (which might have been stopped before the last classifier)
     """
 
@@ -170,7 +174,7 @@ class Cascade:
   def save(self, hdf5):
     """Saves this cascade into the given HDF5 file.
 
-    Keyword parameters:
+    **Parameters:**
 
     ``hdf5`` : :py:class:`bob.io.base.HDF5File`
       An HDF5 file open for writing
@@ -191,7 +195,7 @@ class Cascade:
   def load(self, hdf5):
     """Loads this cascade from the given HDF5 file.
 
-    Keyword parameters:
+    **Parameters:**
 
     ``hdf5`` : :py:class:`bob.io.base.HDF5File`
       An HDF5 file open for reading

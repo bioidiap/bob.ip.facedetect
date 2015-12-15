@@ -7,8 +7,8 @@ from . import version
 from .version import module as __version__
 
 from ._library import FeatureExtractor, BoundingBox, prune_detections, overlapping_detections
-from .detector import Sampler, Cascade
-from .train import TrainingSet, expected_eye_positions, bounding_box_from_annotation, read_annotation_file
+from .detector import *
+from .train import *
 
 from .detect import default_cascade, best_detection, detect_single_face, detect_all_faces
 
