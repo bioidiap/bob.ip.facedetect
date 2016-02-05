@@ -331,7 +331,7 @@ Feature extraction was performed using a single scale MCT, as:
 
 .. code-block:: sh
 
-   $ ./bin/extract_training_features.py -vv --lbp-scale 1 --lbp-variant mct --negative-samples-every 1 --filelists [ALL of ABOVE]
+   $ ./bin/extract_training_features.py -vv --lbp-scale 1 --lbp-variant mct --negative-examples-every 1 --filelists [ALL of ABOVE]
 
 Finally, the cascade training used default parameters:
 
