@@ -43,7 +43,7 @@ class Sampler:
 
     Computes the all possible scales for the given image and yields a tuple of the scale and the scaled image shape as an iterator.
 
-    **Paremeters::**
+    **Parameters::**
 
     ``image`` : array_like(2D or 3D)
       The image, for which the scales should be computed
