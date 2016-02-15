@@ -122,19 +122,28 @@ class Cascade:
     self.feature = numpy.zeros(self.extractor.number_of_features, numpy.uint16)
 
 
-  def prepare(self, image, scale):
+  def prepare(self, gray_image, scale, color_image = None):
     """Prepares the cascade for extracting features of the given image in the given scale.
+    If the ``extractor`` is extracting color information, this function requires the color_image to be specified.
 
     **Parameters:**
 
-    ``image`` : array_like (2D, float)
+    ``gray_image`` : array_like (2D, float)
       The image from which features will be extracted
 
     ``scale`` : float
       The scale of the image, for which features will be extracted
+
+    ``color_image`` : array_like (3D, float) or ``None``
+      The color image from which color features will be extracted
     """
     # prepare the feature extractor with the given image and scale
-    self.extractor.prepare(image, scale)
+    self.extractor.prepare(gray_image, scale)
+    if self.extractor.extract_color:
+      assert color_image is not None, "The extractor extracts color information, so the given color image cannot be None"
+      # here, we expect that the given image is a color image
+      self.extractor.prepare_color(color_image, scale)
+
 
 
   def __call__(self, bounding_box):

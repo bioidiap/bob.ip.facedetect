@@ -1,8 +1,9 @@
 #include "features.h"
 #include <boost/format.hpp>
 
-bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize)
-: m_patchSize(patchSize),
+bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, bool extractColor)
+: m_extractColor(extractColor),
+  m_patchSize(patchSize),
   m_lookUpTable(0,3),
   m_extractors(),
   m_featureStarts(1),
@@ -13,8 +14,9 @@ bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const blitz::TinyVector<
   m_featureStarts(0) = 0;
 }
 
-bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const bob::ip::base::LBP& templAte, bool overlap, bool square, int min_size, int max_size, int distance)
-: m_patchSize(patchSize),
+bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const bob::ip::base::LBP& templAte, bool overlap, bool square, int min_size, int max_size, int distance, bool extractColor)
+: m_extractColor(extractColor),
+  m_patchSize(patchSize),
   m_lookUpTable(0,3),
   m_extractors(),
   m_isMultiBlock(templAte.isMultiBlockLBP()),
@@ -69,8 +71,9 @@ bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const blitz::TinyVector<
 }
 
 
-bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const std::vector<boost::shared_ptr<bob::ip::base::LBP>>& extractors)
-: m_patchSize(patchSize),
+bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const std::vector<boost::shared_ptr<bob::ip::base::LBP>>& extractors, bool extractColor)
+: m_extractColor(extractColor),
+  m_patchSize(patchSize),
   m_lookUpTable(0,3),
   m_extractors(extractors),
   m_hasSingleOffsets(false)
@@ -87,7 +90,8 @@ bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const blitz::TinyVector<
 }
 
 bob::ip::facedetect::FeatureExtractor::FeatureExtractor(const FeatureExtractor& other)
-: m_patchSize(other.m_patchSize),
+: m_extractColor(other.m_extractColor),
+  m_patchSize(other.m_patchSize),
   m_lookUpTable(other.m_lookUpTable),
   m_extractors(other.m_extractors),
   m_featureStarts(other.m_featureStarts),
@@ -251,14 +255,8 @@ void bob::ip::facedetect::FeatureExtractor::extractAll(const BoundingBox& boundi
   if (m_hasSingleOffsets){
     if (m_isMultiBlock){
       for (int i = m_lookUpTable.extent(0); i--;){
-//        std::cout << i << "\t" << m_lookUpTable(i,1) << "\t" << m_lookUpTable(i,2) << "\t -- \t" << boundingBox.top() << "\t" << boundingBox.left() << std::endl;
         const auto& lbp = m_extractors[m_lookUpTable(i,0)];
-        try {
-          dataset(datasetIndex,i) = lbp->extract(m_integralImage, boundingBox.itop() + m_lookUpTable(i,1), boundingBox.ileft() + m_lookUpTable(i,2), true);
-        } catch (std::runtime_error& e){
-          std::cerr << "Couldn't extract feature from bounding box " << boundingBox.itop() << "," << boundingBox.ileft() << "," << boundingBox.ibottom() << "," <<boundingBox.iright() << " with extractor " << lbp->getBlockSize()[0] << "," << lbp->getBlockSize()[1] << " at position [" << m_lookUpTable(i,1) << "," << m_lookUpTable(i,2) << "]" << std::endl;
-          throw;
-        }
+        dataset(datasetIndex,i) = lbp->extract(m_integralImage, boundingBox.itop() + m_lookUpTable(i,1), boundingBox.ileft() + m_lookUpTable(i,2), true);
       }
     } else {
       for (int i = m_lookUpTable.extent(0); i--;){
@@ -288,6 +286,28 @@ void bob::ip::facedetect::FeatureExtractor::extractAll(const BoundingBox& boundi
       std::copy(fit, fit_end, dit);
     }
   }
+
+  // extract color information, if desired
+  if (m_extractColor){
+    if (m_colorImage.extent(0) == 0)
+      throw std::runtime_error("The color image has not been initialized. Did you forget to call prepareColor()");
+
+    uint16_t scale = getMaxLabel();
+    blitz::Array<double,3> subwindow = m_colorImage(blitz::Range::all(), blitz::Range(boundingBox.itop(), boundingBox.ibottom()-1), blitz::Range(boundingBox.ileft(), boundingBox.iright()-1));
+    int i = numberOfLBPFeatures();
+    for (int y=0; y < m_patchSize[0]; ++y){
+      for (int x=0; x < m_patchSize[1]; ++x, i+=2){
+        //compute HSV
+        double r = subwindow(0,y,x) / 255.;
+        double g = subwindow(1,y,x) / 255.;
+        double b = subwindow(2,y,x) / 255.;
+        bob::ip::color::rgb_to_hsv_one(r,g,b, _h,_s,_v);
+        dataset(datasetIndex, i) = std::min(static_cast<uint16_t>(_h * scale), static_cast<uint16_t>(scale-1));
+        dataset(datasetIndex, i+1) = std::min(static_cast<uint16_t>(_s * scale), static_cast<uint16_t>(scale-1));
+      }
+    }
+  }
+
 }
 
 void bob::ip::facedetect::FeatureExtractor::extractSome(const BoundingBox& boundingBox, blitz::Array<uint16_t,1>& featureVector) const{
@@ -300,6 +320,8 @@ void bob::ip::facedetect::FeatureExtractor::extractSome(const BoundingBox& bound
 void bob::ip::facedetect::FeatureExtractor::extractIndexed(const BoundingBox& boundingBox, blitz::Array<uint16_t,1>& featureVector, const blitz::Array<int32_t,1>& indices) const{
   if (indices.extent(0) == 0)
     throw std::runtime_error("The given indices are empty!");
+  if (m_extractColor && m_colorImage.extent(0) == 0)
+    throw std::runtime_error("The color image has not been initialized. Did you forget to call prepareColor()");
   // extract only requested data
   if (m_isMultiBlock){
     for (int i = indices.extent(0); i--;){
@@ -308,10 +330,28 @@ void bob::ip::facedetect::FeatureExtractor::extractIndexed(const BoundingBox& bo
       featureVector(index) = lbp->extract(m_integralImage, boundingBox.top() + m_lookUpTable(index,1), boundingBox.left() + m_lookUpTable(index,2), true);
     }
   } else {
+    int max_lbp = numberOfLBPFeatures();
+    uint16_t scale = getMaxLabel();
     for (int i = indices.extent(0); i--;){
       int index = indices(i);
-      const auto& lbp = m_extractors[m_lookUpTable(index,0)];
-      featureVector(index) = lbp->extract(m_image, boundingBox.top() + m_lookUpTable(index,1), boundingBox.left() + m_lookUpTable(index,2));
+      if (index < max_lbp){
+        const auto& lbp = m_extractors[m_lookUpTable(index,0)];
+        featureVector(index) = lbp->extract(m_image, boundingBox.top() + m_lookUpTable(index,1), boundingBox.left() + m_lookUpTable(index,2));
+      } else {
+        int offset = index - max_lbp;
+        int y = (offset/2) / m_patchSize[1] + boundingBox.top();
+        int x = (offset/2) % m_patchSize[1] + boundingBox.left();
+
+        double r = m_colorImage(0,y,x) / 255.;
+        double g = m_colorImage(1,y,x) / 255.;
+        double b = m_colorImage(2,y,x) / 255.;
+        bob::ip::color::rgb_to_hsv_one(r,g,b, _h,_s,_v);
+
+        if (offset % 2)
+          featureVector(index) = std::min(static_cast<uint16_t>(_s * scale), static_cast<uint16_t>(scale-1));
+        else
+          featureVector(index) = std::min(static_cast<uint16_t>(_h * scale), static_cast<uint16_t>(scale-1));
+      }
     }
   }
 }
@@ -320,6 +360,7 @@ void bob::ip::facedetect::FeatureExtractor::load(bob::io::base::HDF5File& hdf5fi
   // get global information
   m_patchSize[0] = hdf5file.read<int32_t>("PatchSize", 0);
   m_patchSize[1] = hdf5file.read<int32_t>("PatchSize", 1);
+  m_extractColor = hdf5file.contains("ExtractColor") && (hdf5file.read<int8_t>("ExtractColor") == 1);
 
   // get the LBP extractors
   m_extractors.clear();
@@ -360,6 +401,7 @@ void bob::ip::facedetect::FeatureExtractor::save(bob::io::base::HDF5File& hdf5fi
   t(0) = m_patchSize[0];
   t(1) = m_patchSize[1];
   hdf5file.setArray("PatchSize", t);
+  hdf5file.set<int8_t>("ExtractColor", int8_t(m_extractColor? 1 : 0));
 
   // set the LBP extractors
   for (unsigned i = 0; i != m_extractors.size(); ++i){

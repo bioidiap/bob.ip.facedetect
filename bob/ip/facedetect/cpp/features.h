@@ -5,6 +5,7 @@
 #include <bob.ip.base/LBP.h>
 #include <bob.ip.base/IntegralImage.h>
 #include <bob.ip.base/Affine.h>
+#include <bob.ip.color/color.h>
 #include <bob.core/array_convert.h>
 #include <boost/shared_ptr.hpp>
 #include <limits.h>
@@ -66,17 +67,18 @@ class BoundingBox{
 
 void groupDetections(const std::vector<boost::shared_ptr<BoundingBox>>& detections, const blitz::Array<double, 1>& predictions, double overlap_threshold, double weight_threshold, unsigned box_count_threshold, std::vector<std::vector<boost::shared_ptr<BoundingBox>>>& grouped_boxes, std::vector<blitz::Array<double, 1>>& grouped_weights);
 void pruneDetections(const std::vector<boost::shared_ptr<BoundingBox>>& detections, const blitz::Array<double, 1>& predictions, double threshold, std::vector<boost::shared_ptr<BoundingBox>>& pruned_boxes, blitz::Array<double, 1>& pruned_weights, const int number_of_detections);
+void groupDetections(const std::vector<boost::shared_ptr<BoundingBox>>& detections, const blitz::Array<double, 1>& predictions, double overlap_threshold, double weight_threshold, unsigned box_count_threshold, std::vector<std::vector<boost::shared_ptr<BoundingBox>>>& grouped_boxes, std::vector<blitz::Array<double, 1>>& grouped_weights);
 void bestOverlap(const std::vector<boost::shared_ptr<BoundingBox>>& detections, const blitz::Array<double, 1>& predictions, double threshold, std::vector<boost::shared_ptr<BoundingBox>>& pruned_boxes, blitz::Array<double, 1>& pruned_weights);
 
 class FeatureExtractor{
 
   public:
-    FeatureExtractor(const blitz::TinyVector<int,2>& patchSize);
+    FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, bool extractColor = false);
     // Creates all possible combinations of LBP extractors using the given template
-    FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const bob::ip::base::LBP& templAte, bool overlap = false, bool square = false, int min_size=1, int max_size=INT_MAX, int distance=1);
+    FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const bob::ip::base::LBP& templAte, bool overlap = false, bool square = false, int min_size=1, int max_size=INT_MAX, int distance=1, bool extractColor = false);
 
     // Uses the given LBP extractors only; Please don't mix MB-LBP with regular LBP's
-    FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const std::vector<boost::shared_ptr<bob::ip::base::LBP>>& extractors);
+    FeatureExtractor(const blitz::TinyVector<int,2>& patchSize, const std::vector<boost::shared_ptr<bob::ip::base::LBP>>& extractors, bool extractColor = false);
 
     // copy constructor
     FeatureExtractor(const FeatureExtractor& other);
@@ -99,11 +101,14 @@ class FeatureExtractor{
     blitz::Array<int32_t,1> getModelIndices() const {return m_modelIndices;}
 
     // feature information
-    int numberOfFeatures() const {return m_featureStarts((int)m_extractors.size());}
+    int numberOfFeatures() const {return numberOfLBPFeatures() + (m_extractColor ? m_patchSize[0]*m_patchSize[1]*2 : 0);}
     uint16_t getMaxLabel() const {return m_extractors[0]->getMaxLabel();}
 
     template <typename T>
       void prepare(const blitz::Array<T,2>& image, double scale, bool computeIntegralSquareImage);
+
+    template <typename T>
+      void prepareColor(const blitz::Array<T,3>& color_image, double scale);
 
     // the prepared image
     const blitz::Array<double,2>& getImage() const {return m_image;}
@@ -124,9 +129,11 @@ class FeatureExtractor{
     const boost::shared_ptr<bob::ip::base::LBP> extractor(int32_t index) const {return m_extractors[m_lookUpTable(index,0)];}
     blitz::TinyVector<int32_t,2> offset(int32_t index) const {return blitz::TinyVector<int,2>(m_lookUpTable(index,1), m_lookUpTable(index,2));}
 
-  private:
+    bool m_extractColor;
 
+  private:
     void init();
+    int numberOfLBPFeatures() const {return m_featureStarts((int)m_extractors.size());}
 
     // look up table storing three information: lbp index, offset y, offset x
     blitz::TinyVector<int,2> m_patchSize;
@@ -138,8 +145,11 @@ class FeatureExtractor{
     blitz::Array<int32_t,1> m_modelIndices;
 
     blitz::Array<double,2> m_image;
+    blitz::Array<double,3> m_colorImage;
     blitz::Array<double,2> m_integralImage;
     blitz::Array<double,2> m_integralSquareImage;
+
+    mutable double _h, _s, _v;
 
     mutable std::vector<blitz::Array<uint16_t,2> > m_featureImages;
     bool m_isMultiBlock;
@@ -163,6 +173,20 @@ template <typename T>
         bob::ip::base::integral<double>(m_image, m_integralImage, true);
       }
     }
+  }
+
+
+template <typename T>
+  inline void FeatureExtractor::prepareColor(const blitz::Array<T,3>& image, double scale){
+    // TODO: implement different MB-LBP behaviour here (i.e., scaling the LBP's instead of scaling the image)
+
+    if (!m_extractColor){
+      throw std::runtime_error("The prepareColor function was called without setting extractColor to true");
+    }
+
+    // scale image
+    m_colorImage.resize(bob::ip::base::getScaledShape(image.shape(), scale));
+    bob::ip::base::scale(image, m_colorImage);
   }
 
 } } } // namespaces

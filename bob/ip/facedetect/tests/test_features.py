@@ -8,7 +8,7 @@ import bob.ip.color
 
 import bob.ip.facedetect
 
-def test01_single_LBP():
+def test_single_LBP():
   # checks that the C++ implementation and the python implementation of the feature extractors give the same results
 
   # bounding box
@@ -46,7 +46,7 @@ def test01_single_LBP():
       assert some[i] == feature[0,i]
 
 
-def test02_multiple_LBP():
+def test_multiple_LBP():
   # two bounding boxes (py and c++ version)
   bb = bob.ip.facedetect.BoundingBox((10, 10), (24, 20))
 
@@ -82,3 +82,43 @@ def test02_multiple_LBP():
         extractor.extract_indexed(bb, some, numpy.array(indices, numpy.int32))
         for i in indices:
           assert some[i] == feature[0,i]
+
+def test_color():
+  # extract color features
+  lbp = bob.ip.base.LBP(8,2.)
+  extractor = bob.ip.facedetect.FeatureExtractor(patch_size = (24,20), extractors = [lbp])
+  extractor.extract_color = True
+
+  feature_length = extractor.number_of_features
+  lbp_shape = lbp.lbp_shape((24,20))
+  assert feature_length == lbp_shape[0] * lbp_shape[1] + 2 * 20 * 24
+
+  # get color image
+  color_image = bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'bob.ip.facedetect'))
+  gray_image = bob.ip.color.rgb_to_gray(color_image)
+
+  feature = numpy.ndarray((1,feature_length), dtype=numpy.uint16)
+  some = numpy.zeros(feature_length, dtype=numpy.uint16)
+
+  bb = bob.ip.facedetect.BoundingBox((10, 10), (24, 20))
+
+  feature = numpy.ndarray((1,feature_length), dtype=numpy.uint16)
+
+  extractor.prepare(gray_image, 1)
+  extractor.prepare_color(color_image, 1)
+
+  extractor.extract_all(bb, feature, 0)
+
+  # single features
+  some = numpy.zeros(feature_length, dtype=numpy.uint16)
+
+  indices = [20, 53, 66, 487, 833, 1144]
+  extractor.model_indices = numpy.array(indices, numpy.int32)
+  extractor.extract_indexed(bb, some)
+
+  for i in indices:
+    assert some[i] == feature[0,i], "%d: %d != %d" % (i, some[i], feature[0,i])
+
+  extractor.extract_indexed(bb, some, numpy.array(indices, numpy.int32))
+  for i in indices:
+    assert some[i] == feature[0,i]

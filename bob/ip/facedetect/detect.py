@@ -141,9 +141,6 @@ def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.
   if sampler is None:
     sampler = Sampler(patch_size = cascade.extractor.patch_size, distance=2, scale_factor=math.pow(2.,-1./16.), lowest_scale=0.125)
 
-  if image.ndim == 3:
-    image = bob.ip.color.rgb_to_gray(image)
-
   detections = []
   predictions = []
   # get the detection scores for the image
@@ -214,9 +211,6 @@ def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, overl
   if sampler is None:
     sampler = Sampler(patch_size = cascade.extractor.patch_size, distance=2, scale_factor=math.pow(2.,-1./16.), lowest_scale=0.125)
 
-  if image.ndim == 3:
-    image = bob.ip.color.rgb_to_gray(image)
-
   detections = []
   predictions = []
   # get the detection scores for the image
@@ -230,12 +224,9 @@ def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, overl
 
   # group overlapping detections
   if minimum_overlap < 1.:
-    detections, predictions = group_detections(detections, predictions, minimum_overlap, threshold, overlaps)
-
-    if not detections:
-      return None
+    bbs, qualities = group_detections(detections, predictions, minimum_overlap, threshold, overlaps)
 
     # average them
-    detections, predictions = zip(*[average_detections(b, q, relative_prediction_threshold) for b,q in zip(detections, predictions)])
+    bbs, qualities = zip(*[average_detections(b, q, relative_prediction_threshold) for b,q in zip(bbs, qualities)])
 
   return detections, predictions

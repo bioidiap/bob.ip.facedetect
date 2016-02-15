@@ -33,7 +33,7 @@
 # allows you to test your package with new python dependencies w/o requiring
 # administrative interventions.
 
-bob_packages = ['bob.core', 'bob.io.base', 'bob.sp', 'bob.ip.base']
+bob_packages = ['bob.core', 'bob.io.base', 'bob.sp', 'bob.ip.base', 'bob.ip.color']
 
 from setuptools import setup, find_packages, dist
 dist.Distribution(dict(setup_requires=['bob.extension', 'bob.blitz'] + bob_packages))

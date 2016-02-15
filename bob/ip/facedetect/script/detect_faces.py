@@ -53,16 +53,16 @@ def main(command_line_arguments = None):
   sampler = bob.ip.facedetect.detector.Sampler(patch_size=cascade.extractor.patch_size, distance=args.distance, scale_factor=args.scale_factor, lowest_scale=args.lowest_scale)
 
   # load test file
-  gray_image = bob.io.base.load(args.image)
-  if gray_image.ndim == 3:
-    gray_image = bob.ip.color.rgb_to_gray(gray_image)
+  color_image = bob.io.base.load(args.image)
+  if color_image.ndim == 2:
+    color_image = bob.ip.color.gray_to_rgb(color_image)
 
   logger.info("Loaded image '%s' -- starting detection", args.image)
 
   detections = []
   predictions = []
   # get the detection scores for the image
-  for prediction, bounding_box in sampler.iterate_cascade(cascade, gray_image, args.prediction_threshold):
+  for prediction, bounding_box in sampler.iterate_cascade(cascade, color_image, args.prediction_threshold):
     detections.append(bounding_box)
     predictions.append(prediction)
     logger.debug("Found bounding box %s with value %f", str(bounding_box), prediction)
@@ -105,10 +105,8 @@ def main(command_line_arguments = None):
     logger.info("Limiting to the best BoundingBox %s with value %f", str(detections[0]), predictions[0])
 
 
+
   highest_detection = predictions[0]
-  color_image = bob.io.base.load(args.image)
-  if color_image.ndim == 2:
-    color_image = bob.ip.color.gray_to_rgb(color_image)
   for detection, prediction in zip(detections, predictions):
     color = (255,0,0) if args.prediction_threshold is None else (int(255. * (prediction - args.prediction_threshold) / (highest_detection-args.prediction_threshold)),0,0)
     bob.ip.draw.box(color_image, detection.topleft, detection.size, color)

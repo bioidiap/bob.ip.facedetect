@@ -26,7 +26,7 @@ def _make_boxes(detections):
 
 def test_detection():
   # test that the detection works as expected
-  test_image = bob.ip.color.rgb_to_gray(bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'bob.ip.facedetect')))
+  test_image = bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'bob.ip.facedetect'))
 
   cascade = fd.default_cascade()
   classifier = cascade.generate_boosted_machine()
@@ -60,7 +60,7 @@ def test_detection():
 
 def test_cascade():
   # test that the cascade works as expected
-  test_image = bob.ip.color.rgb_to_gray(bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'bob.ip.facedetect')))
+  test_image = bob.io.base.load(bob.io.base.test_utils.datafile("testimage.jpg", 'bob.ip.facedetect'))
 
   cascade = fd.default_cascade()
 
