@@ -1,5 +1,6 @@
 # import Libraries of other lib packages
 import bob.ip.base
+import bob.ip.color
 import bob.io.base
 import bob.learn.boosting
 

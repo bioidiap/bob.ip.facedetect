@@ -1,9 +1,5 @@
-import unittest
-import math
-from nose.plugins.skip import SkipTest
 
 import numpy
-import pkg_resources
 
 import bob.io.base
 import bob.io.base.test_utils

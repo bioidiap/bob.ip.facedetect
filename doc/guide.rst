@@ -127,8 +127,7 @@ In case you want to implement your own strategy of merging overlapping bounding 
 .. doctest::
 
    >>> cascade = bob.ip.facedetect.default_cascade()
-   >>> gray_image = bob.ip.color.rgb_to_gray(face_image)
-   >>> for quality, patch in sampler.iterate_cascade(cascade, gray_image):
+   >>> for quality, patch in sampler.iterate_cascade(cascade, face_image):
    ...   if quality > 40:
    ...     print ("%3.4f"%quality, patch.topleft, patch.size)
    48.9983 (84, 84) (253, 210)

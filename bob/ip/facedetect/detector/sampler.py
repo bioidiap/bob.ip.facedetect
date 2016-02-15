@@ -127,11 +127,13 @@ class Sampler:
     Scales the given image, and extracts features from all possible bounding boxes.
 
     For each of the sampled bounding boxes, this function fills the given pre-allocated feature vector and yields the current bounding box.
+    If the given feature_extractor extracts color features, the given image needs to be a 3D (color) image.
+    If not, it can be either gray-scale (2D) or color (3D).
 
     **Parameters:**
 
-    ``image`` : array_like(2D)
-      The given image to extract features for
+    ``image`` : array_like(2D or 3D)
+      The given (gray or color) image to extract features for
 
     ``feature_extractor`` : :py:class:`FeatureExtractor`
       The feature extractor to use to extract the features for the sampled patches
@@ -144,9 +146,14 @@ class Sampler:
     ``bounding_box`` : :py:class:`BoundingBox`
       The bounding box for which the current features are extracted for
     """
+    gray_image = image if image.ndim == 2 else bob.ip.color.rgb_to_gray(image)
     for scale, scaled_image_shape in self.scales(image):
       # prepare the feature extractor to extract features from the given image
-      feature_extractor.prepare(image, scale)
+      feature_extractor.prepare(gray_image, scale)
+      if feature_extractor.extract_color:
+        # here, we expect that the image is a color image
+        feature_extractor.prepare_color(image, scale)
+
       for bb in self.sample_scaled(scaled_image_shape):
         # extract features for
         feature_extractor.extract_indexed(bb, feature_vector)
@@ -160,6 +167,7 @@ class Sampler:
     This function will compute the cascaded classification result for the given ``image`` using the given ``cascade``.
     It yields a tuple of prediction value and the according bounding box.
     If a ``threshold`` is specified, only those ``prediction``\s are returned, which exceed the given ``threshold``.
+    If the extractor of the given ``cascade`` extracts color features, the given image needs to be a 3D (color) image
 
     .. note::
        The ``threshold`` does not overwrite the cascade thresholds `:py:attr:`Cascade.thresholds`, but only threshold the final prediction.
@@ -170,7 +178,7 @@ class Sampler:
     ``cascade`` : :py:class:`Cascade`
       The cascade that performs the predictions
 
-    ``image`` : array_like(2D)
+    ``image`` : array_like(2D or 3D)
       The image for which the predictions should be computed
 
     ``threshold`` : float
@@ -184,10 +192,11 @@ class Sampler:
     ``bounding_box`` : :py:class:`BoundingBox`
       An iterator over all possible sampled bounding boxes (which exceed the prediction ``threshold``, if given)
     """
-
+    color_image = image if image.ndim == 3 else None
+    gray_image = image if image.ndim == 2 else bob.ip.color.rgb_to_gray(image)
     for scale, scaled_image_shape in self.scales(image):
       # prepare the feature extractor to extract features from the given image
-      cascade.prepare(image, scale)
+      cascade.prepare(gray_image, scale, color_image)
       for bb in self.sample_scaled(scaled_image_shape):
         # return the prediction and the bounding box, if the prediction is over threshold
         prediction = cascade(bb)

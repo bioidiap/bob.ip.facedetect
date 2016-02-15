@@ -237,6 +237,27 @@ PyObject* PyBobIpFacedetectFeatureExtractor_patch_size(PyBobIpFacedetectFeatureE
   BOB_CATCH_MEMBER("patch_size could not be read", 0)
 }
 
+static auto extract_color = bob::extension::VariableDoc(
+  "extract_color",
+  "bool",
+  "This flag indicates whether color features are extracted, too"
+);
+PyObject* PyBobIpFacedetectFeatureExtractor_get_extract_color(PyBobIpFacedetectFeatureExtractorObject* self, void*){
+  BOB_TRY
+  if (self->cxx->m_extractColor)
+    Py_RETURN_TRUE;
+  else
+    Py_RETURN_FALSE;
+  BOB_CATCH_MEMBER("extract_color", 0)
+}
+
+int PyBobIpFacedetectFeatureExtractor_set_extract_color(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* value, void*){
+  BOB_TRY
+  self->cxx->m_extractColor = PyObject_IsTrue(value);
+  return 0;
+  BOB_CATCH_MEMBER("extract_color", -1)
+}
+
 
 static PyGetSetDef PyBobIpFacedetectFeatureExtractor_getseters[] = {
     {
@@ -279,6 +300,13 @@ static PyGetSetDef PyBobIpFacedetectFeatureExtractor_getseters[] = {
       (getter)PyBobIpFacedetectFeatureExtractor_patch_size,
       0,
       patch_size.doc(),
+      0
+    },
+    {
+      extract_color.name(),
+      (getter)PyBobIpFacedetectFeatureExtractor_get_extract_color,
+      (setter)PyBobIpFacedetectFeatureExtractor_set_extract_color,
+      extract_color.doc(),
       0
     },
     {0}  /* Sentinel */
@@ -413,6 +441,41 @@ static PyObject* PyBobIpFacedetectFeatureExtractor_prepare(PyBobIpFacedetectFeat
   }
   BOB_CATCH_MEMBER("cannot prepare image", 0)
 }
+
+static auto prepare_color = bob::extension::FunctionDoc(
+  "prepare_color",
+  "Take the given image to perform the next color feature extraction steps for the given scale",
+  0,
+  true
+)
+.add_prototype("color_image, scale")
+.add_parameter("color_image", "array_like <3D, uint8 or float>", "The image that should be used in the next color feature extraction step")
+.add_parameter("scale", "float", "The scale of the image to extract")
+;
+static PyObject* PyBobIpFacedetectFeatureExtractor_prepare_color(PyBobIpFacedetectFeatureExtractorObject* self, PyObject* args, PyObject* kwargs) {
+  BOB_TRY
+  char** kwlist = prepare_color.kwlist();
+
+  PyBlitzArrayObject* image;
+  double scale;
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&d", kwlist, &PyBlitzArray_Converter, &image, &scale)){
+    return 0;
+  }
+  auto image_ = make_safe(image);
+  if (image->ndim != 3){
+    PyErr_Format(PyExc_TypeError, "%s : The input image must be 3D, not %dD", Py_TYPE(self)->tp_name, (int)image->ndim);
+    return 0;
+  }
+  switch (image->type_num){
+    case NPY_UINT8: self->cxx->prepareColor(*PyBlitzArrayCxx_AsBlitz<uint8_t,3>(image), scale); Py_RETURN_NONE;
+    case NPY_FLOAT64: self->cxx->prepareColor(*PyBlitzArrayCxx_AsBlitz<double,3>(image), scale); Py_RETURN_NONE;
+    default:
+      PyErr_Format(PyExc_TypeError, "%s : The input image must be of type uint8 or float", Py_TYPE(self)->tp_name);
+      return 0;
+  }
+  BOB_CATCH_MEMBER("prepare_color", 0)
+}
+
 
 static auto extract_all = bob::extension::FunctionDoc(
   "extract_all",
@@ -585,6 +648,12 @@ static PyMethodDef PyBobIpFacedetectFeatureExtractor_methods[] = {
     (PyCFunction)PyBobIpFacedetectFeatureExtractor_prepare,
     METH_VARARGS|METH_KEYWORDS,
     prepare.doc()
+  },
+  {
+    prepare_color.name(),
+    (PyCFunction)PyBobIpFacedetectFeatureExtractor_prepare_color,
+    METH_VARARGS|METH_KEYWORDS,
+    prepare_color.doc()
   },
   {
     extract_all.name(),

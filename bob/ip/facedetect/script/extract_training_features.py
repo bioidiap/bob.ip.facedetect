@@ -28,6 +28,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--file-lists', '-i', nargs='+', help = "Select the training lists to extract features for.")
   parser.add_argument('--feature-directory', '-d', default = "features", help = "The output directory, where features will be stores")
   parser.add_argument('--parallel', '-P', type=int, help = "Use this option to run the script in parallel in the SGE grid, using the given number of parallel processes")
+  parser.add_argument('--force', '-F', action='store_true', help = "Forces the re-extraction of features for all files; otherwise existing files will be skipped.")
 
   parser.add_argument('--patch-size', '-p', type=int, nargs=2, default=(24,20), help = "The size of the patch for the image in y and x.")
   parser.add_argument('--distance', '-s', type=int, default=2, help = "The distance with which the image should be scanned.")
@@ -43,6 +44,7 @@ def command_line_options(command_line_arguments):
   parser.add_argument('--lbp-overlap', '-o', action='store_true', help = "Specify the overlap of the MBLBP.")
   parser.add_argument('--lbp-scale', '-L', type=int, help="If given, only a single LBP extractor with the given LBP scale will be extracted, otherwise all possible scales are generated.")
   parser.add_argument('--lbp-square', '-Q', action='store_true', help="Generate only square feature extractors, and no rectangular ones.")
+  parser.add_argument('--extract-color-features', '-c', action='store_true', help="If selected, additionally to the LBP features, also color features are extracted")
 
   bob.core.log.add_command_line_option(parser)
   args = parser.parse_args(command_line_arguments)
@@ -71,6 +73,7 @@ def main(command_line_arguments = None):
       feature_extractor = bob.ip.facedetect.FeatureExtractor(patch_size = args.patch_size, template = bob.ip.base.LBP(8, block_size=(1,1), **res), overlap=args.lbp_overlap, square=args.lbp_square)
     else:
       feature_extractor = bob.ip.facedetect.FeatureExtractor(patch_size = args.patch_size, template = bob.ip.base.LBP(8, radius=1, **res), square=args.lbp_square)
+  feature_extractor.extract_color = args.extract_color_features
 
   # load training sets
   for file_list in args.file_lists:
@@ -81,4 +84,4 @@ def main(command_line_arguments = None):
   sampler = bob.ip.facedetect.detector.Sampler(patch_size=args.patch_size, scale_factor=args.scale_base, lowest_scale=args.lowest_scale, distance=args.distance)
 
   # extract features
-  train_set.extract(sampler, feature_extractor, number_of_examples_per_scale = args.examples_per_image_scale, similarity_thresholds = args.similarity_thresholds, parallel = args.parallel, mirror = not args.no_mirror_samples, use_every_nth_negative_scale = args.negative_examples_every)
+  train_set.extract(sampler, feature_extractor, number_of_examples_per_scale = args.examples_per_image_scale, similarity_thresholds = args.similarity_thresholds, parallel = args.parallel, mirror = not args.no_mirror_samples, use_every_nth_negative_scale = args.negative_examples_every, force = args.force)
