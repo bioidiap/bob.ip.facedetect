@@ -127,7 +127,8 @@ def test_training():
               ]
 
     devnull = open(os.devnull, 'w')
-    subprocess.call(command, stdout=devnull)
+    ret = subprocess.call(command, stdout=devnull)
+    assert ret == 0
 
     # check that the training succeeded
     assert os.path.exists(cascade_file)
@@ -162,7 +163,8 @@ def test_detection():
               ]
 
     devnull = open(os.devnull, 'w')
-    subprocess.call(command, stdout=devnull)
+    ret = subprocess.call(command, stdout=devnull)
+    assert ret == 0
 
     # check that we can read the detected file
     assert os.path.exists(detected_file)
