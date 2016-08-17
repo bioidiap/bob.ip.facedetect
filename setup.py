@@ -56,7 +56,7 @@ setup(
     version=version,
     description='Face detection using boosted LBP features',
 
-    url='http://github.com/bioidiap/bob.ip.facedetect',
+    url='http://gitlab.idiap.ch/bob/bob.ip.facedetect',
     license='GPLv3',
     author='Manuel Guenther',
     author_email='manuel.guenther@idiap.ch',
