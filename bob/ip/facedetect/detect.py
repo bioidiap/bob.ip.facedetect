@@ -122,7 +122,7 @@ def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.
 
 
 def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, minimum_overlap = 0.2):
-  """detect_all_faces(image, [cascade], [sampler], [minimum_overlap]) -> bounding_boxes, qualities
+  """detect_all_faces(image, [cascade], [sampler], [threshold], [minimum_overlap]) -> bounding_boxes, qualities
 
   Detects a single face in the given image, i.e., the one with the highest prediction value.
 
