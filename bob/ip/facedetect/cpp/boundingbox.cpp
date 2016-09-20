@@ -73,7 +73,80 @@ void bob::ip::facedetect::pruneDetections(const std::vector<boost::shared_ptr<Bo
   // done.
 }
 
-void bob::ip::facedetect::bestOverlap(const std::vector<boost::shared_ptr<BoundingBox>>& boxes, const blitz::Array<double, 1>& weights, double threshold, std::vector<boost::shared_ptr<BoundingBox>>& overlapping_boxes, blitz::Array<double, 1>& overlapping_weights){
+void bob::ip::facedetect::groupDetections(const std::vector<boost::shared_ptr<BoundingBox>>& boxes, const blitz::Array<double, 1>& weights, double overlap_threshold, double weight_threshold, unsigned box_count_threshold, std::vector<std::vector<boost::shared_ptr<BoundingBox>>>& grouped_boxes, std::vector<blitz::Array<double, 1>>& grouped_weights){
+  if (boxes.empty()){
+    bob::core::error << "Cannot find any box to compute overlaps" << std::endl;
+    return;
+  }
+  // sort boxes
+  std::vector<indexer> sorted(boxes.size());
+  for (int i = boxes.size(); i--;){
+    sorted[i] = std::make_pair(weights(i), i);
+  }
+  std::sort(sorted.begin(), sorted.end(), gt);
+
+  // compute all overlapping detections
+  // **this is O(n^2)!**
+  std::list<std::list<indexer> > collected;
+  std::list<indexer> best;
+  best.push_back(sorted.front());
+  collected.push_back(best);
+
+  std::vector<indexer>::const_iterator sit = sorted.begin();
+  std::list<std::list<indexer> >::iterator cit;
+  for (++sit; sit != sorted.end(); ++sit){
+    std::list<std::list<indexer> >::iterator best_cit = collected.end();
+    double best_overlap = overlap_threshold, current_overlap;
+
+    if (sit->first < weight_threshold)
+      // we have reached our weight limit; do not consider more bounding boxes
+      break;
+
+    // check if there is a good-enough overlap with one of the already collected bounding boxes
+    for (cit = collected.begin(); cit != collected.end(); ++cit){
+      current_overlap = boxes[sit->second]->similarity(*boxes[cit->front().second]);
+      if (current_overlap > best_overlap){
+        // get the bounding box with the highest overlap value
+        best_overlap = current_overlap;
+        best_cit = cit;
+      }
+    }
+
+    if (best_cit == collected.end()){
+      // no such overlap was found, add a new list of bounding boxes
+      std::list<indexer> novel;
+      novel.push_back(*sit);
+      collected.push_back(novel);
+    } else {
+      // add the bounding box to the list with the highest overlap
+      best_cit->push_back(*sit);
+    }
+  }
+
+
+  // now, convert lists to resulting grouped vectors of vectors of bounding boxes
+  grouped_boxes.reserve(collected.size());
+  grouped_weights.reserve(collected.size());
+
+  std::list<indexer>::const_iterator oit;
+  for (cit = collected.begin(); cit != collected.end(); ++cit){
+    if (cit->size() >= box_count_threshold){
+      blitz::Array<double,1> current_weights(cit->size());
+      std::vector<boost::shared_ptr<BoundingBox>> current_boxes(cit->size());
+      int o = 0;
+      for (oit = cit->begin(); oit != cit->end(); ++oit, ++o){
+        current_weights(o) = oit->first;
+        current_boxes[o] = boxes[oit->second];
+      }
+      grouped_boxes.push_back(current_boxes);
+      grouped_weights.push_back(current_weights);
+    }
+  }
+  // done.
+}
+
+
+void bob::ip::facedetect::bestOverlap(const std::vector<boost::shared_ptr<BoundingBox>>& boxes, const blitz::Array<double, 1>& weights, double overlap_threshold, std::vector<boost::shared_ptr<BoundingBox>>& overlapping_boxes, blitz::Array<double, 1>& overlapping_weights){
   if (boxes.empty()){
     bob::core::error << "Cannot find any box to compute overlaps" << std::endl;
     return;
@@ -99,7 +172,7 @@ void bob::ip::facedetect::bestOverlap(const std::vector<boost::shared_ptr<Boundi
   std::list<std::list<indexer> >::iterator cit;
   for (++sit; sit != sorted.end(); ++sit){
     for (cit = collected.begin(); cit != collected.end(); ++cit){
-      if (boxes[sit->second]->similarity(*boxes[cit->front().second]) > threshold){
+      if (boxes[sit->second]->similarity(*boxes[cit->front().second]) > overlap_threshold){
         cit->push_back(*sit);
         break;
       }
@@ -116,7 +189,7 @@ void bob::ip::facedetect::bestOverlap(const std::vector<boost::shared_ptr<Boundi
   for (cit = collected.begin(); cit != collected.end(); ++cit){
     double current_total = 0.;
     for (oit = cit->begin(); oit != cit->end(); ++oit){
-      current_total += oit->first;
+      current_total += std::max(oit->first, 0.);
     }
     if (current_total > best_total){
       best_total = current_total;
