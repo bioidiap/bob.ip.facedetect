@@ -38,7 +38,7 @@ This task can be achieved using a single command:
 
 As you can see, the bounding box is **not** square as for other face detectors, but has an aspect ratio of :math:`5:6`.
 The function :py:func:`detect_single_face` has several optional parameters with proper default values.
-The first optional parameter specifies the :py:class:`Cascade`, which contains the classifier cascade.
+The first optional parameter specifies the :py:class:`bob.ip.facedetect.Cascade`, which contains the classifier cascade.
 We will see later, how this cascade can be re-trained.
 
 The ``minimum_overlap`` parameter defines the minimum overlap that patches of multiple detections of the same face might have.
@@ -139,7 +139,7 @@ Given an image, the script will detect one or more faces in it, and display the 
 When the script is run using default parameters, it will detect just the face in the image that comes with the highest confidence, as the result of :py:func:`detect_single_face` would do.
 
 .. note::
-   We are using :py:func:`matplotlib.pyplot.imshow` to display the resulting image.
+   We are using `matplotlib.pyplot.imshow <http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.imshow` to display the resulting image.
    We are aware that in some cases, no display shows up.
    In these cases, please try to change the display setup of matplotlib (which isn't easy, I have to admit), or use the ``--write-detection`` parameter to write the result to an image file, and inspect the image with your preferred application.
 
