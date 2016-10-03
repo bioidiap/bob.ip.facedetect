@@ -50,7 +50,7 @@ def main(command_line_arguments = None):
     train_set.load(file_list)
 
   # create the test examples
-  sampler = bob.ip.facedetect.detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
+  sampler = bob.ip.facedetect.detector.Sampler(patch_size=cascade.extractor.patch_size, distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
 
   # iterate over the test files and detect the faces
   i = 1
