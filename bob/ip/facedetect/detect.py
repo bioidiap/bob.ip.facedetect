@@ -239,4 +239,3 @@ def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, overl
     detections, predictions = zip(*[average_detections(b, q, relative_prediction_threshold) for b,q in zip(detections, predictions)])
 
   return detections, predictions
-  return bbs, qualities
