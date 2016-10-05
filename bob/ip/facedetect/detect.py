@@ -230,9 +230,13 @@ def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, overl
 
   # group overlapping detections
   if minimum_overlap < 1.:
-    bbs, qualities = group_detections(detections, predictions, minimum_overlap, threshold, overlaps)
+    detections, predictions = group_detections(detections, predictions, minimum_overlap, threshold, overlaps)
+
+    if not detections:
+      return None
 
     # average them
-    bbs, qualities = zip(*[average_detections(b, q, relative_prediction_threshold) for b,q in zip(bbs, qualities)])
+    detections, predictions = zip(*[average_detections(b, q, relative_prediction_threshold) for b,q in zip(detections, predictions)])
 
+  return detections, predictions
   return bbs, qualities
