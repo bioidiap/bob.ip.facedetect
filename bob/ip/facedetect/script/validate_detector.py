@@ -67,7 +67,7 @@ def main(command_line_arguments = None):
     feature_vector = bob.blitz.array((feature_extractor.number_of_features,), numpy.uint16)
 
     # create the test examples
-    sampler = bob.ip.facedetect.detector.Sampler(distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
+    sampler = bob.ip.facedetect.detector.Sampler(patch_size= feature_extractor.patch_size, distance=args.distance, scale_factor=args.scale_base, lowest_scale=args.lowest_scale)
 
     # generate a DENSE cascade of classifiers
     number_of_weak_classifiers = args.limit_classifiers if args.limit_classifiers is not None else len(strong_classifier.weak_machines)

@@ -48,7 +48,7 @@ def main(command_line_arguments = None):
   # load classifier and feature extractor
   cascade = bob.ip.facedetect.detector.Cascade(bob.io.base.HDF5File(args.cascade_file))
 
-  sampler = bob.ip.facedetect.detector.Sampler(distance=args.distance, scale_factor=args.scale_factor, lowest_scale=args.lowest_scale)
+  sampler = bob.ip.facedetect.detector.Sampler(patch_size=cascade.extractor.patch_size, distance=args.distance, scale_factor=args.scale_factor, lowest_scale=args.lowest_scale)
 
   # load test file
   test_image = bob.io.base.load(args.test_image)
