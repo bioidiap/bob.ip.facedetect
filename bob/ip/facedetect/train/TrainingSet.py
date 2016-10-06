@@ -61,15 +61,15 @@ class TrainingSet:
     self.bounding_boxes.append([bounding_box_from_annotation(**a) for a in annotations])
 
   def add_from_db(self, database, files):
-    """Adds images and bounding boxes for the given files of a database that follows the :py:ref:`bob.db.verification.utils.Database <bob.db.verification.utils>` interface.
+    """Adds images and bounding boxes for the given files of a database that follows the :py:ref:`bob.bio.base.database.BioDatabase <bob.bio.base>` interface.
 
     **Parameters:**
 
-    ``database`` : a derivative of :py:class:`bob.db.verification.utils.Database`
+    ``database`` : a derivative of :py:class:`bob.bio.base.database.BioDatabase`
       The database interface, which provides file names and annotations for the given ``files``
 
-    ``files`` : :py:class:`bob.db.verification.utils.File` or compatible
-      The files (as returned by :py:meth:`bob.db.verification.utils.Database.objects`) which should be added to the training list
+    ``files`` : :py:class:`bob.bio.base.database.BioFile` or compatible
+      The files (as returned by :py:meth:`bob.bio.base.database.BioDatabase.objects`) which should be added to the training list
     """
     for f in files:
       annotation = database.annotations(f)
