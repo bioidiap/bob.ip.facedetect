@@ -18,7 +18,7 @@ static auto FeatureExtractor_doc = bob::extension::ClassDoc(
   BOB_EXT_MODULE_PREFIX ".FeatureExtractor",
   "This class extracts LBP features of several types from a given image patch of a certain size",
   "LBP features are extracted using different variants of :py:class:`bob.ip.base.LBP` feature extractors. "
-  "All LBP features of one patch are stored in a single long feature vector of type :py:class:`numpy.uint16`."
+  "All LBP features of one patch are stored in a single long feature vector of type ``numpy.uint16``."
 ).add_constructor(
   bob::extension::FunctionDoc(
     "__init__",

@@ -8,7 +8,7 @@ import bob.io.base
 import numpy
 
 def default_cascade():
-  """Returns the :py:class:`Cascade` that is loaded from the pre-trained cascade file provided by this package."""
+  """Returns the :py:class:`bob.ip.facedetect.Cascade` that is loaded from the pre-trained cascade file provided by this package."""
   return Cascade(bob.io.base.HDF5File(pkg_resources.resource_filename("bob.ip.facedetect", "MCT_cascade.hdf5")))
 
 

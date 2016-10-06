@@ -136,7 +136,7 @@ class Sampler:
     ``feature_extractor`` : :py:class:`FeatureExtractor`
       The feature extractor to use to extract the features for the sampled patches
 
-    ``feature_vector`` : :py:class:`numpy.ndarray(1D, uint16)`
+    ``feature_vector`` : :py:class:`numpy.ndarray` (1D, uint16)
       The pre-allocated feature vector that will be filled inside this function; needs to be of size :py:attr:`FeatureExtractor.number_of_features`
 
     **Yields:**
