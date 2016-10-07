@@ -2,7 +2,7 @@ import pkg_resources
 import math
 
 from .detector import Sampler, Cascade
-from ._library import BoundingBox, prune_detections, overlapping_detections
+from ._library import BoundingBox, prune_detections, group_detections, overlapping_detections
 
 import bob.io.base
 import numpy
@@ -12,8 +12,53 @@ def default_cascade():
   return Cascade(bob.io.base.HDF5File(pkg_resources.resource_filename("bob.ip.facedetect", "MCT_cascade.hdf5")))
 
 
-def best_detection(detections, predictions, minimum_overlap = 0.2):
-  """best_detection(detections, predictions, [minimum_overlap]) -> bounding_box, prediction
+def average_detections(detections, predictions, relative_prediction_threshold = 0.25):
+  """average_detections(detections, predictions, [relative_prediction_threshold]) -> bounding_box, prediction
+
+  Computes the weighted average of the given detections, where the weights are computed based on the prediction values.
+
+  **Parameters:**
+
+  ``detections`` : [:py:class:`BoundingBox`]
+    The overlapping bounding boxes.
+
+  ``predictions`` : [float]
+    The predictions for the ``detections``.
+
+  ``relative_prediction_threshold`` : float between 0 and 1
+    Limits the bounding boxes to those that have a prediction value higher then ``relative_prediction_threshold * max(predictions)``
+
+  **Returns:**
+
+  ``bounding_box`` : :py:class:`BoundingBox`
+    The bounding box which has been merged from the detections
+
+  ``prediction`` : float
+    The prediction value of the bounding box, which is a weighted sum of the predictions with minimum overlap
+  """
+  # remove the predictions that are too low
+  prediction_threshold = relative_prediction_threshold * max(predictions)
+  detections, predictions = zip(*[[d,p] for d,p in zip(detections, predictions) if p >= prediction_threshold])
+
+  # turn remaining predictions into weights
+  s = sum(predictions)
+  weights = [p/s for p in predictions]
+  # compute weighted average of bounding boxes
+  top = sum(w * b.topleft_f[0] for w, b in zip(weights, detections))
+  left = sum(w * b.topleft_f[1] for w, b in zip(weights, detections))
+  bottom = sum(w * b.bottomright_f[0] for w, b in zip(weights, detections))
+  right = sum(w * b.bottomright_f[1] for w, b in zip(weights, detections))
+
+  # compute the average prediction value
+  value = sum(w*p for w,p in zip(weights, predictions))
+
+  # return the average bounding box
+  return BoundingBox((top, left), (bottom-top, right-left)), value
+
+
+
+def best_detection(detections, predictions, minimum_overlap = 0.2, relative_prediction_threshold = 0.25):
+  """best_detection(detections, predictions, [minimum_overlap], [relative_prediction_threshold]) -> bounding_box, prediction
 
   Computes the best detection for the given detections and according predictions.
 
@@ -30,6 +75,9 @@ def best_detection(detections, predictions, minimum_overlap = 0.2):
 
   ``minimum_overlap`` : float between 0 and 1
     The minimum overlap (in terms of Jaccard :py:meth:`BoundingBox.similarity`) of bounding boxes with the best detection to be considered.
+
+  ``relative_prediction_threshold`` : float between 0 and 1
+    Limits the bounding boxes to those that have a prediction value higher then ``relative_prediction_threshold * max(predictions)``
 
   **Returns:**
 
@@ -49,23 +97,11 @@ def best_detection(detections, predictions, minimum_overlap = 0.2):
   # keep only the bounding boxes with the highest overlap
   detections, predictions = overlapping_detections(detections, numpy.array(predictions), minimum_overlap)
 
-  # compute the mean of the detected bounding boxes
-  s = sum(predictions)
-  weights = [p/s for p in predictions]
-  top = sum(w * b.topleft_f[0] for w, b in zip(weights, detections))
-  left = sum(w * b.topleft_f[1] for w, b in zip(weights, detections))
-  bottom = sum(w * b.bottomright_f[0] for w, b in zip(weights, detections))
-  right = sum(w * b.bottomright_f[1] for w, b in zip(weights, detections))
-
-  value = sum(w*p for w,p in zip(weights, predictions))
-  # as the detection value, we use the *BEST* value of all detections.
-#  value = predictions[0]
-
-  return BoundingBox((top, left), (bottom-top, right-left)), value
+  return average_detections(detections, predictions, relative_prediction_threshold)
 
 
-def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.2):
-  """detect_single_face(image, [cascade], [sampler], [minimum_overlap]) -> bounding_box, quality
+def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.2, relative_prediction_threshold = 0.25):
+  """detect_single_face(image, [cascade], [sampler], [minimum_overlap], [relative_prediction_threshold]) -> bounding_box, quality
 
   Detects a single face in the given image, i.e., the one with the highest prediction value.
 
@@ -85,6 +121,9 @@ def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.
   ``minimum_overlap`` : float between 0 and 1
     Computes the best detection using the given minimum overlap, see :py:func:`best_detection`
 
+  ``relative_prediction_threshold`` : float between 0 and 1
+    Limits the bounding boxes to those that have a prediction value higher then ``relative_prediction_threshold * max(predictions)``
+
   **Returns:**
 
   ``bounding_box`` : :py:class:`BoundingBox`
@@ -102,7 +141,7 @@ def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.
   if sampler is None:
     sampler = Sampler(patch_size = cascade.extractor.patch_size, distance=2, scale_factor=math.pow(2.,-1./16.), lowest_scale=0.125)
 
-  if len(image.shape)==3:
+  if image.ndim == 3:
     image = bob.ip.color.rgb_to_gray(image)
 
   detections = []
@@ -116,15 +155,19 @@ def detect_single_face(image, cascade = None, sampler = None, minimum_overlap=0.
     return None
 
   # compute average over the best locations
-  bb, quality = best_detection(detections, predictions, minimum_overlap)
+  bb, quality = best_detection(detections, predictions, minimum_overlap, relative_prediction_threshold)
 
   return bb, quality
 
 
-def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, minimum_overlap = 0.2):
-  """detect_all_faces(image, [cascade], [sampler], [threshold], [minimum_overlap]) -> bounding_boxes, qualities
+def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, overlaps = 1, minimum_overlap = 0.2, relative_prediction_threshold = 0.25):
+  """detect_all_faces(image, [cascade], [sampler], [threshold], [overlaps], [minimum_overlap], [relative_prediction_threshold]) -> bounding_boxes, qualities
 
-  Detects a single face in the given image, i.e., the one with the highest prediction value.
+  Detects all faces in the given image, whose prediction values are higher than the given threshold.
+
+  If the given ``minimum_overlap`` is lower than 1, overlapping bounding boxes are grouped, with the ``minimum_overlap`` being the minimum Jaccard similarity between two boxes to be considered to be overlapping.
+  Afterwards, all groups which have less than ``overlaps`` elements are discarded (this measure is similar to the Viola-Jones face detector).
+  Finally, :py:func:`average_detections` is used to compute the average bounding box for each of the groups, including averaging the detection value (which will, hence, usually decrease in value).
 
   **Parameters:**
 
@@ -144,8 +187,16 @@ def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, minim
     Detections with a quality lower than this value will not be considered.
     Higher thresholds will not detect all faces, while lower thresholds will generate false detections.
 
+  ``overlaps`` : int
+    The number of overlapping boxes that must exist for a bounding box to be considered.
+    Higher values will remove a lot of false-positives, but might increase the chance of a face to be missed.
+    The default value ``1`` will not limit the boxes.
+
   ``minimum_overlap`` : float between 0 and 1
-    Computes the best detection using the given minimum overlap, see :py:func:`best_detection`
+    Groups detections based on the given minimum bounding box overlap, see :py:func:`group_detections`.
+
+  ``relative_prediction_threshold`` : float between 0 and 1
+    Limits the bounding boxes to those that have a prediction value higher then ``relative_prediction_threshold * max(predictions)``
 
   **Returns:**
 
@@ -163,7 +214,7 @@ def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, minim
   if sampler is None:
     sampler = Sampler(patch_size = cascade.extractor.patch_size, distance=2, scale_factor=math.pow(2.,-1./16.), lowest_scale=0.125)
 
-  if len(image.shape)==3:
+  if image.ndim == 3:
     image = bob.ip.color.rgb_to_gray(image)
 
   detections = []
@@ -174,9 +225,17 @@ def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, minim
     predictions.append(prediction)
 
   if not detections:
+    # No face detected
     return None
 
-  # prune overlapping detections
-  bbs, qualities = prune_detections(detections, predictions, minimum_overlap)
+  # group overlapping detections
+  if minimum_overlap < 1.:
+    detections, predictions = group_detections(detections, predictions, minimum_overlap, threshold, overlaps)
 
-  return bbs, qualities
+    if not detections:
+      return None
+
+    # average them
+    detections, predictions = zip(*[average_detections(b, q, relative_prediction_threshold) for b,q in zip(detections, predictions)])
+
+  return detections, predictions

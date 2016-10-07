@@ -64,6 +64,7 @@ class BoundingBox{
     double m_area;
 };
 
+void groupDetections(const std::vector<boost::shared_ptr<BoundingBox>>& detections, const blitz::Array<double, 1>& predictions, double overlap_threshold, double weight_threshold, unsigned box_count_threshold, std::vector<std::vector<boost::shared_ptr<BoundingBox>>>& grouped_boxes, std::vector<blitz::Array<double, 1>>& grouped_weights);
 void pruneDetections(const std::vector<boost::shared_ptr<BoundingBox>>& detections, const blitz::Array<double, 1>& predictions, double threshold, std::vector<boost::shared_ptr<BoundingBox>>& pruned_boxes, blitz::Array<double, 1>& pruned_weights, const int number_of_detections);
 void bestOverlap(const std::vector<boost::shared_ptr<BoundingBox>>& detections, const blitz::Array<double, 1>& predictions, double threshold, std::vector<boost::shared_ptr<BoundingBox>>& pruned_boxes, blitz::Array<double, 1>& pruned_weights);
 

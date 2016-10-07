@@ -31,23 +31,29 @@ This task can be achieved using a single command:
    >>> face_image = bob.io.base.load('testimage.jpg') # doctest: +SKIP
    >>> bounding_box, quality = bob.ip.facedetect.detect_single_face(face_image)
    >>> print (quality, bounding_box.topleft, bounding_box.size)
-   33.1136586165 (113, 84) (216, 180)
+   39.209601948 (110, 82) (224, 187)
 
 .. plot:: plot/detect_single_face.py
    :include-source: False
 
 As you can see, the bounding box is **not** square as for other face detectors, but has an aspect ratio of :math:`5:6`.
+Also, for each detection we provide a ``quality`` value, which specifies, how good the detection is, see :ref:`several` on how to use this ``quality`` value to differentiate between faces and non-faces.
+
 The function :py:func:`detect_single_face` has several optional parameters with proper default values.
 The first optional parameter specifies the :py:class:`bob.ip.facedetect.Cascade`, which contains the classifier cascade.
 We will see later, how this cascade can be re-trained.
+The second parameter is the sampler, which is explained in more detail in the following section :ref:`sampling`.
 
 The ``minimum_overlap`` parameter defines the minimum overlap that patches of multiple detections of the same face might have.
 If set to ``1`` (or ``None``), only the bounding box of the best detection is returned, while smaller values will compute the average over more detection, which usually makes the detection more stable.
+The related ``relative_prediction_threshold`` parameter defines, which of the bounding boxes to account during averaging, see :py:func:`average_detections`.
+
+.. _sampling:
 
 Sampling
 ========
 
-The second parameter is a :py:class:`Sampler`, which defines how the image is scanned.
+The :py:class:`Sampler` defines how the image is scanned.
 The ``scale_factor`` (a value between 0.5 and 1) defines, in which scale granularity the image is scanned.
 For higher scale factors like the default :math:`2^{-1/16}` many scales are tested and the detection time is increased.
 For lower scale factors like :math:`2^{-1/4}`, fewer scales are tested, which might reduce the stability of the detection.
@@ -77,6 +83,7 @@ The :py:class:`Sampler` can return an `iterator` of bounding boxes that will be 
    >>> print (len(patches))
    14493
 
+.. _several:
 
 Detecting Several Faces
 =======================
@@ -91,19 +98,23 @@ To extract all faces in a given image, the function :py:func:`detect_all_faces` 
 
 .. doctest::
 
-   >>> bounding_boxes, qualities = bob.ip.facedetect.detect_all_faces(face_image, threshold=20)
+   >>> bounding_boxes, qualities = bob.ip.facedetect.detect_all_faces(face_image, threshold=20, overlaps=1)
    >>> for i in range(len(bounding_boxes)):
    ...   print ("%3.4f"%qualities[i], bounding_boxes[i].topleft, bounding_boxes[i].size)
-   74.3045 (88, 66) (264, 220)
+   39.9663 (110, 82) (224, 187)
    24.7024 (264, 192) (72, 60)
-   24.5685 (379, 126) (126, 105)
+   22.6990 (379, 128) (117, 97)
 
 The returned list of detected bounding boxes are sorted according to the quality values.
+The detections are grouped using the :py:func:`group_detections`.
+All groups that have less entries as the given number of ``overlaps`` are discarded, where the default value ``1`` will not discard any group.
+Finally, each group is averaged by :py:func:`average_detections`.
 Again, ``cascade``, ``sampler`` and ``minimum_overlap`` can be specified to the function.
 
 .. note::
    The strategy for merging overlapping detections differ between the two detection functions.
-   While :py:func:`detect_single_face` uses :py:func:`best_detection` to merge detections, :py:func:`detect_all_faces` simply uses :py:func:`prune_detections` to keep only the detection with the highest quality in the overlapping area.
+   While :py:func:`detect_single_face` uses :py:func:`best_detection` to merge detections, :py:func:`overlapping_detections` simply uses :py:func:`group_detections` to keep only the detection with the highest quality in the overlapping area.
+   The difference between :py:func:`overlapping_detections` and :py:func:`group_detections` is that the former uses only the bounding boxes that overlap with **the best detection**, while the latter first groups the detections, so that the **best group average** can be computed.
 
 
 Iterating over the Sampler
