@@ -9,12 +9,11 @@
    import bob.ip.facedetect
    import math
 
-   import pkg_resources
    face_image = bob.io.base.load(bob.io.base.test_utils.datafile('testimage.jpg', 'bob.ip.facedetect'))
 
-=============
- Users Guide
-=============
+=====================================
+ Face Detection using Python and Bob
+=====================================
 
 As in most modern face detectors, we also apply a cascaded classifier for detecting faces.
 In this package, we provide a pre-trained classifier for upright frontal faces, but the cascade can be re-trained using own data.
