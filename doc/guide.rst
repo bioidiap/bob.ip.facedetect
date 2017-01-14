@@ -207,7 +207,7 @@ To use this function, simply specify the command line options for the ``./bin/co
 - ``--annotation-directory``: For each image in the ``--image-directory``, an annotation file with the given ``--annotation-extension`` needs to be available in this directory.
 - ``--annotation-type``: The way how annotations are stored in the annotation files (see :py:func:`read_annotation_file`).
 
-The second way is to use one of our database interfaces (see https://gitlab.idiap.ch/bob/bob/wikis/Packages), which have annotations stored internally:
+The second way is to use one of our database interfaces (see https://www.idiap.ch/software/bob/packages), which have annotations stored internally:
 
 - ``--database``: The name of the database, e.g. ``banca`` for the ``bob.db.banca`` interface.
 - ``--protocols``: If specified, only the images from these database protocols are used.
