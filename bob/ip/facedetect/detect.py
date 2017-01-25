@@ -226,6 +226,9 @@ def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, overl
   if minimum_overlap < 1.:
     detections, predictions = group_detections(detections, predictions, minimum_overlap, threshold, overlaps)
 
+    if not detections:
+      return None
+
     # average them
     detections, predictions = zip(*[average_detections(b, q, relative_prediction_threshold) for b,q in zip(detections, predictions)])
 
