@@ -198,7 +198,7 @@ def detect_all_faces(image, cascade = None, sampler = None, threshold = 0, overl
   **Returns:**
 
   ``bounding_boxes`` : [:py:class:`BoundingBox`]
-    The bounding box containing the detected face.
+    The bounding boxes containing the detected faces.
 
   ``qualities`` : [float]
     The qualities of the ``bounding_boxes``, values greater than ``threshold``.
