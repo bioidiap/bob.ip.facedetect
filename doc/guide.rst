@@ -287,7 +287,7 @@ Particularly, in combination with the `GridTK <https://pypi.python.org/pypi/grid
 
 .. code-block:: sh
 
-   $ jman submit --parallel 64  -- extract_training_features.py ... --parallel 64
+   $ jman submit --parallel 64 -- `which extract_training_features.py` ... --parallel 64
 
 
 Cascade Training
