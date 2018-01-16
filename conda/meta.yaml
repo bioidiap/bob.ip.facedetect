@@ -1,0 +1,76 @@
+{% set name = 'bob.ip.facedetect' %}
+{% set project_dir = environ.get('RECIPE_DIR') + '/..' %}
+
+package:
+  name: {{ name }}
+  version: {{ environ.get('BOB_PACKAGE_VERSION', '0.0.1') }}
+
+build:
+  entry_points:
+    - collect_training_data.py = bob.ip.facedetect.script.collect_training_data:main
+    - extract_training_features.py = bob.ip.facedetect.script.extract_training_features:main
+    - train_detector.py = bob.ip.facedetect.script.train_detector:main
+    - validate_detector.py = bob.ip.facedetect.script.validate_detector:main
+    - detect_faces.py = bob.ip.facedetect.script.detect_faces:main
+    - evaluate_detections.py = bob.ip.facedetect.script.evaluate:main
+    - plot_froc.py = bob.ip.facedetect.script.plot_froc:main
+  number: {{ environ.get('BOB_BUILD_NUMBER', 0) }}
+  run_exports:
+    - {{ pin_subpackage(name) }}
+  script:
+    - cd {{ project_dir }}
+    {% if environ.get('BUILD_EGG') %}
+    - python setup.py sdist --formats=zip
+    {% endif %}
+    - python setup.py install --single-version-externally-managed --record record.txt
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+    - pkg-config {{ pkg_config }}
+  host:
+    - python {{ python }}
+    - setuptools {{ setuptools }}
+    - bob.learn.boosting
+    - bob.ip.base
+    - bob.ip.draw
+    - bob.ip.color
+    - bob.io.image
+    - libblitz {{ libblitz }}
+    - boost {{ boost }}
+    - numpy {{ numpy }}
+  run:
+    - python
+    - setuptools
+    - boost
+    - {{ pin_compatible('numpy') }}
+
+test:
+  imports:
+    - {{ name }}
+  commands:
+    - collect_training_data.py --help
+    - extract_training_features.py --help
+    - train_detector.py --help
+    - validate_detector.py --help
+    - detect_faces.py --help
+    - evaluate_detections.py --help
+    - plot_froc.py --help
+    - nosetests --with-coverage --cover-package={{ name }} -sv {{ name }}
+    - sphinx-build -aEW {{ project_dir }}/doc {{ project_dir }}/sphinx
+    - sphinx-build -aEb doctest {{ project_dir }}/doc sphinx
+    - conda inspect linkages -p $PREFIX {{ name }}  # [not win]
+    - conda inspect objects -p $PREFIX {{ name }}  # [osx]
+  requires:
+    - bob-devel {{ bob_devel }}.*
+    - nose
+    - coverage
+    - sphinx
+    - sphinx_rtd_theme
+
+about:
+  home: https://www.idiap.ch/software/bob/
+  license: BSD 3-Clause
+  summary: Face Detection using a Cascade of Boosted LBP Features
+  license_family: BSD
