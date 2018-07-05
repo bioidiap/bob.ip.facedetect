@@ -6,6 +6,7 @@
    import bob.io.base
    import bob.io.base.test_utils
    import bob.io.image
+   import numpy
    import bob.ip.facedetect
    import math
 
@@ -29,8 +30,12 @@ This task can be achieved using a single command:
 
    >>> face_image = bob.io.base.load('testimage.jpg') # doctest: +SKIP
    >>> bounding_box, quality = bob.ip.facedetect.detect_single_face(face_image)
-   >>> print (quality, bounding_box.topleft, bounding_box.size)
-   39.209601948 (110, 82) (224, 187)
+   >>> numpy.allclose(quality,39.209601948) 
+   True
+   >>> numpy.allclose(bounding_box.topleft,(110, 82)) 
+   True
+   >>> numpy.allclose(bounding_box.size,(224, 187))
+   True
 
 .. plot:: plot/detect_single_face.py
    :include-source: False
