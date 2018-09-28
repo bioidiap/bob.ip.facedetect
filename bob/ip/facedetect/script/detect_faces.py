@@ -105,8 +105,6 @@ def main(command_line_arguments = None):
     logger.info("Limiting to the best BoundingBox %s with value %f", str(detections[0]), predictions[0])
 
 
-
-  highest_detection = predictions[0]
   for detection, prediction in zip(detections, predictions):
     color = (255,0,0) if args.prediction_threshold is None else (int(255. * (prediction - args.prediction_threshold) / (highest_detection-args.prediction_threshold)),0,0)
     bob.ip.draw.box(color_image, detection.topleft, detection.size, color)
