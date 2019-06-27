@@ -26,13 +26,6 @@ import matplotlib; matplotlib.use('pdf') #avoids TkInter threaded start
 import matplotlib.pyplot as mpl
 from matplotlib.backends.backend_pdf import PdfPages
 
-# enable LaTeX interpreter
-matplotlib.rc('text', usetex=True)
-matplotlib.rc('font', family='serif')
-matplotlib.rc('lines', linewidth = 4)
-# increase the default font size
-matplotlib.rc('font', size=18)
-
 import argparse
 import numpy, math
 import os
@@ -167,6 +160,13 @@ def read_score_file(filename):
 
 def main(command_line_arguments=None):
   """Reads score files, computes error measures and plots curves."""
+
+  # enable LaTeX interpreter
+  matplotlib.rc('text', usetex=True)
+  matplotlib.rc('font', family='serif')
+  matplotlib.rc('lines', linewidth = 4)
+  # increase the default font size
+  matplotlib.rc('font', size=18)
 
   args = command_line_options(command_line_arguments)
 
