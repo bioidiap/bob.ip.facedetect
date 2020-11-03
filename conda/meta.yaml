@@ -35,6 +35,7 @@ requirements:
     - bob.ip.base
     - bob.ip.color
     - bob.io.image
+    - scikit-image {{ scikit-image }}
     - libblitz {{ libblitz }}
     - boost {{ boost }}
     - numpy {{ numpy }}

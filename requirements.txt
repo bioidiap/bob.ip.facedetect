@@ -5,3 +5,4 @@ bob.io.base
 bob.io.image
 bob.ip.base
 bob.ip.color
+scikit-image
