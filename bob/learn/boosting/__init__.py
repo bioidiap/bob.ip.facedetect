@@ -1,7 +1,7 @@
 # import Libraries of other lib packages
 import bob.extension
 import bob.io.base
-
+import bob.ip.facedetect
 # versioning
 from bob.learn.boosting import version
 from bob.learn.boosting.version import module as __version__
