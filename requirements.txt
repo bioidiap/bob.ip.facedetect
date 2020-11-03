@@ -5,5 +5,3 @@ bob.io.base
 bob.io.image
 bob.ip.base
 bob.ip.color
-bob.ip.draw
-bob.learn.boosting

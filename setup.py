@@ -33,80 +33,109 @@
 # allows you to test your package with new python dependencies w/o requiring
 # administrative interventions.
 
-bob_packages = ['bob.core', 'bob.io.base', 'bob.sp', 'bob.ip.base']
+bob_packages = ["bob.core", "bob.io.base", "bob.sp", "bob.ip.base"]
 
 from setuptools import setup, find_packages, dist
-dist.Distribution(dict(setup_requires=['bob.extension', 'bob.blitz'] + bob_packages))
+
+dist.Distribution(dict(setup_requires=["bob.extension", "bob.blitz"] + bob_packages))
 from bob.extension.utils import egrep, find_header, find_library
 from bob.blitz.extension import Extension, build_ext
 
 from bob.extension.utils import load_requirements
+
 build_requires = load_requirements()
 
 # Define package version
 version = open("version.txt").read().rstrip()
 
+# Local include directory
+import os
+package_dir = os.path.dirname(os.path.realpath(__file__))
+boost_modules = ['system']
+include_dir = os.path.join(package_dir, 'bob', 'learn', 'boosting', 'include')
+
 # The only thing we do in this file is to call the setup() function with all
 # parameters that define our package.
 setup(
-
     # This is the basic information about your project. Modify all this
     # information before releasing code publicly.
-    name='bob.ip.facedetect',
+    name="bob.ip.facedetect",
     version=version,
-    description='Face detection using boosted LBP features',
-
-    url='http://gitlab.idiap.ch/bob/bob.ip.facedetect',
-    license='GPLv3',
-    author='Manuel Guenther',
-    author_email='manuel.guenther@idiap.ch',
-    keywords='bob, facereclib, face detection',
-
+    description="Face detection using boosted LBP features",
+    url="http://gitlab.idiap.ch/bob/bob.ip.facedetect",
+    license="GPLv3",
+    author="Manuel Guenther",
+    author_email="manuel.guenther@idiap.ch",
+    keywords="bob, face detection",
     # If you have a better, long description of your package, place it on the
     # 'doc' directory and then hook it here
-    long_description=open('README.rst').read(),
-
+    long_description=open("README.rst").read(),
     # This line is required for any distutils based packaging.
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
-
     # This line defines which packages should be installed when you "install"
     # this package. All packages that are mentioned here, but are not installed
     # on the current system will be installed locally and only visible to the
     # scripts of this package. Don't worry - You won't need adminstrative
     # privileges when using buildout.
-    setup_requires = build_requires,
-    install_requires = build_requires,
-
-    cmdclass={
-      'build_ext': build_ext,
-    },
-
-    ext_modules = [
-      Extension("bob.ip.facedetect.version",
-        [
-          "bob/ip/facedetect/version.cpp",
-        ],
-        version = version,
-        bob_packages = bob_packages,
-      ),
-
-      Extension(
-        'bob.ip.facedetect._library',
-        [
-          "bob/ip/facedetect/cpp/features.cpp",
-          "bob/ip/facedetect/cpp/boundingbox.cpp",
-
-          "bob/ip/facedetect/bounding_box.cpp",
-          "bob/ip/facedetect/feature_extractor.cpp",
-          "bob/ip/facedetect/main.cpp",
-        ],
-        version = version,
-        bob_packages = bob_packages,
-      )
+    setup_requires=build_requires,
+    install_requires=build_requires,
+    cmdclass={"build_ext": build_ext,},
+    ext_modules=[
+        Extension(
+            "bob.ip.facedetect.version",
+            ["bob/ip/facedetect/version.cpp",],
+            version=version,
+            bob_packages=bob_packages,
+        ),
+        Extension(
+            "bob.ip.facedetect._library",
+            [
+                "bob/ip/facedetect/cpp/features.cpp",
+                "bob/ip/facedetect/cpp/boundingbox.cpp",
+                "bob/ip/facedetect/bounding_box.cpp",
+                "bob/ip/facedetect/feature_extractor.cpp",
+                "bob/ip/facedetect/main.cpp",
+            ],
+            version=version,
+            bob_packages=bob_packages,
+        ),
+        Extension(
+            "bob.learn.boosting.version",
+            ["bob/learn/boosting/version.cpp",],
+            bob_packages=bob_packages,
+            version=version,
+            packages=["boost"],
+            boost_modules=boost_modules,
+            include_dirs=[include_dir],
+        ),
+        Extension(
+            "bob.learn.boosting._library",
+            [
+                "bob/learn/boosting/main.cpp",
+                "bob/learn/boosting/loss_function.cpp",
+                "bob/learn/boosting/jesorsky_loss.cpp",
+                "bob/learn/boosting/weak_machine.cpp",
+                "bob/learn/boosting/stump_machine.cpp",
+                "bob/learn/boosting/lut_machine.cpp",
+                "bob/learn/boosting/boosted_machine.cpp",
+                "bob/learn/boosting/lut_trainer.cpp",
+                # old Library components
+                "bob/learn/boosting/cpp/LossFunction.cpp",
+                "bob/learn/boosting/cpp/JesorskyLoss.cpp",
+                "bob/learn/boosting/cpp/StumpMachine.cpp",
+                "bob/learn/boosting/cpp/LUTMachine.cpp",
+                "bob/learn/boosting/cpp/BoostedMachine.cpp",
+                "bob/learn/boosting/cpp/LUTTrainer.cpp",
+            ],
+            bob_packages=bob_packages,
+            version=version,
+            packages=["boost"],
+            boost_modules=boost_modules,
+            include_dirs=[include_dir],
+        ),
     ],
-
     # Your project should be called something like 'xbob.<foo>' or
     # 'xbob.<foo>.<bar>'. To implement this correctly and still get all your
     # packages to be imported w/o problems, you need to implement namespaces
@@ -117,8 +146,6 @@ setup(
     # Our database packages are good examples of namespace implementations
     # using several layers. You can check them out here:
     # https://www.idiap.ch/software/bob/packages
-
-
     # This entry defines which scripts you will have inside the 'bin' directory
     # once you install the package (or run 'bin/buildout'). The order of each
     # entry under 'console_scripts' is like this:
@@ -134,30 +161,29 @@ setup(
     # In this simple example we will create a single program that will print
     # the version of bob.
     entry_points={
-      # scripts should be declared using this entry:
-      'console_scripts': [
-        'collect_training_data.py = bob.ip.facedetect.script.collect_training_data:main',
-        'extract_training_features.py = bob.ip.facedetect.script.extract_training_features:main',
-        'train_detector.py = bob.ip.facedetect.script.train_detector:main',
-        'validate_detector.py = bob.ip.facedetect.script.validate_detector:main',
-        'detect_faces.py = bob.ip.facedetect.script.detect_faces:main',
-        'evaluate_detections.py = bob.ip.facedetect.script.evaluate:main',
-        'plot_froc.py = bob.ip.facedetect.script.plot_froc:main'
-      ],
+        # scripts should be declared using this entry:
+        "console_scripts": [
+            "collect_training_data.py = bob.ip.facedetect.script.collect_training_data:main",
+            "extract_training_features.py = bob.ip.facedetect.script.extract_training_features:main",
+            "train_detector.py = bob.ip.facedetect.script.train_detector:main",
+            "validate_detector.py = bob.ip.facedetect.script.validate_detector:main",
+            "detect_faces.py = bob.ip.facedetect.script.detect_faces:main",
+            "evaluate_detections.py = bob.ip.facedetect.script.evaluate:main",
+            "plot_froc.py = bob.ip.facedetect.script.plot_froc:main",
+        ],
     },
-
     # Classifiers are important if you plan to distribute this package through
     # PyPI. You can find the complete list of classifiers that are valid and
     # useful here (http://pypi.python.org/pypi?%3Aaction=list_classifiers).
-    classifiers = [
-      'Framework :: Bob',
-      'Development Status :: 4 - Beta',
-      'Intended Audience :: Developers',
-      'License :: OSI Approved :: BSD License',
-      'Natural Language :: English',
-      'Programming Language :: Python',
-      'Programming Language :: Python :: 3',
-      'Topic :: Software Development :: Libraries :: Python Modules',
-      'Environment :: Plugins',
+    classifiers=[
+        "Framework :: Bob",
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: BSD License",
+        "Natural Language :: English",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Environment :: Plugins",
     ],
 )
