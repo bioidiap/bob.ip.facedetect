@@ -6,3 +6,4 @@ bob.io.image
 bob.ip.base
 bob.ip.color
 scikit-image
+scipy

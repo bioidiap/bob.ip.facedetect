@@ -3,3 +3,5 @@ recursive-include doc doc/plot doc/img *.py *.rst *.png *.ico
 recursive-include bob/ip/facedetect *.cpp *.h
 recursive-include bob/ip/facedetect/data *.jpg *.pos *.hdf5
 include bob/ip/facedetect/MCT_cascade.hdf5
+recursive-include bob/learn/boosting *.h *.cpp
+recursive-include bob/learn/boosting/data *.hdf5 *.tar.bz2
