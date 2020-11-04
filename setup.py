@@ -50,9 +50,10 @@ version = open("version.txt").read().rstrip()
 
 # Local include directory
 import os
+
 package_dir = os.path.dirname(os.path.realpath(__file__))
-boost_modules = ['system']
-include_dir = os.path.join(package_dir, 'bob', 'learn', 'boosting', 'include')
+boost_modules = ["system"]
+include_dir = os.path.join(package_dir, "bob", "learn", "boosting", "include")
 
 # The only thing we do in this file is to call the setup() function with all
 # parameters that define our package.
@@ -134,6 +135,27 @@ setup(
             packages=["boost"],
             boost_modules=boost_modules,
             include_dirs=[include_dir],
+        ),
+        Extension(
+            "bob.ip.flandmark.version",
+            ["bob/ip/flandmark/version.cpp",],
+            bob_packages=bob_packages,
+            version=version,
+            packages=["boost"],
+            boost_modules=boost_modules,
+        ),
+        Extension(
+            "bob.ip.flandmark._library",
+            [
+                "bob/ip/flandmark/cpp/flandmark_detector.cpp",
+                "bob/ip/flandmark/cpp/liblbp.cpp",
+                "bob/ip/flandmark/flandmark.cpp",
+                "bob/ip/flandmark/main.cpp",
+            ],
+            bob_packages=bob_packages,
+            version=version,
+            packages=["boost"],
+            boost_modules=boost_modules,
         ),
     ],
     # Your project should be called something like 'xbob.<foo>' or
