@@ -2,7 +2,6 @@ import bob.io.base
 import bob.io.base.test_utils
 import bob.io.image
 import bob.ip.facedetect
-import bob.ip.draw
 
 # load colored test image
 color_image = bob.io.base.load(bob.io.base.test_utils.datafile('testimage.jpg', 'bob.ip.facedetect'))
@@ -11,5 +10,7 @@ color_image = bob.io.base.load(bob.io.base.test_utils.datafile('testimage.jpg', 
 bounding_box, _ = bob.ip.facedetect.detect_single_face(color_image)
 
 # create figure
-bob.ip.draw.box(color_image, bounding_box.topleft, bounding_box.size, color=(255, 0, 0))
-bob.io.image.imshow(color_image)
+import skimage.draw
+s0,s1 = skimage.draw.rectangle_perimeter(bounding_box.topleft, bounding_box.size, shape=( color_image.shape[1], color_image.shape[2] ))
+color_image[:, s0,s1] = 255
+

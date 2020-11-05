@@ -32,18 +32,20 @@ requirements:
   host:
     - python {{ python }}
     - setuptools {{ setuptools }}
-    - bob.learn.boosting
     - bob.ip.base
-    - bob.ip.draw
     - bob.ip.color
     - bob.io.image
+    - scikit-image {{ scikit_image }}
     - libblitz {{ libblitz }}
     - boost {{ boost }}
     - numpy {{ numpy }}
+    - scipy {{ scipy }}
   run:
     - python
     - setuptools
     - boost
+    - scipy
+    - scikit-image
     - {{ pin_compatible('numpy') }}
   run_constrained:
     - matplotlib
@@ -60,6 +62,8 @@ test:
     - evaluate_detections.py --help
     - plot_froc.py --help
     - nosetests --with-coverage --cover-package={{ name }} -sv {{ name }}
+    - nosetests --with-coverage -sv bob.learn.boosting
+    - nosetests --with-coverage -sv bob.ip.flandmark
     - sphinx-build -aEW {{ project_dir }}/doc {{ project_dir }}/sphinx
     - sphinx-build -aEb doctest {{ project_dir }}/doc sphinx
     - conda inspect linkages -p $PREFIX {{ name }}  # [not win]

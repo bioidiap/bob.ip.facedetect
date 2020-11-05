@@ -12,7 +12,6 @@ import math
 import os
 
 import bob.io.base
-import bob.ip.draw
 import pkg_resources
 
 import bob.ip.facedetect
@@ -109,9 +108,10 @@ def main(command_line_arguments = None):
   color_image = bob.io.base.load(args.image)
   if color_image.ndim == 2:
     color_image = bob.ip.color.gray_to_rgb(color_image)
-  for detection, prediction in zip(detections, predictions):
-    color = (255,0,0) if args.prediction_threshold is None else (int(255. * (prediction - args.prediction_threshold) / (highest_detection-args.prediction_threshold)),0,0)
-    bob.ip.draw.box(color_image, detection.topleft, detection.size, color)
+  for detection, prediction in zip(detections, predictions):    
+    import skimage.draw
+    s0,s1 = skimage.draw.rectangle_perimeter(detection.topleft, detection.size, shape=( color_image.shape[1], color_image.shape[2] ))
+    color_image[:, s0,s1] = 255
 
   if not args.no_display:
     import matplotlib.pyplot
