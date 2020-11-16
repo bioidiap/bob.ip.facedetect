@@ -7,10 +7,12 @@ import pkg_resources
 import bob.ip.color
 import bob.io.image
 
+from bob.bio.face.annotator import Base
+
 import logging
 logger = logging.getLogger(__name__)
 
-class MTCNNAnnotator:
+class MTCNNAnnotator(Base):
 
     """MTCNN v1 wrapper for Tensorflow 2. See
     https://kpzhang93.github.io/MTCNN_face_detection_alignment/index.html for
@@ -25,7 +27,8 @@ class MTCNNAnnotator:
     thresholds : list
         Thresholds are a trade-off between false positives and missed detections.
     """
-    def __init__(self, min_size, factor, thresholds):
+    def __init__(self, min_size=40, factor=0.709, thresholds=[0.6, 0.7, 0.7], **kwargs):
+        super(MTCNNAnnotator, self).__init__(**kwargs)
         self._min_size = min_size
         self._factor = factor
         self._thresholds = thresholds
