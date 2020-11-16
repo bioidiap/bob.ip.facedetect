@@ -29,9 +29,9 @@ class MTCNNAnnotator(Base):
     """
     def __init__(self, min_size=40, factor=0.709, thresholds=[0.6, 0.7, 0.7], **kwargs):
         super(MTCNNAnnotator, self).__init__(**kwargs)
-        self._min_size = min_size
-        self._factor = factor
-        self._thresholds = thresholds
+        self.min_size = min_size
+        self.factor = factor
+        self.thresholds = thresholds
         self._graph_path = pkg_resources.resource_filename(
             __name__, "models/mtcnn.pb"
         )
@@ -45,19 +45,18 @@ class MTCNNAnnotator(Base):
         with open(self._graph_path, 'rb') as f:
             graph_def = tf.compat.v1.GraphDef.FromString(f.read())
 
-        with tf.device('/cpu:0'):
-            prob, landmarks, box = tf.compat.v1.import_graph_def(graph_def,
-                input_map={
-                    'input:0': img,
-                    'min_size:0': tf.convert_to_tensor(self._min_size, dtype=float),
-                    'thresholds:0': tf.convert_to_tensor(self._thresholds, dtype=float),
-                    'factor:0': tf.convert_to_tensor(self._factor, dtype=float)
-                },
-                return_elements=[
-                    'prob:0',
-                    'landmarks:0',
-                    'box:0'],
-                name='')
+        prob, landmarks, box = tf.compat.v1.import_graph_def(graph_def,
+            input_map={
+                'input:0': img,
+                'min_size:0': tf.convert_to_tensor(self.min_size, dtype=float),
+                'thresholds:0': tf.convert_to_tensor(self.thresholds, dtype=float),
+                'factor:0': tf.convert_to_tensor(self.factor, dtype=float)
+            },
+            return_elements=[
+                'prob:0',
+                'landmarks:0',
+                'box:0'],
+            name='')
         return box, prob, landmarks
 
     def detect(self, img):
@@ -75,7 +74,6 @@ class MTCNNAnnotator(Base):
         """
         box, prob, landmarks = self._mtcnn_fun(img)
         return box.numpy(), prob.numpy(), landmarks.numpy()
-
 
     def annotations(self, image_batch):
         """Detects all faces in the image and returns annotations in bob format.
