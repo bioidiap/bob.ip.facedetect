@@ -1,5 +1,5 @@
 
-.. _bob.ip.tensorflow_extractor.face_detect:
+.. _bob.ip.facedetect.mtcnn:
 
 ============================
  Face detection using MTCNN
@@ -11,7 +11,7 @@ information on MTCNN. The model is directly converted from the caffe model using
 https://github.com/blaueck/tf-mtcnn
 
 See below for an example on how to use
-:any:`bob.ip.tensorflow_extractor.MTCNN`:
+:py:class:`bob.ip.facedetect.annotator.mtcnn.MTCNNAnnotator`:
 
 .. plot:: plot/detect_faces_mtcnn.py
    :include-source: True
