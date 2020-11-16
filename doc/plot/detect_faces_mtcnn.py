@@ -1,7 +1,7 @@
 from bob.io.image import imshow
 from bob.io.base import load
 from bob.io.base.test_utils import datafile
-from bob.ip.facedetect.annotator import MTCNNAnnotator
+from bob.ip.facedetect import MTCNNAnnotator
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, Circle
 

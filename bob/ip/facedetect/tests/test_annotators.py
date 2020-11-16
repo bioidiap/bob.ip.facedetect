@@ -1,4 +1,4 @@
-from bob.ip.facedetect.annotator.mtcnn import MTCNNAnnotator
+from bob.ip.facedetect import MTCNNAnnotator
 
 import bob.io.base
 import bob.io.base.test_utils

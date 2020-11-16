@@ -7,7 +7,7 @@ import pkg_resources
 import bob.ip.color
 import bob.io.image
 
-from bob.bio.face.annotator import Base
+from bob.bio.face.annotator.Base import Base
 
 import logging
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class MTCNNAnnotator(Base):
         self.factor = factor
         self.thresholds = thresholds
         self._graph_path = pkg_resources.resource_filename(
-            __name__, "models/mtcnn.pb"
+            __name__, "data/mtcnn.pb"
         )
 
         # wrap graph function as a callable function
@@ -146,7 +146,7 @@ class MTCNNAnnotator(Base):
 
     def transform(self, image_batch, max_face_nb=1, **kwargs):
         """
-        Returns the annotations of faces in each images
+        Returns the annotations of faces in each image
 
         Parameters
         ----------

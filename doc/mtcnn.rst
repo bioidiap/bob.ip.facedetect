@@ -11,7 +11,7 @@ information on MTCNN. The model is directly converted from the caffe model using
 https://github.com/blaueck/tf-mtcnn
 
 See below for an example on how to use
-:py:class:`bob.ip.facedetect.annotator.mtcnn.MTCNNAnnotator`:
+:any:`bob.ip.facedetect.MTCNNAnnotator`:
 
 .. plot:: plot/detect_faces_mtcnn.py
    :include-source: True
