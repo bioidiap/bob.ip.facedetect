@@ -14,7 +14,7 @@ face_image = bob.io.base.load(
 
 def test_mtcnn_annnotator():
     mtcnn_annotator = MTCNNAnnotator()
-    annot = mtcnn_annotator([face_image], expected_face_nb=1)[0][0]
+    annot = mtcnn_annotator([face_image])[0]
 
     assert [int(x) for x in annot['topleft']] == [68, 76], annot
     assert [int(x) for x in annot['bottomright']] == [344, 274], annot

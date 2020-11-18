@@ -128,23 +128,36 @@ class MTCNNAnnotator(Base):
             all_annotations.append(annots)
         return all_annotations
 
-    def transform_single_image(self, image, max_face_nb=1, **kwargs):
+    def transform(self, image_batch, **kwargs):
         """
-        Returns the annotations of faces in one image
+        Returns the annotations of the principal face in images
 
         Parameters
         ----------
 
-        image:
-            An image in bob format.
+        image_batch:
+            A batch of images in bob format.
 
-        max_face_nb:
-            The quantity of face expected to be found in the image.
-            If ``None``: returns all detected faces
+        Returns
+        -------
+
+        A batch of annotations dict.
         """
-        return self.transform([image], max_face_nb=max_face_nb, **kwargs)[0]
+        all_annotations = self.annotations(image_batch)
 
-    def transform(self, image_batch, max_face_nb=1, **kwargs):
+        one_face_annots = []
+        # Returns only the first detected face in the image
+        for annotations in all_annotations:
+            if annotations:
+                one_face_annots.append(annotations[0])
+            else:
+                logger.info("MTCNN failed to find a face.")
+                one_face_annots.append(None)
+
+        return one_face_annots
+
+
+    def transform_multi_face(self, image_batch, max_face_nb=None, **kwargs):
         """
         Returns the annotations of faces in each image
 

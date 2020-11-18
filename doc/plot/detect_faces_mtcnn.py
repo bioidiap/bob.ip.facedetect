@@ -9,10 +9,12 @@ from matplotlib.patches import Rectangle, Circle
 color_image = load(
     datafile("test_image_multi_face.png", "bob.ip.facedetect")
 )
+image_batch = [color_image]
 
-# detect all face
+# Detect all faces
 detector = MTCNNAnnotator()
-detections = detector.transform_single_image(color_image, max_face_nb=None)
+detections_batch = detector.transform_multi_face(image_batch, max_face_nb=None)
+detections = detections_batch[0]
 
 imshow(color_image)
 plt.axis("off")
