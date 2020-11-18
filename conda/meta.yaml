@@ -49,6 +49,8 @@ requirements:
     - {{ pin_compatible('numpy') }}
   run_constrained:
     - matplotlib
+  optional:
+    - tensorflow >=2.1
 
 test:
   imports:
@@ -75,6 +77,7 @@ test:
     - sphinx
     - sphinx_rtd_theme
     - matplotlib
+    - tensorflow >=2.1
 
 about:
   home: https://www.idiap.ch/software/bob/
