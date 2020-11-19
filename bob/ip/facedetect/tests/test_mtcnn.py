@@ -44,17 +44,6 @@ def test_mtcnn():
     _assert_mtcnn_annotations(annot)
 
 @is_library_available("tensorflow")
-def test_mtcnn_batch():
-    """MTCNN should accept a batch of face images."""
-    from bob.ip.facedetect.mtcnn import MTCNN
-    mtcnn_annotator = MTCNN()
-    image_batch = [face_image]
-    annot_batch = mtcnn_annotator.annotations_batch(image_batch)
-    assert len(annot_batch) == 1
-    annot = annot_batch[0]
-    _assert_mtcnn_annotations(annot)
-
-@is_library_available("tensorflow")
 def test_mtcnn_multiface():
     """MTCNN should find multiple faces in an image."""
     from bob.ip.facedetect.mtcnn import MTCNN

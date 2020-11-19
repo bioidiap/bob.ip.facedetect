@@ -40,17 +40,18 @@ requirements:
     - boost {{ boost }}
     - numpy {{ numpy }}
     - scipy {{ scipy }}
+    - matplotlib {{ matplotlib }}
+    - tensorflow {{ tensorflow }}
   run:
     - python
     - setuptools
     - boost
-    - scipy
-    - scikit-image
+    - {{ pin_compatible('scipy') }}
+    - {{ pin_compatible('scikit-image') }}
     - {{ pin_compatible('numpy') }}
   run_constrained:
-    - matplotlib
-  optional:
-    - tensorflow >=2.1
+    - {{ pin_compatible('matplotlib') }}
+    - {{ pin_compatible('tensorflow') }}
 
 test:
   imports:
@@ -77,7 +78,7 @@ test:
     - sphinx
     - sphinx_rtd_theme
     - matplotlib
-    - tensorflow >=2.1
+    - tensorflow
 
 about:
   home: https://www.idiap.ch/software/bob/

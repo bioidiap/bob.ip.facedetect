@@ -1,14 +1,14 @@
 # Example taken from:
 # https://github.com/blaueck/tf-mtcnn/blob/master/mtcnn_tfv2.py
 
-
-import tensorflow as tf
-import pkg_resources
-import bob.ip.color
-import bob.io.image
-
 import logging
+
+import pkg_resources
+from bob.io.image import to_matplotlib
+from bob.ip.color import gray_to_rgb
+
 logger = logging.getLogger(__name__)
+
 
 class MTCNN:
 
@@ -25,42 +25,74 @@ class MTCNN:
     thresholds : list
         Thresholds are a trade-off between false positives and missed detections.
     """
-    def __init__(
-        self,
-        min_size=40,
-        factor=0.709,
-        thresholds=[0.6, 0.7, 0.7],
-        **kwargs
-    ):
+
+    def __init__(self, min_size=40, factor=0.709, thresholds=(0.6, 0.7, 0.7), **kwargs):
+        super().__init__(**kwargs)
         self.min_size = min_size
         self.factor = factor
         self.thresholds = thresholds
-        self._graph_path = pkg_resources.resource_filename(
-            __name__, "data/mtcnn.pb"
-        )
+        self._graph_path = pkg_resources.resource_filename(__name__, "data/mtcnn.pb")
 
-        # wrap graph function as a callable function
-        self._mtcnn_fun = tf.compat.v1.wrap_function(self._mtcnn_fun, [
-            tf.TensorSpec(shape=[None, None, 3], dtype=tf.float32),
-        ])
+        # Avoids loading graph at initilization
+        self._fun = None
 
-    def _mtcnn_fun(self, img):
-        with open(self._graph_path, 'rb') as f:
+    @property
+    def mtcnn_fun(self):
+        import tensorflow as tf
+
+        if self._fun is None:
+            # wrap graph function as a callable function
+            self._fun = tf.compat.v1.wrap_function(
+                self._graph_fn,
+                [
+                    tf.TensorSpec(shape=[None, None, 3], dtype=tf.float32),
+                ],
+            )
+        return self._fun
+
+    def _graph_fn(self, img):
+        import tensorflow as tf
+
+        with open(self._graph_path, "rb") as f:
             graph_def = tf.compat.v1.GraphDef.FromString(f.read())
 
-        prob, landmarks, box = tf.compat.v1.import_graph_def(graph_def,
+        prob, landmarks, box = tf.compat.v1.import_graph_def(
+            graph_def,
             input_map={
-                'input:0': img,
-                'min_size:0': tf.convert_to_tensor(self.min_size, dtype=float),
-                'thresholds:0': tf.convert_to_tensor(self.thresholds, dtype=float),
-                'factor:0': tf.convert_to_tensor(self.factor, dtype=float)
+                "input:0": img,
+                "min_size:0": tf.convert_to_tensor(self.min_size, dtype=float),
+                "thresholds:0": tf.convert_to_tensor(self.thresholds, dtype=float),
+                "factor:0": tf.convert_to_tensor(self.factor, dtype=float),
             },
-            return_elements=[
-                'prob:0',
-                'landmarks:0',
-                'box:0'],
-            name='')
+            return_elements=["prob:0", "landmarks:0", "box:0"],
+            name="",
+        )
         return box, prob, landmarks
+
+    def detect(self, image):
+        """Detects all faces in the image.
+
+        Parameters
+        ----------
+        image : numpy.ndarray
+            An RGB image in Bob format.
+
+        Returns
+        -------
+        tuple
+            A tuple of boxes, probabilities, and landmarks.
+        """
+        if len(image.shape) == 2:
+            image = gray_to_rgb(image)
+
+        # Assuming image is Bob format and RGB
+        assert image.shape[0] == 3, image.shape
+        # MTCNN expects BGR opencv format
+        image = to_matplotlib(image)
+        image = image[..., ::-1]
+
+        boxes, probs, landmarks = self.mtcnn_fun(image)
+        return boxes, probs, landmarks
 
     def annotations(self, image):
         """Detects all faces in the image and returns annotations in bob format.
@@ -77,16 +109,7 @@ class MTCNN:
             following keys: ``topleft``, ``bottomright``, ``reye``, ``leye``, ``nose``,
             ``mouthright``, ``mouthleft``, and ``quality``.
         """
-        if len(image.shape) == 2:
-            image = bob.ip.color.gray_to_rgb(image)
-
-        # Assuming image is Bob format and RGB
-        assert image.shape[0] == 3, image.shape
-        # MTCNN expects BGR opencv format
-        image = bob.io.image.to_matplotlib(image)
-        image = image[..., ::-1]
-
-        boxes, probs, landmarks = self._mtcnn_fun(image)
+        boxes, probs, landmarks = self.detect(image)
 
         # Iterate over all the detected faces
         annots = []
@@ -112,24 +135,6 @@ class MTCNN:
             )
         return annots
 
-    def annotations_batch(self, image_batch, **kwargs):
-        """
-        Returns the annotations of faces in each image
-
-        Parameters
-        ----------
-        image_batch:
-            A batch of images in bob format.
-
-        Returns
-        -------
-        list
-            A list (batches) of list (faces) of annotations. Annotations ar
-            dictionaries that contain the following keys: ``topleft``,
-            ``bottomright``, ``reye``, ``leye``, ``nose``, ``mouthright``,
-            ``mouthleft``, and ``quality``.
-        """
-        all_annotations = []
-        for image in image_batch:
-            all_annotations.append(self.annotations(image))
-        return all_annotations
+    def __call__(self, img):
+        """Wrapper for the annotations method."""
+        return self.annotations(img)

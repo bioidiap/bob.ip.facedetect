@@ -1,20 +1,16 @@
 from bob.io.image import imshow
 from bob.io.base import load
 from bob.io.base.test_utils import datafile
-from bob.ip.facedetect import MTCNNAnnotator
+from bob.ip.facedetect.mtcnn import MTCNN
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, Circle
 
 # load colored test image
-color_image = load(
-    datafile("test_image_multi_face.png", "bob.ip.facedetect")
-)
-image_batch = [color_image]
+color_image = load(datafile("test_image_multi_face.png", "bob.ip.facedetect"))
 
-# Detect all faces
-detector = MTCNNAnnotator()
-detections_batch = detector.transform_multi_face(image_batch, max_face_nb=None)
-detections = detections_batch[0]
+# detect all face
+detector = MTCNN()
+detections = detector(color_image)
 
 imshow(color_image)
 plt.axis("off")
