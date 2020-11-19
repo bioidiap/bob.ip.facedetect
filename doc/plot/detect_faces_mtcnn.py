@@ -3,14 +3,18 @@ from bob.io.base import load
 from bob.io.base.test_utils import datafile
 from bob.io.image import imshow
 from bob.ip.facedetect.mtcnn import MTCNN
-from bob.ip.facedetect.tests.utils import is_library_available
 from matplotlib.patches import Circle
 from matplotlib.patches import Rectangle
 
 # load colored test image
 color_image = load(datafile("test_image_multi_face.png", "bob.ip.facedetect"))
+is_tf_available = True
+try:
+    import tensorflow
+except Exception:
+    is_tf_available = False
 
-if not is_library_available("tensorflow"):
+if not is_tf_available:
     imshow(color_image)
 else:
 
