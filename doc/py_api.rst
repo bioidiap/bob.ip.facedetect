@@ -40,3 +40,4 @@ Detailed Information
 --------------------
 
 .. automodule:: bob.ip.facedetect
+.. automodule:: bob.ip.facedetect.mtcnn

@@ -12,7 +12,6 @@ from .train import *
 
 from .detect import default_cascade, average_detections, best_detection, detect_single_face, detect_all_faces
 
-
 def get_config():
   """Returns a string containing the configuration information.
   """

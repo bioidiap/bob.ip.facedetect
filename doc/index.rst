@@ -34,6 +34,7 @@ Documentation
    :maxdepth: 2
 
    guide
+   mtcnn
    py_api
 
 
