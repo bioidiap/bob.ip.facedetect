@@ -7,3 +7,4 @@ bob.ip.base
 bob.ip.color
 scikit-image
 scipy
+mxnet

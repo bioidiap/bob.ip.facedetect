@@ -35,6 +35,7 @@ Documentation
 
    guide
    mtcnn
+   tinyface
    py_api
 
 
