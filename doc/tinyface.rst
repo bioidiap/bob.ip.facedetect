@@ -1,9 +1,8 @@
-
 .. _bob.ip.facedetect.tinyface:
 
-============================
- Face detection using TinyFaceN
-============================
+==============================
+ Face detection using TinyFace
+==============================
 
 This package comes with a TinyFace face detector. The Original Model is ``ResNet101`` 
 from https://github.com/peiyunh/tiny. Please check for more details on TinyFace. The 
@@ -12,8 +11,14 @@ from https://github.com/chinakook/hr101_mxnet.
 
 
 See below for an example on how to use
-:any:`bob.ip.facedetect.mtcnn.MTCNN`:
+:any:`bob.ip.facedetect.tinyface.TinyFacesDetector`:
 
-.. plot:: plot/detect_faces_tinyface.py
-   :include-source: True
+.. literalinclude:: plot/detect_faces_tinyface.py
+   :linenos:
 
+.. figure:: img/detect_faces_tinyface.png
+  :figwidth: 75%
+  :align: center
+  :alt: Multi-Face Detection results using TinyFace.
+
+  Multiple faces are detected by TinyFace.
