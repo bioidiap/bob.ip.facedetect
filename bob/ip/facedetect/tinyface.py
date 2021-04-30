@@ -10,6 +10,11 @@ from collections import namedtuple
 import time
 from bob.io.image import to_matplotlib
 import pkg_resources
+from bob.extension import rc
+from bob.bio.face.embeddings import download_model
+
+
+
 
 logger = logging.getLogger(__name__)
 Batch = namedtuple('Batch', ['data'])
@@ -27,15 +32,35 @@ class TinyFacesDetector:
         Thresholds are a trade-off between false positives and missed detections.
     """
     def __init__(self, prob_thresh=0.5):
+       
+        internal_path = pkg_resources.resource_filename(
+            __name__, os.path.join("data", "tinyface_detector/tinyface_detector"),
+        )
+        
+        checkpoint_path = (
+            internal_path
+            if rc["bob.bio.face.models.tinyface_detector"]
+            is None
+            else rc["bob.bio.face.models.tinyface_detector"]
+        )
+
+        urls = ["https://www.idiap.ch/software/bob/data/bob/bob.ip.facedetect/master/tinyface_detector.tar.gz"]
+
+        download_model(
+            checkpoint_path, urls, "tinyface_detector.tar.gz"
+        )
+        self.checkpoint_path = checkpoint_path
+
+
         self.MAX_INPUT_DIM=5000.0
         self.prob_thresh = prob_thresh
         self.nms_thresh = 0.1
-        self.model_root = pkg_resources.resource_filename(__name__, "tinyface_detector/")
+        self.model_root = pkg_resources.resource_filename(__name__,self.checkpoint_path)
 
-        sym, arg_params, aux_params = mx.model.load_checkpoint(os.path.join(self.model_root, 'hr101'),0)
+        sym, arg_params, aux_params = mx.model.load_checkpoint(os.path.join(self.checkpoint_path, 'hr101'),0)
         all_layers = sym.get_internals()
 
-        meta_file = open(os.path.join(self.model_root, 'meta.pkl'), 'rb')
+        meta_file = open(os.path.join(self.checkpoint_path, 'meta.pkl'), 'rb')
         self.clusters = pickle.load(meta_file)
         self.averageImage = pickle.load(meta_file)
         meta_file.close()
@@ -198,4 +223,3 @@ class TinyFacesDetector:
             )
 
         return annots
-        
