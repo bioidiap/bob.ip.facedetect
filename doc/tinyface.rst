@@ -11,26 +11,14 @@ model is converted into MxNet Interface and the code used to implement the model
 from https://github.com/chinakook/hr101_mxnet.
 
 
+Implementation
+--------------
+
 See below for an example on how to use
-:any:`bob.ip.facedetect.tinyface.TinyFacesDetector`:
+`bob.ip.facedetect.tinyface.TinyFacesDetector`:
 
-.. code-block:: python
-
-    # Import and Call the class TinyFacesDetector
-    from bob.ip.facedetect.tinyface import TinyFacesDetector
-    detector = TinyFacesDetector()
-    
-    # Call the function detect to annotate the given image
-    annotations = detector.detect(image)
-    
-    # The function will return two coordinates, topleft and bottomright, for each detected faces.
-    topleft = annotations["topleft"]
-    bottomright = annotations["bottomright"]
-    
-    # eyes locations are the estimated results, not the real one, so be careful to use.
-    leye = annotations["leye"]
-    reye = annotations["reye"]
-
+.. literalinclude:: plot/detect_faces_tinyface.py
+   :linenos:
 
 This face detector can be used for detecting single or multiple faces. If there are more than one face, the first entry of the returned annotation supposed to be the largest face in the image. 
   
@@ -41,3 +29,12 @@ This face detector can be used for detecting single or multiple faces. If there 
   :alt: Multi-Face Detection results using TinyFace.
 
   Multiple faces are detected by TinyFace.
+
+
+
+
+Source Code for bob.ip.facedetect.tinyface
+------------------------------------------
+
+.. literalinclude:: plot/detect_code_tinyface.py
+   :linenos:

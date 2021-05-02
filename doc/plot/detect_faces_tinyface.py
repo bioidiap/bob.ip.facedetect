@@ -7,17 +7,17 @@ from matplotlib.patches import Rectangle
 
 # load colored test image
 color_image = load(datafile("test_image_multi_face.png", "bob.ip.facedetect"))
-is_tf_available = True
+is_mxnet_available = True
 try:
     import mxnet
 except Exception:
-    is_tf_available = False
+    is_mxnet_available = False
 
-if not is_tf_available:
+if not is_mxnet_available:
     imshow(color_image)
 else:
 
-    # detect all face
+    # detect all faces
     detector = TinyFacesDetector()
     detections = detector.detect(color_image)
 
