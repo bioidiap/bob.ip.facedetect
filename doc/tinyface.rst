@@ -1,3 +1,4 @@
+
 .. _bob.ip.facedetect.tinyface:
 
 ==============================
@@ -13,9 +14,27 @@ from https://github.com/chinakook/hr101_mxnet.
 See below for an example on how to use
 :any:`bob.ip.facedetect.tinyface.TinyFacesDetector`:
 
-.. literalinclude:: plot/detect_faces_tinyface.py
-   :linenos:
+.. code-block:: python
 
+    # Import and Call the class TinyFacesDetector
+    from bob.ip.facedetect.tinyface import TinyFacesDetector
+    detector = TinyFacesDetector()
+    
+    # Call the function detect to annotate the given image
+    annotations = detector.detect(image)
+    
+    # The function will return two coordinates, topleft and bottomright, for each detected faces.
+    topleft = annotations["topleft"]
+    bottomright = annotations["bottomright"]
+    
+    # eyes locations are the estimated results, not the real one, so be careful to use.
+    leye = annotations["leye"]
+    reye = annotations["reye"]
+
+
+This face detector can be used for detecting single or multiple faces. If there are more than one face, the first entry of the returned annotation supposed to be the largest face in the image. 
+  
+  
 .. figure:: img/detect_faces_tinyface.png
   :figwidth: 75%
   :align: center
