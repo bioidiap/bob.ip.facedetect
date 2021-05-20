@@ -41,3 +41,4 @@ Detailed Information
 
 .. automodule:: bob.ip.facedetect
 .. automodule:: bob.ip.facedetect.mtcnn
+.. automodule:: bob.ip.facedetect.tinyface

@@ -14,8 +14,7 @@ from https://github.com/chinakook/hr101_mxnet.
 Implementation
 --------------
 
-See below for an example on how to use
-`bob.ip.facedetect.tinyface.TinyFacesDetector`:
+See below for an example on how to use :any: `bob.ip.facedetect.tinyface.TinyFacesDetector`:
 
 .. literalinclude:: plot/detect_faces_tinyface.py
    :linenos:
@@ -29,12 +28,3 @@ This face detector can be used for detecting single or multiple faces. If there 
   :alt: Multi-Face Detection results using TinyFace.
 
   Multiple faces are detected by TinyFace.
-
-
-
-
-Source Code for bob.ip.facedetect.tinyface
-------------------------------------------
-
-.. literalinclude:: plot/detect_code_tinyface.py
-   :linenos:

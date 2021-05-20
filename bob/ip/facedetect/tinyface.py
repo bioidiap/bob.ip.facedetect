@@ -1,9 +1,6 @@
-import mxnet as mx
-from mxnet import gluon
 from bob.ip.color import gray_to_rgb
 import logging
 import numpy as np
-import cv2 as cv
 import pickle
 import os, sys
 from collections import namedtuple
@@ -11,13 +8,8 @@ import time
 from bob.io.image import to_matplotlib
 import pkg_resources
 from bob.extension import rc
-from bob.bio.face.embeddings import download_model
-
-
-
 
 logger = logging.getLogger(__name__)
-Batch = namedtuple('Batch', ['data'])
 
 class TinyFacesDetector:
 
@@ -31,8 +23,12 @@ class TinyFacesDetector:
     prob_thresh: float
         Thresholds are a trade-off between false positives and missed detections.
     """
-    def __init__(self, prob_thresh=0.5):
-       
+    def __init__(self, prob_thresh=0.5, **kwargs):
+        super().__init__(**kwargs)
+
+        import mxnet as mx
+        from bob.bio.face.embeddings import download_model
+        
         internal_path = pkg_resources.resource_filename(
             __name__, os.path.join("data", "tinyface_detector/tinyface_detector"),
         )
@@ -119,6 +115,10 @@ class TinyFacesDetector:
             (``reye`` and ``leye`` are the estimated results, not captured by the 
             model.)
         """
+        import cv2 as cv
+        import mxnet as mx
+        Batch = namedtuple('Batch', ['data'])
+
         raw_img = img
         if len(raw_img.shape) == 2:
             raw_img = gray_to_rgb(raw_img)
@@ -207,12 +207,12 @@ class TinyFacesDetector:
         annotations = refind_bboxes
         annots = []
         for i in range(len(refind_bboxes)):
-            topleft = float(annotations[i][1]),float(annotations[i][0])
-            bottomright = float(annotations[i][3]),float(annotations[i][2])
+            topleft = round(float(annotations[i][1])),round(float(annotations[i][0]))
+            bottomright = round(float(annotations[i][3])), round(float(annotations[i][2]))
             width = float(annotations[i][2]) - float(annotations[i][0])
             length = float(annotations[i][3]) - float(annotations[i][1])
-            right_eye = (0.37) * length + float(annotations[i][1]),(0.3) * width + float(annotations[i][0])
-            left_eye = (0.37) * length + float(annotations[i][1]),(0.7) * width + float(annotations[i][0])
+            right_eye = round((0.37) * length + float(annotations[i][1])), round((0.3) * width + float(annotations[i][0]))
+            left_eye = round((0.37) * length + float(annotations[i][1])),round((0.7) * width + float(annotations[i][0]))
             annots.append(
                 {
                     "topleft": topleft,

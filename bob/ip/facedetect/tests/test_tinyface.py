@@ -31,8 +31,8 @@ def _assert_tinyface_annotations(annot):
     face = annot[0]
     assert [int(x) for x in face['topleft']] == [59, 57], face
     assert [int(x) for x in face['bottomright']] == [338, 284], face
-#    assert [int(x) for x in face['reye']] == [180, 129], face
-#    assert [int(x) for x in face['leye']] == [175, 220], face
+    assert [int(x) for x in face['reye']] == [162, 125], face
+    assert [int(x) for x in face['leye']] == [162, 216], face
 
 @is_library_available("mxnet")
 def test_tinyface():
