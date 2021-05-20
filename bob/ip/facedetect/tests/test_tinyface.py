@@ -1,4 +1,3 @@
-
 from bob.ip.facedetect.tests.utils import is_library_available
 
 import bob.io.image
@@ -10,16 +9,12 @@ import numpy
 
 # An image with one face
 face_image = bob.io.base.load(
-    bob.io.base.test_utils.datafile(
-        'testimage.jpg', 'bob.ip.facedetect'
-    )
+    bob.io.base.test_utils.datafile("testimage.jpg", "bob.ip.facedetect")
 )
 
 # An image with 6 faces
 face_image_multiple = bob.io.base.load(
-    bob.io.base.test_utils.datafile(
-        'test_image_multi_face.png', 'bob.ip.facedetect'
-    )
+    bob.io.base.test_utils.datafile("test_image_multi_face.png", "bob.ip.facedetect")
 )
 
 
