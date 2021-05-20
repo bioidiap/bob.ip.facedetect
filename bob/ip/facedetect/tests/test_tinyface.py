@@ -33,6 +33,7 @@ def _assert_tinyface_annotations(annot):
 def test_tinyface():
     """TinyFace should annotate one face correctly."""
     from bob.ip.facedetect.tinyface import TinyFacesDetector
+
     tinyface_annotator = TinyFacesDetector()
     annot = tinyface_annotator.detect(face_image)
     _assert_tinyface_annotations(annot)
@@ -41,6 +42,7 @@ def test_tinyface():
 def test_tinyface_multiface():
     """TinyFace should find multiple faces in an image."""
     from bob.ip.facedetect.tinyface import TinyFacesDetector
+    
     tinyface_annotator = TinyFacesDetector()
     annot = tinyface_annotator.detect(face_image_multiple)
     assert len(annot) == 6

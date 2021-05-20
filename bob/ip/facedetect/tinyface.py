@@ -35,9 +35,9 @@ class TinyFacesDetector:
         
         checkpoint_path = (
             internal_path
-            if rc["bob.bio.face.models.tinyface_detector"]
+            if rc["bob.ip.facedetect.models.tinyface_detector"]
             is None
-            else rc["bob.bio.face.models.tinyface_detector"]
+            else rc["bob.ip.facedetect.models.tinyface_detector"]
         )
 
         urls = ["https://www.idiap.ch/software/bob/data/bob/bob.ip.facedetect/master/tinyface_detector.tar.gz"]
