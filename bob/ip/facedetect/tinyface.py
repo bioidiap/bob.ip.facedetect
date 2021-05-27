@@ -1,9 +1,6 @@
-import mxnet as mx
-from mxnet import gluon
 from bob.ip.color import gray_to_rgb
 import logging
 import numpy as np
-import cv2 as cv
 import pickle
 import os, sys
 from collections import namedtuple
@@ -11,12 +8,8 @@ import time
 from bob.io.image import to_matplotlib
 import pkg_resources
 from bob.extension import rc
-from bob.extension.download import download_and_unzip
-import os
 
 logger = logging.getLogger(__name__)
-Batch = namedtuple("Batch", ["data"])
-
 
 class TinyFacesDetector:
 
@@ -30,66 +23,54 @@ class TinyFacesDetector:
     prob_thresh: float
         Thresholds are a trade-off between false positives and missed detections.
     """
+    def __init__(self, prob_thresh=0.5, **kwargs):
+        super().__init__(**kwargs)
 
-    def __init__(self, prob_thresh=0.5):
-
+        import mxnet as mx
+        from bob.bio.face.embeddings import download_model
+        
         internal_path = pkg_resources.resource_filename(
-            __name__, os.path.join("data", "tinyface_detector"),
+            __name__, os.path.join("data", "tinyface_detector/tinyface_detector"),
         )
-
+        
         checkpoint_path = (
             internal_path
-            if rc["bob.ip.facedetect.models.tinyface_detector"] is None
+            if rc["bob.ip.facedetect.models.tinyface_detector"]
+            is None
             else rc["bob.ip.facedetect.models.tinyface_detector"]
         )
 
-        urls = [
-            "https://www.idiap.ch/software/bob/data/bob/bob.ip.facedetect/master/tinyface_detector.tar.gz"
-        ]
+        urls = ["https://www.idiap.ch/software/bob/data/bob/bob.ip.facedetect/master/tinyface_detector.tar.gz"]
 
-        os.makedirs(checkpoint_path, exist_ok=True)
-        download_and_unzip(
-            urls, os.path.join(checkpoint_path, "tinyface_detector.tar.gz")
+        download_model(
+            checkpoint_path, urls, "tinyface_detector.tar.gz"
         )
-
         self.checkpoint_path = checkpoint_path
 
-        self.MAX_INPUT_DIM = 5000.0
+
+        self.MAX_INPUT_DIM=5000.0
         self.prob_thresh = prob_thresh
         self.nms_thresh = 0.1
-        self.model_root = pkg_resources.resource_filename(
-            __name__, self.checkpoint_path
-        )
+        self.model_root = pkg_resources.resource_filename(__name__,self.checkpoint_path)
 
-        sym, arg_params, aux_params = mx.model.load_checkpoint(
-            os.path.join(self.checkpoint_path, "hr101"), 0
-        )
+        sym, arg_params, aux_params = mx.model.load_checkpoint(os.path.join(self.checkpoint_path, 'hr101'),0)
         all_layers = sym.get_internals()
 
-        meta_file = open(os.path.join(self.checkpoint_path, "meta.pkl"), "rb")
+        meta_file = open(os.path.join(self.checkpoint_path, 'meta.pkl'), 'rb')
         self.clusters = pickle.load(meta_file)
         self.averageImage = pickle.load(meta_file)
         meta_file.close()
-        self.clusters_h = self.clusters[:, 3] - self.clusters[:, 1] + 1
-        self.clusters_w = self.clusters[:, 2] - self.clusters[:, 0] + 1
-        self.normal_idx = np.where(self.clusters[:, 4] == 1)
+        self.clusters_h = self.clusters[:,3] - self.clusters[:,1] + 1
+        self.clusters_w = self.clusters[:,2] - self.clusters[:,0] + 1
+        self.normal_idx = np.where(self.clusters[:,4] == 1)
 
-        self.mod = mx.mod.Module(
-            symbol=all_layers["fusex_output"], data_names=["data"], label_names=None
-        )
-        self.mod.bind(
-            for_training=False,
-            data_shapes=[("data", (1, 3, 224, 224))],
-            label_shapes=None,
-            force_rebind=False,
-        )
-        self.mod.set_params(
-            arg_params=arg_params, aux_params=aux_params, force_init=False
-        )
+        self.mod = mx.mod.Module(symbol=all_layers['fusex_output'], data_names=['data'], label_names=None)
+        self.mod.bind(for_training=False, data_shapes=[('data', (1, 3, 224, 224))], label_shapes=None, force_rebind=False)
+        self.mod.set_params(arg_params=arg_params, aux_params=aux_params, force_init=False)
 
     @staticmethod
     def _nms(dets, prob_thresh):
-
+  
         x1 = dets[:, 0]
         y1 = dets[:, 1]
         x2 = dets[:, 2]
@@ -134,6 +115,10 @@ class TinyFacesDetector:
             (``reye`` and ``leye`` are the estimated results, not captured by the 
             model.)
         """
+        import cv2 as cv
+        import mxnet as mx
+        Batch = namedtuple('Batch', ['data'])
+
         raw_img = img
         if len(raw_img.shape) == 2:
             raw_img = gray_to_rgb(raw_img)
@@ -141,71 +126,64 @@ class TinyFacesDetector:
 
         raw_img = to_matplotlib(raw_img)
         raw_img = raw_img[..., ::-1]
-
+        
         raw_h = raw_img.shape[0]
         raw_w = raw_img.shape[1]
 
         raw_img = cv.cvtColor(raw_img, cv.COLOR_BGR2RGB)
         raw_img_f = raw_img.astype(np.float32)
+  
+        min_scale = min(np.floor(np.log2(np.max(self.clusters_w[self.normal_idx]/raw_w))), np.floor(np.log2(np.max(self.clusters_h[self.normal_idx]/raw_h))))
+        max_scale = min(1.0, -np.log2(max(raw_h, raw_w)/self.MAX_INPUT_DIM))
 
-        min_scale = min(
-            np.floor(np.log2(np.max(self.clusters_w[self.normal_idx] / raw_w))),
-            np.floor(np.log2(np.max(self.clusters_h[self.normal_idx] / raw_h))),
-        )
-        max_scale = min(1.0, -np.log2(max(raw_h, raw_w) / self.MAX_INPUT_DIM))
-
-        scales_down = np.arange(min_scale, 0 + 0.0001, 1.0)
-        scales_up = np.arange(0.5, max_scale + 0.0001, 0.5)
+        scales_down = np.arange(min_scale, 0+0.0001, 1.)
+        scales_up = np.arange(0.5, max_scale+0.0001, 0.5)
         scales_pow = np.hstack((scales_down, scales_up))
         scales = np.power(2.0, scales_pow)
 
         start = time.time()
-        bboxes = np.empty(shape=(0, 5))
+        bboxes = np.empty(shape=(0,5))
         for s in scales[::-1]:
-            img = cv.resize(raw_img_f, (0, 0), fx=s, fy=s)
-            img = np.transpose(img, (2, 0, 1))
+            img = cv.resize(raw_img_f, (0,0), fx = s, fy = s)
+            img = np.transpose(img,(2,0,1))
             img = img - self.averageImage
 
             tids = []
-            if s <= 1.0:
+            if s <= 1. :
                 tids = list(range(4, 12))
-            else:
+            else :
                 tids = list(range(4, 12)) + list(range(18, 25))
-            ignoredTids = list(set(range(0, self.clusters.shape[0])) - set(tids))
+            ignoredTids = list(set(range(0,self.clusters.shape[0]))-set(tids))
             img_h = img.shape[1]
             img_w = img.shape[2]
             img = img[np.newaxis, :]
 
-            self.mod.reshape(data_shapes=[("data", (1, 3, img_h, img_w))])
+            self.mod.reshape(data_shapes=[('data', (1, 3, img_h, img_w))])
             self.mod.forward(Batch([mx.nd.array(img)]))
             self.mod.get_outputs()[0].wait_to_read()
             fusex_res = self.mod.get_outputs()[0]
 
-            score_cls = mx.nd.slice_axis(
-                fusex_res, axis=1, begin=0, end=25, name="score_cls"
-            )
-            score_reg = mx.nd.slice_axis(
-                fusex_res, axis=1, begin=25, end=None, name="score_reg"
-            )
+            score_cls = mx.nd.slice_axis(fusex_res, axis=1, begin=0, end=25, name='score_cls')
+            score_reg = mx.nd.slice_axis(fusex_res, axis=1, begin=25, end=None, name='score_reg')
             prob_cls = mx.nd.sigmoid(score_cls)
 
             prob_cls_np = prob_cls.asnumpy()
-            prob_cls_np[0, ignoredTids, :, :] = 0.0
+            prob_cls_np[0,ignoredTids,:,:] = 0.
 
             _, fc, fy, fx = np.where(prob_cls_np > self.prob_thresh)
 
             cy = fy * 8 - 1
             cx = fx * 8 - 1
-            ch = self.clusters[fc, 3] - self.clusters[fc, 1] + 1
+            ch = self.clusters[fc, 3] - self.clusters[fc,1] + 1
             cw = self.clusters[fc, 2] - self.clusters[fc, 0] + 1
 
             Nt = self.clusters.shape[0]
 
             score_reg_np = score_reg.asnumpy()
             tx = score_reg_np[0, 0:Nt, :, :]
-            ty = score_reg_np[0, Nt : 2 * Nt, :, :]
-            tw = score_reg_np[0, 2 * Nt : 3 * Nt, :, :]
-            th = score_reg_np[0, 3 * Nt : 4 * Nt, :, :]
+            ty = score_reg_np[0, Nt:2*Nt,:,:]
+            tw = score_reg_np[0, 2*Nt:3*Nt,:,:]
+            th = score_reg_np[0,3*Nt:4*Nt,:,:]
 
             dcx = cw * tx[fc, fy, fx]
             dcy = ch * ty[fc, fy, fx]
@@ -217,10 +195,8 @@ class TinyFacesDetector:
             score_cls_np = score_cls.asnumpy()
             scores = score_cls_np[0, fc, fy, fx]
 
-            tmp_bboxes = np.vstack(
-                (rcx - rcw / 2, rcy - rch / 2, rcx + rcw / 2, rcy + rch / 2)
-            )
-            tmp_bboxes = np.vstack((tmp_bboxes / s, scores))
+            tmp_bboxes = np.vstack((rcx-rcw/2, rcy-rch/2, rcx+rcw/2,rcy+rch/2))
+            tmp_bboxes = np.vstack((tmp_bboxes/s, scores))
             tmp_bboxes = tmp_bboxes.transpose()
             bboxes = np.vstack((bboxes, tmp_bboxes))
 
@@ -231,18 +207,12 @@ class TinyFacesDetector:
         annotations = refind_bboxes
         annots = []
         for i in range(len(refind_bboxes)):
-            topleft = float(annotations[i][1]), float(annotations[i][0])
-            bottomright = float(annotations[i][3]), float(annotations[i][2])
+            topleft = round(float(annotations[i][1])),round(float(annotations[i][0]))
+            bottomright = round(float(annotations[i][3])), round(float(annotations[i][2]))
             width = float(annotations[i][2]) - float(annotations[i][0])
             length = float(annotations[i][3]) - float(annotations[i][1])
-            right_eye = (
-                (0.37) * length + float(annotations[i][1]),
-                (0.3) * width + float(annotations[i][0]),
-            )
-            left_eye = (
-                (0.37) * length + float(annotations[i][1]),
-                (0.7) * width + float(annotations[i][0]),
-            )
+            right_eye = round((0.37) * length + float(annotations[i][1])), round((0.3) * width + float(annotations[i][0]))
+            left_eye = round((0.37) * length + float(annotations[i][1])),round((0.7) * width + float(annotations[i][0]))
             annots.append(
                 {
                     "topleft": topleft,
