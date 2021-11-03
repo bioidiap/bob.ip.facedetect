@@ -1,12 +1,12 @@
 .. vim: set fileencoding=utf-8 :
 .. Wed 17 Aug 15:48:07 CEST 2016
 
-.. image:: https://img.shields.io/badge/docs-available-orange.svg
-   :target: https://www.idiap.ch/software/bob/docs/bob/bob.ip.facedetect/master/index.html
-.. image:: https://gitlab.idiap.ch/bob/bob.ip.facedetect/badges/master/pipeline.svg
-   :target: https://gitlab.idiap.ch/bob/bob.ip.facedetect/commits/master
-.. image:: https://gitlab.idiap.ch/bob/bob.ip.facedetect/badges/master/coverage.svg
-   :target: https://gitlab.idiap.ch/bob/bob.ip.facedetect/commits/master
+.. image:: https://img.shields.io/badge/docs-v4.1.0-orange.svg
+   :target: https://www.idiap.ch/software/bob/docs/bob/bob.ip.facedetect/v4.1.0/index.html
+.. image:: https://gitlab.idiap.ch/bob/bob.ip.facedetect/badges/v4.1.0/pipeline.svg
+   :target: https://gitlab.idiap.ch/bob/bob.ip.facedetect/commits/v4.1.0
+.. image:: https://gitlab.idiap.ch/bob/bob.ip.facedetect/badges/v4.1.0/coverage.svg
+   :target: https://gitlab.idiap.ch/bob/bob.ip.facedetect/commits/v4.1.0
 .. image:: https://img.shields.io/badge/gitlab-project-0000c0.svg
    :target: https://gitlab.idiap.ch/bob/bob.ip.facedetect
 
