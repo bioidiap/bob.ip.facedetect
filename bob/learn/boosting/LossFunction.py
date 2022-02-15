@@ -26,7 +26,9 @@ class LossFunction(object):
           Depending on the intended task, one of the two output variants should be chosen.
           For classification tasks, please use the former way (#samples, #outputs), while for regression tasks, use the latter (#samples, 1).
         """
-        raise NotImplementedError("This is a pure abstract function. Please implement that in your derived class.")
+        raise NotImplementedError(
+            "This is a pure abstract function. Please implement that in your derived class."
+        )
 
     def loss_gradient(self, targets, scores):
         """This function is to compute the gradient of the loss for the given targets and scores.
@@ -40,7 +42,9 @@ class LossFunction(object):
         Returns
           loss (float <#samples, #outputs>): The gradient of the loss based on the given scores and targets.
         """
-        raise NotImplementedError("This is a pure abstract function. Please implement that in your derived class.")
+        raise NotImplementedError(
+            "This is a pure abstract function. Please implement that in your derived class."
+        )
 
     def loss_sum(self, alpha, targets, previous_scores, current_scores):
         """The function computes the sum of the loss which is used to find the optimized values of alpha (x).
@@ -68,7 +72,7 @@ class LossFunction(object):
         losses = self.loss(targets, scores)
 
         # compute the sum of the loss
-        return numpy.sum(losses, 0)
+        return numpy.mean(numpy.sum(losses, 0))
 
     def loss_gradient_sum(self, alpha, targets, previous_scores, current_scores):
         """The function computes the gradient as the sum of the derivatives per sample which is used to find the optimized values of alpha.
